@@ -186,8 +186,8 @@
         page-break-after: auto;
       }
       .print-table th, .print-table td {
-        padding: 6px !important;
-        font-size: 13px !important;
+        padding: 4px 6px !important;
+        font-size: 12px !important;
       }
       .avoid-break {
         page-break-inside: avoid;
@@ -238,7 +238,7 @@
       <div class="summary-box">
         <div class="summary-row"><span>Длина ткани для заказа:</span><span class="summary-value" id="totalFabricLength">0.00 м.п.</span></div>
         <div class="summary-row"><span>Себестоимость ткани:</span><span class="summary-value" id="costFabricOnly">0 ₽</span></div>
-        <div class="summary-row"><span>Себестоимость сборки (изделий):</span><span class="summary-value" id="costItemsOnly">0 ₽</span></div>
+        <div class="summary-row"><span>Фурнитура и работы:</span><span class="summary-value" id="costItemsOnly">0 ₽</span></div>
         <div id="widthError" class="error-msg">Внимание: Одно или несколько изделий шире рулона!</div>
         <div class="total-cost-row"><span>ИТОГО СЕБЕСТОИМОСТЬ:</span><span id="costTotal">0 ₽</span></div>
       </div>
@@ -289,8 +289,6 @@
     };
 
     const EXCHANGE_RATE = 95; 
-    const MATERIAL_COST_M2 = 700; 
-    const LABOR_COST_ITEM = 500;  
 
     const fabricDB = [
       { name: "АВЕНСИС", width: 240, price: 29.49 },
@@ -481,11 +479,11 @@
         });
         state.rooms.push(roomData);
       });
-      localStorage.setItem('uniCalcState11', JSON.stringify(state)); 
+      localStorage.setItem('uniCalcState12', JSON.stringify(state)); 
     }
 
     function loadState() {
-      const saved = localStorage.getItem('uniCalcState11');
+      const saved = localStorage.getItem('uniCalcState12');
       if (saved) {
         try {
           const state = JSON.parse(saved);
@@ -650,11 +648,15 @@
       const visualBlock = document.getElementById('visualBlock');
       const visualContainer = document.getElementById('visualContainer');
       
-      let totalItemsCost = 0;
       let itemsToPack = [];
       let widthExceeded = false;
       const rollWidthCm = parseFloat(inputWidth.value) || 0;
       const rollWidthM = rollWidthCm / 100;
+
+      let totalQty = 0;
+      let totalWidthCm = 0;
+      let totalGuidesCm = 0;
+      let totalChainCm = 0;
 
       allItems.forEach(row => {
         const w = parseFloat(row.querySelector('.item-width').value) || 0;
@@ -662,10 +664,14 @@
         const qty = parseInt(row.querySelector('.item-qty').value) || 1;
 
         if (w > 0 && h > 0) {
+          totalQty += qty;
+          totalWidthCm += w * qty;
+          totalGuidesCm += Math.max(0, h - 6) * 2 * qty;
+          totalChainCm += (h * 1.5) * qty;
+
           const widthM = w / 100;
           const heightM = h / 100;
-          const itemCost = (widthM * heightM) * MATERIAL_COST_M2 + LABOR_COST_ITEM;
-          totalItemsCost += itemCost * qty;
+          
           if (rollWidthM > 0 && widthM > rollWidthM) widthExceeded = true;
           for (let i = 0; i < qty; i++) {
              itemsToPack.push({ originalW: widthM, originalH: heightM, width: widthM, height: heightM + 0.1 });
@@ -719,6 +725,31 @@
       let sumFabricCost = 0;
       const priceRubInput = parseFloat(inputPriceRub.value) || 0;
       if (priceRubInput > 0) sumFabricCost = totalFabricLengthM * priceRubInput;
+
+      // === ПОДРОБНЫЙ РАСЧЕТ РАБОТЫ И ФУРНИТУРЫ ===
+      const totalWidthM = totalWidthCm / 100;
+      const totalGuidesM = totalGuidesCm / 100;
+      const totalChainM = totalChainCm / 100;
+
+      const laborCost = totalQty * (300 + 250); // изготовление + установка
+      const hardwareCost = 
+        (totalWidthM * 220) + // короб
+        (totalWidthM * 55) + // труба
+        (totalWidthM * 130) + // утяжелитель
+        (totalGuidesM * 70) + // направляющие
+        (totalQty * 60) + // механизм управления (1шт на изделие)
+        (totalChainM * 5) + // цепь управления
+        (totalQty * 10) + // груз цепи (1шт на изделие)
+        (totalQty * 2) + // соединитель цепи (1шт на изделие)
+        (totalQty * 2 * 1) + // ограничитель цепи (2шт по 1р)
+        (totalQty * 2) + // фиксатор цепи (1шт по 2р)
+        (totalWidthM * 60) + // шлегель
+        (totalQty * 2 * 2) + // крышка утяжелителя (2шт по 2р)
+        (totalWidthM * 6) + // лента 7мм
+        (totalWidthM * 6) + // скотч труба
+        (totalGuidesM * 15); // скотч 9мм (длина направляющих)
+
+      const totalItemsCost = laborCost + hardwareCost;
       const totalCost = totalItemsCost + sumFabricCost;
 
       const priceBase = totalCost * 2; 
@@ -812,12 +843,14 @@
       let cutTableHtml = ''; 
 
       let totalMechanisms = 0;
-      let totalBox = 0;
-      let totalGuides = 0;
-      let totalTube = 0;
-      let totalWeightBar = 0;
-      let totalChain = 0;
+      let totalWidthCm = 0;
+      let totalGuidesCm = 0;
+      let totalChainCm = 0;
       let totalChainWeights = 0;
+      let totalChainConnectors = 0;
+      let totalChainStoppers = 0;
+      let totalChainFixators = 0;
+      let totalWeightCaps = 0;
 
       allRows.forEach((row, idx) => {
         const roomBlock = row.closest('.room-block');
@@ -829,13 +862,15 @@
         const ctrl = row.querySelector('.item-control').value;
         const qty = parseInt(row.querySelector('.item-qty').value) || 1;
         
-        totalMechanisms += 2 * qty;
-        totalBox += (w * qty);
-        totalGuides += Math.max(0, (h - 6)) * 2 * qty;
-        totalTube += (w * qty);
-        totalWeightBar += (w * qty);
-        totalChain += (h * 1.5 * qty);
+        totalMechanisms += 1 * qty;
+        totalWidthCm += w * qty;
+        totalGuidesCm += Math.max(0, (h - 6)) * 2 * qty;
+        totalChainCm += (h * 1.5) * qty;
         totalChainWeights += 1 * qty;
+        totalChainConnectors += 1 * qty;
+        totalChainStoppers += 2 * qty;
+        totalChainFixators += 1 * qty;
+        totalWeightCaps += 2 * qty;
 
         cpItemsHtml += `
           <tr>
@@ -878,8 +913,8 @@
       });
 
       const componentsHtml = `
-        <h3 class="avoid-break" style="font-size: 14px; margin-top: 15px; margin-bottom: 8px; color: #2c3e50; text-transform: uppercase;">Расход комплектующих</h3>
-        <table class="print-table avoid-break" style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+        <h3 class="avoid-break" style="font-size: 14px; margin-top: 15px; margin-bottom: 8px; color: #2c3e50; text-transform: uppercase;">Расход комплектующих (на весь заказ)</h3>
+        <table class="print-table avoid-break" style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 12px;">
           <thead>
             <tr style="background-color: #ecf0f1; color: #2c3e50;">
               <th style="border: 1px solid #bdc3c7; text-align: left; padding: 4px 8px;">Наименование</th>
@@ -889,29 +924,79 @@
           </thead>
           <tbody>
             <tr>
-              <td style="border: 1px solid #bdc3c7; padding: 4px 8px;">Механизм управления UNI</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px;">шт</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px; font-weight: bold;">${totalMechanisms}</td>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Механизм управления UNI</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">компл/шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalMechanisms}</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #bdc3c7; padding: 4px 8px;">Короб / Труба / Утяж. ткани (каждого)</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px;">м.п.</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px; font-weight: bold;">${(totalBox / 100).toFixed(2)}</td>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Короб UNI</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #bdc3c7; padding: 4px 8px;">Направляющие UNI</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px;">м.п.</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px; font-weight: bold;">${(totalGuides / 100).toFixed(2)}</td>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Труба</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #bdc3c7; padding: 4px 8px;">Цепь управления</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px;">м.п.</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px; font-weight: bold;">${(totalChain / 100).toFixed(2)}</td>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Утяжелитель ткани</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #bdc3c7; padding: 4px 8px;">Утяжелитель цепи</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px;">шт</td>
-              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 4px; font-weight: bold;">${totalChainWeights}</td>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Направляющие UNI</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalGuidesCm / 100).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Цепь управления</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalChainCm / 100).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Груз цепи управления</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalChainWeights}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Соединитель цепи управления</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalChainConnectors}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Ограничитель цепи управления</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalChainStoppers}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Фиксатор цепи управления</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalChainFixators}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Шлегель</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Крышка утяжелителя</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">шт</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${totalWeightCaps}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Лента 7мм</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Скотч (труба)</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalWidthCm / 100).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #bdc3c7; padding: 3px 8px;">Скотч 9мм (направляющие)</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px;">м.п.</td>
+              <td style="border: 1px solid #bdc3c7; text-align: center; padding: 3px; font-weight: bold;">${(totalGuidesCm / 100).toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -948,29 +1033,23 @@
       const printHtml = `
         <div style="font-family: Arial, sans-serif; color: #2c3e50; line-height: 1.4;">
           
-          <!-- СТРАНИЦА 1: КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ ДЛЯ КЛИЕНТА -->
           <div class="print-section">
             <div class="avoid-break">
               
-              <!-- === НОВАЯ ШАПКА С КАРТИНКАМИ === -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px;">
-                <!-- Левый блок: Логотип -->
                 <div style="width: 140px; text-align: left;">
                   <img src="logo_sp-removebg-preview.png" style="max-width: 100%; max-height: 110px; object-fit: contain;" alt="Логотип">
                 </div>
                 
-                <!-- Центральный блок: Заголовок -->
                 <div style="text-align: center; flex: 1; padding: 0 15px;">
                   <h1 style="margin: 0; font-size: 28px; font-weight: 900; color: #d35400; text-transform: uppercase;">SunProtection</h1>
                   <div style="font-size: 16px; color: #7f8c8d; margin-top: 5px; text-transform: uppercase; letter-spacing: 2px;">Коммерческое предложение</div>
                 </div>
 
-                <!-- Правый блок: Схема шторы -->
                 <div style="width: 140px; text-align: right;">
                   <img src="shema_uni-removebg-preview.png" style="max-width: 100%; max-height: 110px; object-fit: contain;" alt="Схема UNI">
                 </div>
               </div>
-              <!-- =============================== -->
 
               <div style="margin-bottom: 20px; font-size: 15px;">
                 <strong>Кому:</strong> ${cName} <br>
@@ -1016,7 +1095,6 @@
             </div>
           </div>
 
-          <!-- СТРАНИЦА 2: ВНУТРЕННИЙ ЗАКАЗ-НАРЯД -->
           <div class="print-section">
             <div class="avoid-break">
               <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #3498db; padding-bottom: 15px; margin-bottom: 20px;">
@@ -1074,7 +1152,7 @@
                 <div style="flex: 1; border: 1px solid #bdc3c7; border-radius: 6px; padding: 10px;">
                   <div style="font-weight: 700; color: #7f8c8d; margin-bottom: 8px; font-size: 12px;">СЕБЕСТОИМОСТЬ</div>
                   <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px;"><span>Ткань:</span> <strong>${window.calcData.costFabric.toFixed(0)} ₽</strong></div>
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;"><span>Сборка (изделия):</span> <strong>${window.calcData.costItems.toFixed(0)} ₽</strong></div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;"><span>Фурнитура и работы:</span> <strong>${window.calcData.costItems.toFixed(0)} ₽</strong></div>
                   <div style="display: flex; justify-content: space-between; border-top: 1px solid #bdc3c7; padding-top: 6px; font-size: 14px;"><span>Итого затрат:</span> <strong>${window.calcData.costTotal.toFixed(0)} ₽</strong></div>
                 </div>
 
@@ -1087,7 +1165,6 @@
             </div>
           </div>
 
-          <!-- СТРАНИЦА 3: СХЕМА РЕЗА -->
           <div class="print-section">
             <h3 class="avoid-break" style="font-size: 16px; width: 100%; margin-bottom: 15px; color: #2c3e50; text-transform: uppercase; text-align: center;">Схема реза ткани</h3>
             <div style="width: 100%; display: flex; justify-content: center;">
@@ -1095,7 +1172,6 @@
             </div>
           </div>
 
-          <!-- СТРАНИЦА 4: ЦЕХ / СБОРКА -->
           <div class="print-section">
             <div class="avoid-break" style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #8e44ad; padding-bottom: 15px; margin-bottom: 20px;">
               <div>
