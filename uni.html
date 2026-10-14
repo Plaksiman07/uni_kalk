@@ -186,6 +186,9 @@
     .btn-add:hover { background-color: #d35400; color: #ffffff; }
     .btn-pdf { background-color: #2c3e50; border: 1px solid #2c3e50; color: white; margin-bottom: 40px; }
     .btn-pdf:hover { background-color: #1a252f; }
+    .btn-labels { background: #ffffff; border: 1px solid #2c3e50; color: #2c3e50; margin-bottom: 10px; }
+    .btn-labels:hover { background: #f0f2f5; }
+    .btn-labels-tech { margin: 0 0 40px; }
 
     .summary-box { background-color: #f7f8fa; border-radius: 12px; padding: 20px; }
     .summary-row { display: flex; justify-content: space-between; font-size: 15px; color: #65676b; margin-bottom: 12px; }
@@ -403,6 +406,7 @@
       </div>
     </div>
 
+    <button type="button" class="btn-action btn-labels labels-btn">🏷 Наклейки на изделия (термопринтер)</button>
     <button id="savePdfBtn" class="btn-action btn-pdf">📄 Создать заказ-наряд (PDF)</button>
     </div>
 
@@ -438,6 +442,8 @@
         <div class="block-title">Расход комплектующих (на весь заказ)</div>
         <div id="techComponents"></div>
       </div>
+
+      <button type="button" class="btn-action btn-labels btn-labels-tech labels-btn">🏷 Наклейки на изделия (термопринтер)</button>
     </div>
   </div>
 
@@ -1125,7 +1131,8 @@
       seal: 60, weightCap: 2, tape7: 6, tapeTube: 6, tape9: 15,
       markupBase: 2, discount7: 7, discount12: 12, markupB2B: 2.3,
       taxB2B: 6, tripFee: 0, minOrder: 0, roundStep: 10,
-      metalWaste: 0, fabricMode: 0, fabricWaste: 10
+      metalWaste: 0, fabricMode: 0, fabricWaste: 10,
+      labelW: 58, labelH: 40
     };
     const SETTINGS_DEF = [
       { group: 'Курс валюты', items: [
@@ -1162,7 +1169,10 @@
       { group: 'Учёт материалов', items: [
         ['metalWaste', 'Запас на обрезки профиля, %'],
         ['fabricMode', 'Ткань в себестоимости', [[0, 'По раскрою: весь ряд'], [1, 'По площади изделий + отход']]],
-        ['fabricWaste', 'Отход ткани при расчёте по площади, %'] ] }
+        ['fabricWaste', 'Отход ткани при расчёте по площади, %'] ] },
+      { group: 'Наклейки (термопринтер)', items: [
+        ['labelW', 'Ширина наклейки, мм'],
+        ['labelH', 'Высота наклейки, мм'] ] }
     ];
     const SETTINGS_KEY = 'uniCalcSettings1';
     let SETTINGS = Object.assign({}, DEFAULT_SETTINGS);
@@ -1230,6 +1240,103 @@
     function discountLabel(key) { return `Со скидкой ${fmtNum(SETTINGS[key])}%`; }
 
     loadState();
+
+    // === НАКЛЕЙКИ НА ИЗДЕЛИЯ (термопринтер) ===
+    // Каждая наклейка — отдельная страница размером с этикетку. Только чёрный цвет, без заливок серым.
+    let labelStyleEl = null;
+    function removeLabelPageStyle() {
+      if (labelStyleEl) { labelStyleEl.remove(); labelStyleEl = null; }
+    }
+    window.addEventListener('afterprint', removeLabelPageStyle);
+
+    function printLabels() {
+      const order = readOrder();
+      if (!order.items.length) { alert('Добавьте размеры изделий — наклеек пока нет.'); return; }
+      const orderNoRaw = document.getElementById('orderNumber').value.trim();
+      if (!orderNoRaw && !confirm('Номер заказа не указан. Напечатать наклейки без номера?')) return;
+
+      const W = SETTINGS.labelW > 0 ? SETTINGS.labelW : 58;
+      const H = SETTINGS.labelH > 0 ? SETTINGS.labelH : 40;
+      const pad = Math.max(1.5, Math.min(W, H) * 0.05);
+      const innerW = W - 2 * pad, innerH = H - 2 * pad;
+      const u = Math.min(innerH, innerW * 0.75);            // базовая единица для шрифтов, мм
+      const orderNo = esc(orderNoRaw || '—');
+      const totalItems = order.items.length;
+      const num = v => String(fmtNum(v)).replace('.', ',');
+
+      const labels = [];
+      order.items.forEach(it => {
+        for (let c = 1; c <= it.qty; c++) labels.push({ it, c });
+      });
+
+      const ctrlW = Math.min(innerW * 0.3, innerH * 0.5);
+      // размер шрифта, чтобы строка гарантированно влезла по ширине (k — средняя ширина символа в долях кегля)
+      const fit = (text, maxMm, availMm, k = 0.6) => Math.min(maxMm, availMm / (String(text).length * k));
+      const sizeText = it => `${num(it.w)}×${num(it.h)}`;
+      const html = labels.map(({ it, c }) => {
+        const st = sizeText(it);
+        const sizeMm = Math.min(u * 0.3, (innerW - ctrlW - pad) / (st.length * 0.58));
+        const room = esc(it.room || '');
+        const topText = `Заказ № ${orderNoRaw || '—'}  Изд. ${it.n}/${totalItems}`;
+        const topMm = fit(topText, u * 0.15, innerW, 0.62);
+        const subText = `Ш × В, см · Ш гот. ${num(cutParts(it.w, it.h).wFinished)}`;
+        const subMm = fit(subText, u * 0.085, innerW - ctrlW - 1.5, 0.55);
+        return `
+        <div class="lbl" style="width:${W}mm; height:${H}mm; padding:${pad}mm;">
+          <div class="lbl-top" style="font-size:${topMm.toFixed(2)}mm;">
+            <span>Заказ <b>№ ${orderNo}</b></span>
+            <span class="lbl-num">Изд. <b>${it.n}</b><small>/${totalItems}</small></span>
+          </div>
+          <div class="lbl-mid">
+            <div class="lbl-size">
+              <div style="font-size:${sizeMm.toFixed(2)}mm; font-weight:900; line-height:1; white-space:nowrap;">${st}</div>
+              <div style="font-size:${subMm.toFixed(2)}mm; margin-top:${(u * 0.04).toFixed(2)}mm; white-space:nowrap;">${subText}</div>
+            </div>
+            <div class="lbl-ctrl" style="width:${ctrlW.toFixed(2)}mm;">
+              <div class="lbl-ctrl-letter" style="font-size:${(Math.min(ctrlW * 0.75, u * 0.36)).toFixed(2)}mm;">${esc(it.ctrl)}</div>
+              <div style="font-size:${(u * 0.075).toFixed(2)}mm;">${it.ctrl === 'Л' ? 'левое' : it.ctrl === 'П' ? 'правое' : 'упр.'}</div>
+            </div>
+          </div>
+          <div class="lbl-bot" style="font-size:${(u * 0.095).toFixed(2)}mm;">
+            <span class="lbl-room">${room}</span>
+            <span>${it.qty > 1 ? `шт. ${c} из ${it.qty}` : ''}</span>
+          </div>
+        </div>`;
+      }).join('');
+
+      removeLabelPageStyle();
+      labelStyleEl = document.createElement('style');
+      labelStyleEl.textContent = `
+        @media print {
+          @page { size: ${W}mm ${H}mm; margin: 0; }
+          html, body { width: ${W}mm; }
+          #printArea { width: ${W}mm !important; }
+        }
+        .lbl { box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; color: #000; background: #fff;
+               font-family: Arial, "Helvetica Neue", sans-serif; break-inside: avoid; page-break-inside: avoid; }
+        .lbl + .lbl { break-before: page; page-break-before: always; }
+        .lbl b { font-weight: 900; }
+        .lbl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; white-space: nowrap;
+                   border-bottom: 0.4mm solid #000; padding-bottom: 0.6mm; line-height: 1.1; }
+        .lbl-num small { font-size: 0.75em; }
+        .lbl-mid { flex: 1; display: flex; align-items: center; gap: 1.5mm; min-height: 0; }
+        .lbl-size { flex: 1; min-width: 0; overflow: hidden; }
+        .lbl-ctrl { flex: none; text-align: center; line-height: 1.05; }
+        .lbl-ctrl-letter { background: #000; color: #fff; font-weight: 900; border-radius: 1mm; line-height: 1.15; }
+        .lbl-bot { display: flex; justify-content: space-between; gap: 1mm; white-space: nowrap; border-top: 0.3mm solid #000;
+                   padding-top: 0.6mm; line-height: 1.1; }
+        .lbl-room { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+      `;
+      document.head.appendChild(labelStyleEl);
+
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = html;
+      const oldTitle = document.title;
+      document.title = 'Наклейки ' + (orderNoRaw ? 'заказ ' + orderNoRaw.replace(/[\\/:*?"<>|]/g, '-') : '');
+      setTimeout(() => { window.print(); document.title = oldTitle; }, 150);
+    }
+    document.querySelectorAll('.labels-btn').forEach(b => b.addEventListener('click', printLabels));
+
     loadPhotos();
 
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
@@ -1550,6 +1657,7 @@
       };
 
       pdfBtn.disabled = !!problem;
+      document.querySelectorAll('.labels-btn').forEach(b => { b.disabled = order.items.length === 0; });
       pdfBtn.title = problem;
 
       const rub = v => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
@@ -1612,6 +1720,7 @@
 
     // === ПЕЧАТЬ В PDF ===
     document.getElementById('savePdfBtn').addEventListener('click', function () {
+      removeLabelPageStyle();
       calculateTotals();
       if (window.calcData.problem) { alert(window.calcData.problem); return; }
 
