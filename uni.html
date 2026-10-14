@@ -188,7 +188,7 @@
     .btn-pdf:hover { background-color: #1a252f; }
     .btn-labels { background: #ffffff; border: 1px solid #2c3e50; color: #2c3e50; margin-bottom: 10px; }
     .btn-labels:hover { background: #f0f2f5; }
-    .btn-labels-tech { margin: 0 0 40px; }
+    .btn-labels-tech { margin: 0 0 8px; }
 
     .summary-box { background-color: #f7f8fa; border-radius: 12px; padding: 20px; }
     .summary-row { display: flex; justify-content: space-between; font-size: 15px; color: #65676b; margin-bottom: 12px; }
@@ -442,7 +442,8 @@
         <div id="techComponents"></div>
       </div>
 
-      <button type="button" class="btn-action btn-labels btn-labels-tech labels-btn">🏷 Наклейки на изделия (термопринтер)</button>
+      <button type="button" class="btn-action btn-labels btn-labels-tech labels-btn">🏷 Скачать наклейки на изделия (PDF)</button>
+      <div class="visual-hint" id="labelsStatus" style="margin:0 0 40px;">Файл для термопринтера: по наклейке на каждое изделие. Размер наклейки — в настройках ⚙</div>
     </div>
   </div>
 
@@ -1241,98 +1242,166 @@
     loadState();
 
     // === НАКЛЕЙКИ НА ИЗДЕЛИЯ (термопринтер) ===
-    // Каждая наклейка — отдельная страница размером с этикетку. Только чёрный цвет, без заливок серым.
-    let labelStyleEl = null;
-    function removeLabelPageStyle() {
-      if (labelStyleEl) { labelStyleEl.remove(); labelStyleEl = null; }
+    // Готовый PDF-файл: одна страница = одна наклейка точного размера, на КАЖДОЕ изделие (с учётом кол-ва).
+    // Нумерация — как в схеме раскроя ткани, размер — готового изделия (Ш гот. × В).
+    // Картинка чисто чёрно-белая (1 бит) — термопринтер печатает её без серых точек.
+    const LABEL_PX_PER_MM = 12;   // ~300 dpi
+
+    function removeLabelPageStyle() {}   // совместимость: раньше наклейки печатались через окно печати
+
+    function drawLabel(ctx, d, W, H) {
+      const S = LABEL_PX_PER_MM;
+      const pad = Math.max(1.5, Math.min(W, H) * 0.05) * S;
+      const Wp = W * S, Hp = H * S, IW = Wp - 2 * pad, IH = Hp - 2 * pad;
+      const u = Math.min(IH, IW * 0.75);
+      const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
+      const setFont = (px, bold) => { ctx.font = `${bold ? '900' : '400'} ${px}px ${FONT}`; };
+      const fit = (text, maxPx, maxW, bold) => {
+        setFont(maxPx, bold); const w = ctx.measureText(text).width;
+        const px = w > maxW ? maxPx * maxW / w : maxPx; setFont(px, bold); return px;
+      };
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, Wp, Hp);
+      ctx.fillStyle = '#000'; ctx.strokeStyle = '#000'; ctx.textBaseline = 'alphabetic';
+      const line = (y, t) => { ctx.fillRect(pad, y, IW, t); };
+
+      // --- верх: заказ и номер изделия ---
+      const topPx = u * 0.17;
+      const numText = `Изд. ${d.n}`;
+      const numPx = fit(numText, topPx * 1.15, IW * 0.4, true);
+      const numW = ctx.measureText(numText).width;
+      ctx.textAlign = 'right'; ctx.fillText(numText, Wp - pad, pad + numPx * 0.85);
+      const ordText = `Заказ ${d.order}`;
+      fit(ordText, topPx, IW - numW - 2 * S, true);
+      ctx.textAlign = 'left'; ctx.fillText(ordText, pad, pad + numPx * 0.85);
+      const topLineY = pad + numPx * 1.08;
+      line(topLineY, Math.max(2, 0.4 * S));
+
+      // --- низ: комната и шт. ---
+      const botPx = u * 0.11;
+      const botBase = Hp - pad - botPx * 0.15;
+      const botLineY = botBase - botPx * 1.15;
+      line(botLineY, Math.max(2, 0.3 * S));
+      let right = d.qty > 1 ? `шт. ${d.copy} из ${d.qty}` : '';
+      let rightW = 0;
+      if (right) { setFont(botPx, false); rightW = ctx.measureText(right).width; ctx.textAlign = 'right'; ctx.fillText(right, Wp - pad, botBase); }
+      let room = d.room || '';
+      const roomMaxW = IW - (rightW ? rightW + 2 * S : 0);
+      setFont(botPx, false);
+      if (ctx.measureText(room).width > roomMaxW) {
+        while (room.length > 1 && ctx.measureText(room + '…').width > roomMaxW) room = room.slice(0, -1);
+        room = room.trim() + '…';
+      }
+      ctx.textAlign = 'left'; ctx.fillText(room, pad, botBase);
+
+      // --- середина: размер и управление ---
+      const midTop = topLineY + 1 * S, midBot = botLineY - 1 * S, midH = midBot - midTop;
+      const capPx = u * 0.085;
+      const box = Math.min(IW * 0.3, midH - capPx * 1.2);
+      const boxX = Wp - pad - box, boxY = midTop + (midH - box - capPx * 1.2) / 2;
+      const r = Math.min(1 * S, box * 0.1);
+      ctx.beginPath();
+      ctx.moveTo(boxX + r, boxY); ctx.arcTo(boxX + box, boxY, boxX + box, boxY + box, r);
+      ctx.arcTo(boxX + box, boxY + box, boxX, boxY + box, r); ctx.arcTo(boxX, boxY + box, boxX, boxY, r);
+      ctx.arcTo(boxX, boxY, boxX + box, boxY, r); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      fit(d.ctrl, box * 0.8, box * 0.8, true); ctx.fillText(d.ctrl, boxX + box / 2, boxY + box * 0.54);
+      ctx.fillStyle = '#000'; ctx.textBaseline = 'alphabetic';
+      setFont(capPx, false);
+      ctx.fillText(d.ctrl === 'Л' ? 'левое' : d.ctrl === 'П' ? 'правое' : 'упр.', boxX + box / 2, boxY + box + capPx * 1.05);
+
+      const leftW = IW - box - 2 * S;
+      const sizePx = fit(d.size, u * 0.34, leftW, true);
+      const subPx = u * 0.085;
+      const blockH = sizePx * 0.8 + subPx * 1.5;
+      const sizeBase = midTop + (midH - blockH) / 2 + sizePx * 0.8;
+      ctx.textAlign = 'left'; ctx.fillText(d.size, pad, sizeBase);
+      fit('готовое изделие Ш × В, см', subPx, leftW, false);
+      ctx.fillText('готовое изделие Ш × В, см', pad, sizeBase + subPx * 1.45);
     }
-    window.addEventListener('afterprint', removeLabelPageStyle);
+
+    // Минимальный PDF: каждая страница — 1-битная картинка во всю страницу
+    function buildLabelsPdf(pages, W, H) {
+      const enc = new TextEncoder();
+      const chunks = []; let len = 0; const offs = [];
+      const push = x => { const b = typeof x === 'string' ? enc.encode(x) : x; chunks.push(b); len += b.length; };
+      const ptW = (W * 72 / 25.4).toFixed(2), ptH = (H * 72 / 25.4).toFixed(2);
+      const n = pages.length;
+      // объекты: 1 каталог, 2 страницы, далее на каждую наклейку: страница, содержимое, картинка
+      const pageId = i => 3 + i * 3, contId = i => 4 + i * 3, imgId = i => 5 + i * 3;
+      const obj = (id, body) => { offs[id] = len; push(`${id} 0 obj\n`); body(); push('\nendobj\n'); };
+      push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+      obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+      obj(2, () => push(`<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => pageId(i) + ' 0 R').join(' ')}] >>`));
+      pages.forEach((pg, i) => {
+        obj(pageId(i), () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ptW} ${ptH}] /Resources << /XObject << /Im0 ${imgId(i)} 0 R >> >> /Contents ${contId(i)} 0 R >>`));
+        const cs = `q ${ptW} 0 0 ${ptH} 0 0 cm /Im0 Do Q`;
+        obj(contId(i), () => { push(`<< /Length ${cs.length} >>\nstream\n`); push(cs); push('\nendstream'); });
+        obj(imgId(i), () => {
+          push(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceGray /BitsPerComponent 1 /Length ${pg.bits.length} >>\nstream\n`);
+          push(pg.bits); push('\nendstream');
+        });
+      });
+      const total = 3 + n * 3;
+      const xref = len;
+      let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+      for (let id = 1; id < total; id++) x += String(offs[id]).padStart(10, '0') + ' 00000 n \n';
+      push(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+      return new Blob(chunks, { type: 'application/pdf' });
+    }
+
+    function canvasToBits(cv) {
+      const { width: w, height: h } = cv;
+      const px = cv.getContext('2d').getImageData(0, 0, w, h).data;
+      const rowBytes = Math.ceil(w / 8);
+      const bits = new Uint8Array(rowBytes * h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = (y * w + x) * 4;
+          const lum = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+          if (lum >= 128) bits[y * rowBytes + (x >> 3)] |= (0x80 >> (x & 7));   // 1 = белый
+        }
+      }
+      return { w, h, bits };
+    }
+
+    function makeLabelsPdf() {
+      const order = readOrder();
+      const orderNoRaw = document.getElementById('orderNumber').value.trim();
+      const W = SETTINGS.labelW > 0 ? SETTINGS.labelW : 58;
+      const H = SETTINGS.labelH > 0 ? SETTINGS.labelH : 40;
+      const num = v => String(fmtNum(v)).replace('.', ',');
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(W * LABEL_PX_PER_MM); cv.height = Math.round(H * LABEL_PX_PER_MM);
+      const ctx = cv.getContext('2d');
+      const pages = [];
+      order.items.forEach(it => {
+        const wf = cutParts(it.w, it.h).wFinished;
+        for (let c = 1; c <= it.qty; c++) {
+          drawLabel(ctx, {
+            order: orderNoRaw ? '№ ' + orderNoRaw : 'без номера', n: it.n, size: `${num(wf)}×${num(it.h)}`,
+            ctrl: it.ctrl || '', room: it.room || '', qty: it.qty, copy: c
+          }, W, H);
+          pages.push(canvasToBits(cv));
+        }
+      });
+      return { blob: buildLabelsPdf(pages, W, H), count: pages.length, W, H, orderNoRaw };
+    }
 
     function printLabels() {
       const order = readOrder();
       if (!order.items.length) { alert('Добавьте размеры изделий — наклеек пока нет.'); return; }
       const orderNoRaw = document.getElementById('orderNumber').value.trim();
-      if (!orderNoRaw && !confirm('Номер заказа не указан. Напечатать наклейки без номера?')) return;
-
-      const W = SETTINGS.labelW > 0 ? SETTINGS.labelW : 58;
-      const H = SETTINGS.labelH > 0 ? SETTINGS.labelH : 40;
-      const pad = Math.max(1.5, Math.min(W, H) * 0.05);
-      const innerW = W - 2 * pad, innerH = H - 2 * pad;
-      const u = Math.min(innerH, innerW * 0.75);            // базовая единица для шрифтов, мм
-      const orderNo = esc(orderNoRaw || '—');
-      const totalItems = order.items.length;
-      const num = v => String(fmtNum(v)).replace('.', ',');
-
-      const labels = [];
-      order.items.forEach(it => {
-        for (let c = 1; c <= it.qty; c++) labels.push({ it, c });
-      });
-
-      const ctrlW = Math.min(innerW * 0.3, innerH * 0.5);
-      // размер шрифта, чтобы строка гарантированно влезла по ширине (k — средняя ширина символа в долях кегля)
-      const fit = (text, maxMm, availMm, k = 0.6) => Math.min(maxMm, availMm / (String(text).length * k));
-      const sizeText = it => `${num(it.w)}×${num(it.h)}`;
-      const html = labels.map(({ it, c }) => {
-        const st = sizeText(it);
-        const sizeMm = Math.min(u * 0.3, (innerW - ctrlW - pad) / (st.length * 0.58));
-        const room = esc(it.room || '');
-        const topText = `Заказ № ${orderNoRaw || '—'}  Изд. ${it.n}/${totalItems}`;
-        const topMm = fit(topText, u * 0.15, innerW, 0.62);
-        const subText = `Ш × В, см · Ш гот. ${num(cutParts(it.w, it.h).wFinished)}`;
-        const subMm = fit(subText, u * 0.085, innerW - ctrlW - 1.5, 0.55);
-        return `
-        <div class="lbl" style="width:${W}mm; height:${H}mm; padding:${pad}mm;">
-          <div class="lbl-top" style="font-size:${topMm.toFixed(2)}mm;">
-            <span>Заказ <b>№ ${orderNo}</b></span>
-            <span class="lbl-num">Изд. <b>${it.n}</b><small>/${totalItems}</small></span>
-          </div>
-          <div class="lbl-mid">
-            <div class="lbl-size">
-              <div style="font-size:${sizeMm.toFixed(2)}mm; font-weight:900; line-height:1; white-space:nowrap;">${st}</div>
-              <div style="font-size:${subMm.toFixed(2)}mm; margin-top:${(u * 0.04).toFixed(2)}mm; white-space:nowrap;">${subText}</div>
-            </div>
-            <div class="lbl-ctrl" style="width:${ctrlW.toFixed(2)}mm;">
-              <div class="lbl-ctrl-letter" style="font-size:${(Math.min(ctrlW * 0.75, u * 0.36)).toFixed(2)}mm;">${esc(it.ctrl)}</div>
-              <div style="font-size:${(u * 0.075).toFixed(2)}mm;">${it.ctrl === 'Л' ? 'левое' : it.ctrl === 'П' ? 'правое' : 'упр.'}</div>
-            </div>
-          </div>
-          <div class="lbl-bot" style="font-size:${(u * 0.095).toFixed(2)}mm;">
-            <span class="lbl-room">${room}</span>
-            <span>${it.qty > 1 ? `шт. ${c} из ${it.qty}` : ''}</span>
-          </div>
-        </div>`;
-      }).join('');
-
-      removeLabelPageStyle();
-      labelStyleEl = document.createElement('style');
-      labelStyleEl.textContent = `
-        @media print {
-          @page { size: ${W}mm ${H}mm; margin: 0; }
-          html, body { width: ${W}mm; }
-          #printArea { width: ${W}mm !important; }
-        }
-        .lbl { box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; color: #000; background: #fff;
-               font-family: Arial, "Helvetica Neue", sans-serif; break-inside: avoid; page-break-inside: avoid; }
-        .lbl + .lbl { break-before: page; page-break-before: always; }
-        .lbl b { font-weight: 900; }
-        .lbl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; white-space: nowrap;
-                   border-bottom: 0.4mm solid #000; padding-bottom: 0.6mm; line-height: 1.1; }
-        .lbl-num small { font-size: 0.75em; }
-        .lbl-mid { flex: 1; display: flex; align-items: center; gap: 1.5mm; min-height: 0; }
-        .lbl-size { flex: 1; min-width: 0; overflow: hidden; }
-        .lbl-ctrl { flex: none; text-align: center; line-height: 1.05; }
-        .lbl-ctrl-letter { background: #000; color: #fff; font-weight: 900; border-radius: 1mm; line-height: 1.15; }
-        .lbl-bot { display: flex; justify-content: space-between; gap: 1mm; white-space: nowrap; border-top: 0.3mm solid #000;
-                   padding-top: 0.6mm; line-height: 1.1; }
-        .lbl-room { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-      `;
-      document.head.appendChild(labelStyleEl);
-
-      const printArea = document.getElementById('printArea');
-      printArea.innerHTML = html;
-      const oldTitle = document.title;
-      document.title = 'Наклейки ' + (orderNoRaw ? 'заказ ' + orderNoRaw.replace(/[\\/:*?"<>|]/g, '-') : '');
-      setTimeout(() => { window.print(); document.title = oldTitle; }, 150);
+      if (!orderNoRaw && !confirm('Номер заказа не указан. Сделать наклейки без номера?')) return;
+      let res;
+      try { res = makeLabelsPdf(); } catch (e) { console.error(e); alert('Не удалось сформировать файл наклеек.'); return; }
+      const safe = (res.orderNoRaw || 'bez_nomera').replace(/[^0-9A-Za-z_-]+/g, '_');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(res.blob);
+      a.download = `labels_${safe}_${res.count}pcs_${res.W}x${res.H}mm.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      const st = document.getElementById('labelsStatus');
+      if (st) st.textContent = `Файл скачан. Наклеек: ${res.count} (${res.W}×${res.H} мм) — по одной на каждое изделие.`;
     }
     document.querySelectorAll('.labels-btn').forEach(b => b.addEventListener('click', printLabels));
 
