@@ -2319,9 +2319,9 @@
           });
           return `
             <div style="break-inside: avoid; page-break-inside: avoid;">
-              <div style="height: ${LBL}mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 8pt; line-height: 1; padding-bottom: 0.6mm; box-sizing: border-box; white-space: nowrap; overflow: hidden;">
-                <span><strong>Ряд ${i + 1}</strong> · <strong style="color: #c0392b;">✂ ${r1(rowCm)} см</strong></span>
-                <span style="color: #7f8c8d;">${r1(rowStart[i])}→${r1(rowStart[i] + rowCm)}</span>
+              <div style="height: ${LBL}mm; position: relative; font-size: 8pt; line-height: 1; box-sizing: border-box; white-space: nowrap; overflow: hidden; width: ${drawW.toFixed(2)}mm;">
+                <span style="position: absolute; left: 0; bottom: 0.6mm;"><strong>Ряд ${i + 1}</strong> · <strong style="color: #c0392b;">✂ ${r1(rowCm)} см</strong></span>
+                <span style="position: absolute; right: 0; bottom: 0.6mm; color: #7f8c8d;">${r1(rowStart[i])}→${r1(rowStart[i] + rowCm)}</span>
               </div>
               <div style="position: relative; width: ${drawW.toFixed(2)}mm; height: ${(rowCm * k).toFixed(2)}mm; background: #f4f6f7; border: 0.35mm solid #7f8c8d; border-bottom: 0.6mm dashed #c0392b; box-sizing: border-box;">${itemsHtml}</div>
             </div>`;
@@ -2330,12 +2330,12 @@
         const pages = [];
         for (let pI = 0; pI < cols.length; pI += C) pages.push(cols.slice(pI, pI + C));
         pages.forEach((pageCols, si) => {
-          const colsHtml = pageCols.map(col => `
-            <div style="width: ${best.colW.toFixed(2)}mm; flex: none;">${col.map(rowHtml).join('')}</div>`).join('');
+          const colsHtml = pageCols.map((col, ci) => `
+            <td style="width: ${best.colW.toFixed(2)}mm; vertical-align: top; padding: 0 ${ci < pageCols.length - 1 ? GAP : 0}mm 0 0;">${col.map(rowHtml).join('')}</td>`).join('');
           fabricSheetsHtml += `
             <div class="print-landscape">
               ${sheetHeader('Схема раскроя ткани', `Лист ${si + 1} из ${pages.length} · ширина рулона ${rollWidthCm} см · всего ${r1(totalCm / 100)} м.п., ${fRows.length} ряд(ов) · размеры изделий Ш×В, высота на схеме с +10 см на намотку · ряды читать сверху вниз, колонки слева направо`)}
-              <div style="display: flex; gap: ${GAP}mm; align-items: flex-start;">${colsHtml}</div>
+              <table style="border-collapse: collapse; border-spacing: 0;"><tr>${colsHtml}</tr></table>
             </div>`;
         });
       }
