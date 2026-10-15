@@ -305,6 +305,18 @@
     .bars-group span:last-child { font-size: 12px; font-weight: 600; color: #7f8c8d; white-space: nowrap; }
     .tech-table.wrap td.left { white-space: normal; }
 
+    /* полотно и цвет отдельной сетки */
+    .item-opt-btn { display: block; width: 100%; margin-top: 12px; text-align: left; padding: 10px 12px; border: 1px dashed #ced0d4; border-radius: 10px;
+      background: #f7f8fa; font-size: 13px; line-height: 1.35; color: #65676b; cursor: pointer; }
+    .item-opt-btn.own { border-style: solid; border-color: #d35400; background: #fdf0e6; color: #1c1e21; }
+    .item-opt-btn.own b { color: #d35400; }
+    .item-opt-btn .io-sub { color: #90949c; }
+    .io-grid .io-def, .io-colors .io-def { grid-column: 1 / -1; }
+    .type-card .io-sub { font-size: 12px; color: #65676b; }
+    .io-colors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .io-colors .io-def { flex-direction: row; justify-content: center; }
+    .tech-table td.opt { color: #8e44ad; font-weight: 700; }
+
     @media print {
       .lt-table td, .lt-table th { text-align: center; }
     }
@@ -348,6 +360,7 @@
 
     <div class="app-block">
       <div class="block-title">Параметры сетки</div>
+      <div class="visual-hint" style="text-align:left;">Для всего заказа. Если у отдельной сетки другое полотно или цвет — нажмите кнопку «Полотно и цвет» под её размерами.</div>
       <div class="form-group">
         <label>Тип полотна</label>
         <div class="type-options" id="typeOptions"></div>
@@ -384,22 +397,22 @@
       <div class="visual-hint" style="text-align:left; margin-bottom: 15px;">Отметьте цену, которая пойдет в PDF. 🤫 — маржа до общих расходов (аренда, зарплата и т. п.), для Р/С — после налога. <span id="laborNote"></span></div>
       <div class="summary-box">
         <div class="client-price-row">
-          <input type="radio" name="selectedPrice" value="base" class="price-radio" checked onchange="saveState()">
+          <input type="radio" name="selectedPrice" value="base" class="price-radio" checked onchange="calculateTotals()">
           <div class="client-price-main"><span class="client-price-title">Базовая стоимость</span><span class="client-price-value" id="priceBase">0 ₽</span></div>
           <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginBase')" title="Показать маржу">🤫</button><span class="margin-value" id="marginBase">0 ₽</span></div>
         </div>
         <div class="client-price-row">
-          <input type="radio" name="selectedPrice" value="discount7" class="price-radio" onchange="saveState()">
+          <input type="radio" name="selectedPrice" value="discount7" class="price-radio" onchange="calculateTotals()">
           <div class="client-price-main"><span class="client-price-title" id="titleDiscount7">Со скидкой 7%</span><span class="client-price-value" id="price7">0 ₽</span></div>
           <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin7')" title="Показать маржу">🤫</button><span class="margin-value" id="margin7">0 ₽</span></div>
         </div>
         <div class="client-price-row">
-          <input type="radio" name="selectedPrice" value="discount12" class="price-radio" onchange="saveState()">
+          <input type="radio" name="selectedPrice" value="discount12" class="price-radio" onchange="calculateTotals()">
           <div class="client-price-main"><span class="client-price-title" id="titleDiscount12">Со скидкой 12%</span><span class="client-price-value" id="price12">0 ₽</span></div>
           <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin12')" title="Показать маржу">🤫</button><span class="margin-value" id="margin12">0 ₽</span></div>
         </div>
         <div class="client-price-row" style="border-top: 2px dashed #e4e6eb; padding-top: 15px; margin-top: 5px;">
-          <input type="radio" name="selectedPrice" value="b2b" class="price-radio" onchange="saveState()">
+          <input type="radio" name="selectedPrice" value="b2b" class="price-radio" onchange="calculateTotals()">
           <div class="client-price-main"><span class="client-price-title" style="color:#8e44ad; font-weight:bold;">Оплата по Р/С (ИП)</span><span class="client-price-value" id="priceB2B" style="color:#8e44ad;">0 ₽</span></div>
           <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginB2B')" title="Показать маржу">🤫</button><span class="margin-value" id="marginB2B" style="color:#8e44ad; background:#f4ecf7;">0 ₽</span></div>
         </div>
@@ -489,6 +502,9 @@
     let meshType = 'standard', meshColor = 'white';
     const typeName = () => (MESH_TYPES.find(t => t.key === meshType) || MESH_TYPES[0]).name;
     const colorName = () => (MESH_COLORS.find(c => c.key === meshColor) || MESH_COLORS[0]).name;
+    const typeNameOf = k => (MESH_TYPES.find(t => t.key === k) || MESH_TYPES[0]).name;
+    const colorNameOf = k => (MESH_COLORS.find(c => c.key === k) || MESH_COLORS[0]).name;
+    const colorHexOf = k => (MESH_COLORS.find(c => c.key === k) || MESH_COLORS[0]).hex;
 
     function renderChoices() {
       document.getElementById('typeOptions').innerHTML = MESH_TYPES.map(t =>
@@ -646,7 +662,8 @@
       roomsContainer.querySelectorAll('.room-block').forEach(room => {
         const rd = { name: room.querySelector('.room-name-input').value, pk: room.dataset.pk, items: [] };
         room.querySelectorAll('.item-row').forEach(item => rd.items.push({
-          w: item.querySelector('.item-width').value, h: item.querySelector('.item-height').value, qty: item.querySelector('.item-qty').value
+          w: item.querySelector('.item-width').value, h: item.querySelector('.item-height').value, qty: item.querySelector('.item-qty').value,
+          t: item.dataset.type || '', c: item.dataset.color || ''
         }));
         state.rooms.push(rd);
       });
@@ -703,8 +720,10 @@
       const room = document.getElementById(roomId);
       if (!room) return;
       const itemId = `item-${Date.now()}-${++uidCounter}`;
+      const ownT = MESH_TYPES.some(t => t.key === data.t) ? data.t : '';
+      const ownC = MESH_COLORS.some(c => c.key === data.c) ? data.c : '';
       room.querySelector('.room-items-container').insertAdjacentHTML('beforeend', `
-        <div class="item-row" id="${itemId}">
+        <div class="item-row" id="${itemId}"${ownT ? ` data-type="${ownT}"` : ''}${ownC ? ` data-color="${ownC}"` : ''}>
           <div class="item-header">
             <span class="item-title-text">Сетка</span>
             <button type="button" class="btn-remove" onclick="removeItem('${roomId}', '${itemId}')">&times;</button>
@@ -723,7 +742,9 @@
               <input type="number" class="item-qty" min="1" inputmode="numeric" value="${esc(data.qty || '1')}" oninput="calculateTotals()">
             </div>
           </div>
+          <button type="button" class="item-opt-btn" onclick="openItemOpts('${itemId}')"></button>
         </div>`);
+      renderItemOpt(document.getElementById(itemId));
       updateItemNumbers();
     }
 
@@ -744,6 +765,7 @@
       if (room && room.querySelectorAll('.item-row').length === 1) {
         item.querySelectorAll('input.item-width, input.item-height').forEach(i => { i.value = ''; });
         item.querySelector('.item-qty').value = '1';
+        delete item.dataset.type; delete item.dataset.color; renderItemOpt(item);
       } else item.remove();
       updateItemNumbers(); calculateTotals();
     }
@@ -761,6 +783,56 @@
       createItemInRoom(createRoom()); calculateTotals();
     });
 
+    // === Полотно и цвет отдельной сетки: пусто — «как в заказе» ===
+    function renderItemOpt(row) {
+      const btn = row && row.querySelector('.item-opt-btn');
+      if (!btn) return;
+      const ot = row.dataset.type || '', oc = row.dataset.color || '';
+      btn.classList.toggle('own', !!(ot || oc));
+      const v = (own, name) => own ? `<b>${esc(name)}</b>` : `${esc(name)} <span class="io-sub">(как в заказе)</span>`;
+      btn.innerHTML = (ot || oc)
+        ? `🕸 Полотно: ${v(ot, typeNameOf(ot || meshType))} · Профиль: ${v(oc, colorNameOf(oc || meshColor).toLowerCase())}`
+        : `🕸 Полотно и цвет: как в заказе <span class="io-sub">· ${esc(typeName())}, ${esc(colorName().toLowerCase())} — нажмите, чтобы изменить</span>`;
+    }
+    function openItemOpts(itemId) {
+      const row = document.getElementById(itemId);
+      if (!row) return;
+      const title = row.querySelector('.item-title-text').textContent;
+      const ov = document.createElement('div');
+      ov.className = 'settings-overlay open';
+      const draw = () => {
+        const ot = row.dataset.type || '', oc = row.dataset.color || '';
+        ov.innerHTML = `
+        <div class="settings-panel" role="dialog" aria-label="Полотно и цвет сетки">
+          <div class="settings-panel-head">
+            <div class="block-title" style="margin-bottom:0;">${esc(title)}: полотно и цвет</div>
+            <button type="button" class="settings-close" data-x aria-label="Закрыть">&times;</button>
+          </div>
+          <div class="form-group" style="margin-top:14px;"><label>Тип полотна</label>
+            <div class="type-options io-grid">
+              <div class="type-card io-def${!ot ? ' active' : ''}" data-t=""><span class="tc-name">Как в заказе</span><span class="io-sub">${esc(typeName())}</span></div>
+              ${MESH_TYPES.map(t => `<div class="type-card${ot === t.key ? ' active' : ''}" data-t="${t.key}"><span class="tc-icon">${t.icon}</span><span class="tc-name">${t.name}</span></div>`).join('')}
+            </div></div>
+          <div class="form-group"><label>Цвет профиля</label>
+            <div class="io-colors">
+              <div class="color-card io-def${!oc ? ' active' : ''}" data-c=""><span class="cc-dot" style="background:${colorHexOf(meshColor)}"></span><span>Как в заказе · ${esc(colorName().toLowerCase())}</span></div>
+              ${MESH_COLORS.map(c => `<div class="color-card${oc === c.key ? ' active' : ''}" data-c="${c.key}"><span class="cc-dot" style="background:${c.hex}"></span><span>${c.name}</span></div>`).join('')}
+            </div></div>
+          <button type="button" class="btn-action btn-pdf" data-x style="margin:4px 0 0;">Готово</button>
+        </div>`;
+      };
+      draw();
+      ov.addEventListener('click', e => {
+        if (e.target === ov || e.target.closest('[data-x]')) { ov.remove(); return; }
+        const t = e.target.closest('[data-t]'), c = e.target.closest('[data-c]');
+        if (t) { if (t.dataset.t) row.dataset.type = t.dataset.t; else delete row.dataset.type; }
+        else if (c) { if (c.dataset.c) row.dataset.color = c.dataset.c; else delete row.dataset.color; }
+        else return;
+        draw(); calculateTotals();
+      });
+      document.body.appendChild(ov);
+    }
+
     // Разбор заказа: сетки с заполненными размерами, номер = номер сетки в форме
     function readOrder() {
       const items = [];
@@ -772,7 +844,8 @@
         const roomBlock = row.closest('.room-block');
         const room = roomBlock ? roomBlock.querySelector('.room-name-input').value : '-';
         const c = cutParts(w, h);
-        items.push({ n: i + 1, room, w, h, qty, cut: c });
+        const ownT = row.dataset.type || '', ownC = row.dataset.color || '';
+        items.push({ n: i + 1, room, w, h, qty, cut: c, type: ownT || meshType, color: ownC || meshColor, ownType: !!ownT, ownColor: !!ownC });
       });
       return items;
     }
@@ -809,71 +882,83 @@
       }
       const blocked = tooSmall.length > 0;
 
-      // расход
-      const colorK = meshColor === 'white' ? 1 : 1 + S.colorExtra / 100;
+      // расход и себестоимость: у каждой сетки своё полотно и цвет (по умолчанию — как в заказе)
       const mw = 1 + S.metalWaste / 100;
-      const clothPrice = { standard: S.clothStandard, antimoshka: S.clothAntimoshka, antipyl: S.clothAntipyl, antikoshka: S.clothAntikoshka }[meshType] || 0;
-      const t = { qty: 0, frameCm: 0, impCm: 0, clothM: 0, cordCm: 0 };
+      const CLOTH = { standard: S.clothStandard, antimoshka: S.clothAntimoshka, antipyl: S.clothAntipyl, antikoshka: S.clothAntikoshka };
+      const MARKUP = { standard: S.markupStandard, antimoshka: S.markupAntimoshka, antipyl: S.markupAntipyl, antikoshka: S.markupAntikoshka };
+      const t = { qty: 0, frameCm: 0, impCm: 0, clothM: 0, cordCm: 0, byColor: {}, byType: {} };
       let costProfile = 0, costCloth = 0, costParts = 0, costLabor = 0;
       const unitLabor = S.laborMake + (noInstall ? 0 : S.laborInstall);
       items.forEach(it => {
         const c = it.cut;
+        const colorK = it.color === 'white' ? 1 : 1 + S.colorExtra / 100;
         const frameCm = 2 * (c.profW + c.profH), impCm = c.imp;
         const clothM = (it.h / 100) * (1 + S.clothWaste / 100);   // полотно, м.п.: по высоте сетки + запас
         const prof = (frameCm / 100) * mw * S.profile * colorK + (impCm / 100) * mw * S.impost * colorK;
-        const cloth = clothM * clothPrice;
+        const cloth = clothM * (CLOTH[it.type] || 0);
         const parts = (frameCm / 100) * S.cord + S.corner + 2 * S.impConn + S.mountKit + S.handle;
-        it.unitCost = prof + cloth + parts + unitLabor;
+        it.markup = MARKUP[it.type] || 1;   // наценка по типу полотна этой сетки
+        it.unitMat = prof + cloth + parts;
+        it.unitCost = it.unitMat + unitLabor;
         costProfile += prof * it.qty; costCloth += cloth * it.qty; costParts += parts * it.qty; costLabor += unitLabor * it.qty;
         t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM * it.qty; t.cordCm += frameCm * it.qty;
+        const bc = t.byColor[it.color] || (t.byColor[it.color] = { frameCm: 0, impCm: 0 });
+        bc.frameCm += frameCm * it.qty; bc.impCm += impCm * it.qty;
+        t.byType[it.type] = (t.byType[it.type] || 0) + clothM * it.qty;
       });
       const tripFee = items.length ? S.tripFee : 0;
       const totalCost = costProfile + costCloth + costParts + costLabor + tripFee;
-      // Цена клиента: материалы (и выезд) × наценка; работы — без наценки (если так в настройках).
+      // Цена клиента: материалы (и выезд) × наценка типа полотна каждой сетки; работы — без наценки (если так в настройках).
       // Скидка уменьшает только наценённую часть, работы не дисконтируются.
       const laborWithMarkup = S.laborMarkup === 1;
-      // наценка зависит от типа полотна (рыночные цены разные)
-      const markup = { standard: S.markupStandard, antimoshka: S.markupAntimoshka, antipyl: S.markupAntipyl, antikoshka: S.markupAntikoshka }[meshType] || 1;
-      const markupB2B = markup * (1 + S.b2bExtra / 100);
-      const matCost = totalCost - costLabor;
-      const priceOf = (mult, disc) => laborWithMarkup
-        ? totalCost * mult * (1 - disc)
-        : matCost * mult * (1 - disc) + costLabor;
-      const matTotal = matCost > 0 ? matCost : 0;
+      const matNoTrip = costProfile + costCloth + costParts;
       items.forEach(it => {
-        const lab = unitLabor * it.qty;
-        const mat = it.unitCost * it.qty - lab;
-        const matWithTrip = mat + (matTotal - tripFee > 0 ? tripFee * mat / (matTotal - tripFee) : 0);
-        it.lineCost = matWithTrip + lab;
-        // вес строки для разбивки цены клиента по позициям в КП
-        it.lineWeight = laborWithMarkup ? it.lineCost * markup : matWithTrip * markup + lab;
+        it.lab = unitLabor * it.qty;
+        const mat = it.unitMat * it.qty;
+        it.mat = mat + (matNoTrip > 0 ? tripFee * mat / matNoTrip : (t.qty ? tripFee * it.qty / t.qty : 0));   // выезд — пропорционально
+        it.lineCost = it.mat + it.lab;
       });
+      const lineClient = (it, b2b, disc) => {
+        const k = it.markup * (b2b ? 1 + S.b2bExtra / 100 : 1) * (1 - disc);
+        return laborWithMarkup ? it.lineCost * k : it.mat * k + it.lab;
+      };
+      const priceOf = (b2b, disc) => items.reduce((a, it) => a + lineClient(it, b2b, disc), 0);
+      const selNow = (document.querySelector('input[name="selectedPrice"]:checked') || {}).value || 'base';
+      const selDisc = { base: 0, discount7: S.discount7 / 100, discount12: S.discount12 / 100, b2b: 0 }[selNow] || 0;
+      // вес строки для разбивки выбранной цены клиента по позициям в КП
+      items.forEach(it => { it.lineWeight = lineClient(it, selNow === 'b2b', selDisc); });
 
       const roundUp = v => S.roundStep > 0 ? Math.ceil(v / S.roundStep - 1e-9) * S.roundStep : v;
       const minB2B = S.minOrder * (1 + S.b2bExtra / 100);
-      const priceBase = roundUp(Math.max(priceOf(markup, 0), S.minOrder));
-      const price7 = roundUp(Math.max(priceOf(markup, S.discount7 / 100), S.minOrder));
-      const price12 = roundUp(Math.max(priceOf(markup, S.discount12 / 100), S.minOrder));
-      const priceB2B = roundUp(Math.max(priceOf(markupB2B, 0), minB2B));
+      const priceBase = roundUp(Math.max(priceOf(false, 0), S.minOrder));
+      const price7 = roundUp(Math.max(priceOf(false, S.discount7 / 100), S.minOrder));
+      const price12 = roundUp(Math.max(priceOf(false, S.discount12 / 100), S.minOrder));
+      const priceB2B = roundUp(Math.max(priceOf(true, 0), minB2B));
       const taxB2B = priceB2B * S.taxB2B / 100;
       const profitOf = { base: priceBase - totalCost, discount7: price7 - totalCost, discount12: price12 - totalCost, b2b: priceB2B - taxB2B - totalCost };
 
-      // хлысты
-      const framePieces = [], impPieces = [];
-      items.forEach(it => {
-        if (it.cut.profW <= 0 || it.cut.profH <= 0) return;
-        for (let k = 0; k < it.qty; k++) {
-          framePieces.push({ len: it.cut.profW, n: it.n, kind: 'Ш' }, { len: it.cut.profW, n: it.n, kind: 'Ш' },
-                           { len: it.cut.profH, n: it.n, kind: 'В' }, { len: it.cut.profH, n: it.n, kind: 'В' });
-          impPieces.push({ len: it.cut.imp, n: it.n, kind: 'И' });
-        }
-      });
-      const frameBars = packBars(framePieces), impBars = packBars(impPieces);
+      // хлысты — отдельно по каждому цвету профиля
+      const barGroups = MESH_COLORS.map(col => {
+        const framePieces = [], impPieces = [];
+        items.forEach(it => {
+          if (it.color !== col.key || it.cut.profW <= 0 || it.cut.profH <= 0) return;
+          for (let k = 0; k < it.qty; k++) {
+            framePieces.push({ len: it.cut.profW, n: it.n, kind: 'Ш' }, { len: it.cut.profW, n: it.n, kind: 'Ш' },
+                             { len: it.cut.profH, n: it.n, kind: 'В' }, { len: it.cut.profH, n: it.n, kind: 'В' });
+            impPieces.push({ len: it.cut.imp, n: it.n, kind: 'И' });
+          }
+        });
+        return framePieces.length ? { color: col.key, name: col.name, frame: packBars(framePieces), imp: packBars(impPieces) } : null;
+      }).filter(Boolean);
+      const types = MESH_TYPES.map(x => x.key).filter(k => items.some(it => it.type === k));
+      const colors = MESH_COLORS.map(x => x.key).filter(k => items.some(it => it.color === k));
 
       window.calcData = {
         items, totals: t, costProfile, costCloth, costParts, costLabor, tripFee, costTotal: totalCost,
-        priceBase, price7, price12, priceB2B, taxB2B, profitOf, noInstall, blocked, problem, frameBars, impBars
+        priceBase, price7, price12, priceB2B, taxB2B, profitOf, noInstall, blocked, problem, barGroups,
+        types, colors, mixedType: types.length > 1, mixedColor: colors.length > 1
       };
+      roomsContainer.querySelectorAll('.item-row').forEach(renderItemOpt);
 
       const pricesEmpty = ['profile', 'impost', 'clothStandard', 'clothAntimoshka', 'clothAntipyl', 'clothAntikoshka', 'cord', 'corner', 'impConn', 'mountKit', 'handle', 'laborMake']
         .every(k => !(S[k] > 0));
@@ -901,20 +986,36 @@
       saveState();
     }
 
-    // Расход комплектующих на весь заказ
+    // Расход комплектующих на весь заказ (профиль — по цветам, полотно — по типам)
     function componentsList() {
       const d = window.calcData, t = d.totals;
       const m = cm => (cm / 100).toFixed(2);
+      const bars = (key, part) => { const g = d.barGroups.find(x => x.color === key); return g ? g[part].bars.length : 0; };
+      const cols = MESH_COLORS.filter(c => t.byColor[c.key]);
       return [
-        ['Профиль рамочный, ' + colorName().toLowerCase() + ` (хлыстов: ${d.frameBars.bars.length})`, 'м.п.', m(t.frameCm)],
-        ['Импост, ' + colorName().toLowerCase() + ` (хлыстов: ${d.impBars.bars.length})`, 'м.п.', m(t.impCm)],
-        ['Полотно «' + typeName() + '» (с запасом ' + fmtNum(SETTINGS.clothWaste) + '%)', 'м.п.', t.clothM.toFixed(2)],
+        ...cols.map(c => [`Профиль рамочный, ${c.name.toLowerCase()} (хлыстов: ${bars(c.key, 'frame')})`, 'м.п.', m(t.byColor[c.key].frameCm)]),
+        ...cols.map(c => [`Импост, ${c.name.toLowerCase()} (хлыстов: ${bars(c.key, 'imp')})`, 'м.п.', m(t.byColor[c.key].impCm)]),
+        ...MESH_TYPES.filter(x => t.byType[x.key]).map(x => [`Полотно «${x.name}» (с запасом ${fmtNum(SETTINGS.clothWaste)}%)`, 'м.п.', t.byType[x.key].toFixed(2)]),
         ['Шнур закаточный', 'м.п.', m(t.cordCm)],
         ['Уголок соединительный', 'шт', t.qty * 4],
         ['Соединитель импоста', 'шт', t.qty * 2],
         ['Крепления', 'компл', t.qty],
         ['Ручка', 'шт', t.qty * 2]
       ];
+    }
+    // Полотно / цвет позиции — для таблиц, когда в заказе они разные
+    function optText(it) {
+      const d = window.calcData;
+      return [d.mixedType ? typeNameOf(it.type) : '', d.mixedColor ? colorNameOf(it.color).toLowerCase() : ''].filter(Boolean).join(', ');
+    }
+    function optHead() {
+      const d = window.calcData;
+      return d.mixedType && d.mixedColor ? 'Полотно, профиль' : d.mixedType ? 'Полотно' : 'Цвет профиля';
+    }
+    // «Стандарт — 3 шт · Антимошка — 1 шт»
+    function countBy(key, nameOf) {
+      const m = {}; window.calcData.items.forEach(it => { m[it[key]] = (m[it[key]] || 0) + it.qty; });
+      return Object.keys(m).map(k => `${nameOf(k)} — ${m[k]} шт`).join(' · ');
     }
 
     // === Визуализация хлыста: профиль цвета заказа, рама — с пазом, импост — без ===
@@ -927,8 +1028,8 @@
     const kindTxt = k => k === 'И' ? 'Имп' : k;
 
     // Один хлыст в SVG. vbW — ширина в условных единицах (на экране 1000, в печати 1600)
-    function barSvg(bar, L, grooved, vbW, H = 96, printWmm = 0) {
-      const c = PROFILE_LOOK[meshColor] || PROFILE_LOOK.white;
+    function barSvg(bar, L, grooved, vbW, H = 96, printWmm = 0, color = meshColor) {
+      const c = PROFILE_LOOK[color] || PROFILE_LOOK.white;
       const kerf = SETTINGS.sawKerf || 0;
       const top = 12, bot = H - 12;
       const k = vbW / L;
@@ -986,13 +1087,13 @@
     // Список резов хлыста по порядку
     const barCutsText = bar => bar.pieces.map((pc, i) => `<b>${i + 1})</b> №${pc.n} ${kindTxt(pc.kind)} ${cmTxt(pc.len)}`).join(' &nbsp;·&nbsp; ');
 
-    function barsHtml(pk, label, grooved) {
+    function barsHtml(pk, label, grooved, color) {
       if (!pk.bars.length) return '';
       return `<div class="bars-group"><span>${label}</span><span>хлыстов: ${pk.bars.length} по ${fmtNum(pk.L)} см</span></div>` +
         pk.bars.map((b, i) => `
           <div class="bar-row">
             <div class="bar-row-head"><span>Хлыст ${i + 1}</span><span>остаток ${cmTxt(Math.max(0, b.left))} см</span></div>
-            ${barSvg(b, pk.L, grooved, 1000, 150)}
+            ${barSvg(b, pk.L, grooved, 1000, 150, 0, color)}
             <div class="bar-cuts">${barCutsText(b)}</div>
           </div>`).join('') +
         (pk.tooLong.length ? `<div class="tech-error">Длиннее хлыста: ${pk.tooLong.map(p => `сетка ${p.n} (${p.len} см)`).join(', ')}</div>` : '');
@@ -1006,26 +1107,27 @@
         <div class="summary-box">
           <div class="summary-row"><span>Номер заказа:</span><span class="summary-value">${orderNo}</span></div>
           <div class="summary-row"><span>Клиент:</span><span class="summary-value">${client}</span></div>
-          <div class="summary-row"><span>Полотно:</span><span class="summary-value">${typeName()}</span></div>
-          <div class="summary-row"><span>Цвет профиля:</span><span class="summary-value">${colorName()}</span></div>
+          <div class="summary-row"><span>Полотно:</span><span class="summary-value" style="text-align:right;">${d.mixedType ? countBy('type', typeNameOf) : (d.types[0] ? typeNameOf(d.types[0]) : typeName())}</span></div>
+          <div class="summary-row"><span>Цвет профиля:</span><span class="summary-value" style="text-align:right;">${d.mixedColor ? countBy('color', colorNameOf) : (d.colors[0] ? colorNameOf(d.colors[0]) : colorName())}</span></div>
           <div class="summary-row"><span>Сеток всего:</span><span class="summary-value">${d.totals.qty} шт</span></div>
         </div>` + (errText ? `<div class="tech-error">${esc(errText)}</div>` : '');
 
       const empty = '<div class="tech-empty">Добавьте размеры на вкладке «Заказ-наряд».</div>';
       if (!d.items.length) { ['techCut', 'techBars', 'techComponents'].forEach(id => { document.getElementById(id).innerHTML = empty; }); return; }
 
+      const mixed = d.mixedType || d.mixedColor;
       document.getElementById('techCut').innerHTML = `
         <div class="table-scroll"><table class="tech-table">
-          <thead><tr><th>№</th><th class="left">Комната</th><th>Кол-во</th><th>Размер<small>Ш × В</small></th>
+          <thead><tr><th>№</th><th class="left">Комната</th><th>Кол-во</th><th>Размер<small>Ш × В</small></th>${mixed ? `<th>${optHead()}</th>` : ''}
             <th>Ш рез<small>(Ш − 6), 2 шт</small></th><th>В рез<small>(В − 6), 2 шт</small></th>
             <th>Импост<small>(Ш − 4,7), 1 шт</small></th><th>Креп. имп.<small>(В / 2)</small></th><th>Креп. руч.<small>(креп. имп. + 10)</small></th></tr></thead>
           <tbody>${d.items.map(it => `<tr><td>${it.n}</td><td class="left">${esc(it.room)}</td><td>${it.qty} шт</td>
-            <td>${fmtNum(it.w)}×${fmtNum(it.h)}</td><td class="key">${it.cut.profW} см</td><td class="key">${it.cut.profH} см</td>
+            <td>${fmtNum(it.w)}×${fmtNum(it.h)}</td>${mixed ? `<td class="opt">${esc(optText(it))}</td>` : ''}<td class="key">${it.cut.profW} см</td><td class="key">${it.cut.profH} см</td>
             <td class="key">${it.cut.imp} см</td><td class="ctrl">${it.cut.impMount} см</td><td class="ctrl">${it.cut.handleMount} см</td></tr>`).join('')}</tbody></table></div>`;
 
       document.getElementById('techBars').innerHTML =
-        `<div class="bars-legend">Цвет хлыста — цвет профиля в заказе (${colorName().toLowerCase()}). Рама — с пазом под шнур, импост — без паза. На отрезке: номер сетки · Ш / В / Имп · длина в см. Красная линия — рез, пропил ${cmTxt(SETTINGS.sawKerf)} см.</div>` +
-        barsHtml(d.frameBars, 'Профиль рамочный (с пазом)', true) + barsHtml(d.impBars, 'Импост (без паза)', false);
+        `<div class="bars-legend">Цвет хлыста — цвет профиля${d.mixedColor ? ', каждый цвет раскраивается отдельно' : ` (${colorName().toLowerCase()})`}. Рама — с пазом под шнур, импост — без паза. На отрезке: номер сетки · Ш / В / Имп · длина в см. Красная линия — рез, пропил ${cmTxt(SETTINGS.sawKerf)} см.</div>` +
+        d.barGroups.map(g => barsHtml(g.frame, `Профиль рамочный, ${g.name.toLowerCase()} (с пазом)`, true, g.color) + barsHtml(g.imp, `Импост, ${g.name.toLowerCase()} (без паза)`, false, g.color)).join('');
 
       document.getElementById('techComponents').innerHTML = `
         <div class="table-scroll"><table class="tech-table wrap">
@@ -1321,7 +1423,7 @@
         items.forEach(it => {
           for (let c = 1; c <= it.qty; c++) {
             drawLabel(ctx, { order: orderNoRaw ? '№ ' + orderNoRaw : 'без номера', n: it.n, size: `${num(it.w)}×${num(it.h)}`,
-              type: typeName(), color: colorName(), room: it.room || '', qty: it.qty, copy: c }, W, H);
+              type: typeNameOf(it.type), color: colorNameOf(it.color), room: it.room || '', qty: it.qty, copy: c }, W, H);
             pages.push(canvasToBits(cv));
           }
         });
@@ -1349,7 +1451,11 @@
       const cName = esc(document.getElementById('clientName').value || 'Не указано');
       const cPhone = esc(document.getElementById('clientPhone').value || 'Не указан');
       const cAddress = esc(document.getElementById('clientAddress').value || 'Не указан');
-      const tName = esc(typeName()), cColor = esc(colorName());
+      const tName = d.mixedType ? 'разные — см. спецификацию' : esc(typeNameOf(d.types[0])), cColor = d.mixedColor ? 'разные — см. спецификацию' : esc(colorNameOf(d.colors[0]));
+      const tShort = d.mixedType ? 'разные' : tName, cShort = d.mixedColor ? 'разные' : cColor;
+      const mixed = d.mixedType || d.mixedColor;
+      const optTd = it => mixed ? td(esc(optText(it)), 'white-space:nowrap;') : '';
+      const optTh = () => mixed ? th(optHead()) : '';
 
       const sel = document.querySelector('input[name="selectedPrice"]:checked').value;
       const finalClientPrice = { base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel];
@@ -1371,10 +1477,10 @@
 
       const td = (v, extra = '') => `<td style="padding: 8px; border: 1px solid #bdc3c7; text-align: center; ${extra}">${v}</td>`;
       const th = (v, extra = '') => `<th style="padding: 8px; border: 1px solid #bdc3c7; ${extra}">${v}</th>`;
-      const cpRows = d.items.map((it, i) => `<tr>${td(it.n)}${td(esc(it.room), 'text-align:left; font-weight:bold;')}${td(fmtNum(it.w) + ' см')}${td(fmtNum(it.h) + ' см')}${td(it.qty + ' шт')}${td(fmtRub(lineSums[i] || 0) + ' ₽', 'text-align:right; font-weight:bold; white-space:nowrap;')}</tr>`).join('');
-      const specRows = d.items.map(it => `<tr>${td(it.n)}${td(esc(it.room), 'text-align:left; font-weight:bold;')}${td(fmtNum(it.w) + ' см')}${td(fmtNum(it.h) + ' см')}${td(it.qty + ' шт')}</tr>`).join('');
+      const cpRows = d.items.map((it, i) => `<tr>${td(it.n)}${td(esc(it.room), 'text-align:left; font-weight:bold;')}${td(fmtNum(it.w) + ' см')}${td(fmtNum(it.h) + ' см')}${optTd(it)}${td(it.qty + ' шт')}${td(fmtRub(lineSums[i] || 0) + ' ₽', 'text-align:right; font-weight:bold; white-space:nowrap;')}</tr>`).join('');
+      const specRows = d.items.map(it => `<tr>${td(it.n)}${td(esc(it.room), 'text-align:left; font-weight:bold;')}${td(fmtNum(it.w) + ' см')}${td(fmtNum(it.h) + ' см')}${optTd(it)}${td(it.qty + ' шт')}</tr>`).join('');
       const compRows = componentsList().map(r => `<tr>${td(esc(r[0]), 'text-align:left;')}${td(r[1])}${td('<strong>' + r[2] + '</strong>')}</tr>`).join('');
-      const cutRows = d.items.map(it => `<tr><td>${it.n}</td><td style="text-align:left;">${esc(it.room)}</td><td>${it.qty}</td><td>${fmtNum(it.w)}×${fmtNum(it.h)}</td>
+      const cutRows = d.items.map(it => `<tr><td>${it.n}</td><td style="text-align:left;">${esc(it.room)}</td><td>${it.qty}</td><td>${fmtNum(it.w)}×${fmtNum(it.h)}</td>${mixed ? `<td style="font-weight:bold; color:#8e44ad; white-space:nowrap;">${esc(optText(it))}</td>` : ''}
         <td style="font-weight:bold; color:#16a085;">${it.cut.profW}</td><td style="font-weight:bold; color:#16a085;">${it.cut.profH}</td>
         <td style="font-weight:bold; color:#16a085;">${it.cut.imp}</td><td style="font-weight:bold; color:#d35400;">${it.cut.impMount}</td><td style="font-weight:bold; color:#d35400;">${it.cut.handleMount}</td><td></td></tr>`).join('');
 
@@ -1386,18 +1492,18 @@
           </div>
           <div style="text-align: right; font-size: 12px; color: #2c3e50; line-height: 1.5; white-space: nowrap; flex: none;">
             Заказ №: <strong>${orderNo}</strong> &nbsp;·&nbsp; Клиент: <strong>${cName}</strong><br>
-            Полотно: <strong>${tName}</strong> &nbsp;·&nbsp; Профиль: <strong>${cColor}</strong>
+            Полотно: <strong>${tShort}</strong> &nbsp;·&nbsp; Профиль: <strong>${cShort}</strong>
           </div>
         </div>`;
 
       // Раскладка по хлыстам для печати (ширина колонки 277 мм)
-      const barsPrint = (pk, label, grooved) => {
+      const barsPrint = (pk, label, grooved, color) => {
         if (!pk.bars.length) return '';
-        return `<div style="font-size: 12px; font-weight: bold; margin: 8px 0 4px;">${label}: хлыст ${fmtNum(pk.L)} см, хлыстов ${pk.bars.length} · цвет профиля: ${cColor.toLowerCase()}</div>` +
-          pk.bars.map((b, i) => `
-            <div style="margin-bottom: 2.5mm; break-inside: avoid; page-break-inside: avoid;">
+        const head = `<div style="font-size: 12px; font-weight: bold; margin: 8px 0 4px;">${label}: хлыст ${fmtNum(pk.L)} см, хлыстов ${pk.bars.length} · цвет профиля: ${esc(colorNameOf(color).toLowerCase())}</div>`;
+        return pk.bars.map((b, i) => `
+            <div style="margin-bottom: 2.5mm; break-inside: avoid; page-break-inside: avoid;">${i === 0 ? head : ''}
               <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold;"><span>Хлыст ${i + 1}</span><span style="color:#7f8c8d;">остаток ${cmTxt(Math.max(0, b.left))} см</span></div>
-              ${barSvg(b, pk.L, grooved, 1600, 110, 276)}
+              ${barSvg(b, pk.L, grooved, 1600, 110, 276, color)}
               <div style="font-size: 10px; color: #2c3e50;">${barCutsText(b)}</div>
             </div>`).join('');
       };
@@ -1455,7 +1561,7 @@
               <h3 style="font-size: 16px; margin-bottom: 10px; color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px;">Спецификация заказа</h3>
             </div>
             <table class="print-table" style="margin-bottom: 20px;">
-              <thead><tr style="background-color: #ecf0f1;">${th('№')}${th('Помещение', 'text-align:left;')}${th('Ширина')}${th('Высота')}${th('Кол-во')}${th('Сумма')}</tr></thead>
+              <thead><tr style="background-color: #ecf0f1;">${th('№')}${th('Помещение', 'text-align:left;')}${th('Ширина')}${th('Высота')}${optTh()}${th('Кол-во')}${th('Сумма')}</tr></thead>
               <tbody>${cpRows}</tbody>
             </table>
             <div class="avoid-break">
@@ -1496,7 +1602,7 @@
               <h3 style="font-size: 14px; margin-bottom: 8px; color: #2c3e50; text-transform: uppercase;">Спецификация размеров</h3>
             </div>
             <table class="print-table" style="margin-bottom: 15px;">
-              <thead><tr style="background-color: #ecf0f1;">${th('№')}${th('Комната', 'text-align:left;')}${th('Ширина')}${th('Высота')}${th('Кол-во')}</tr></thead>
+              <thead><tr style="background-color: #ecf0f1;">${th('№')}${th('Комната', 'text-align:left;')}${th('Ширина')}${th('Высота')}${optTh()}${th('Кол-во')}</tr></thead>
               <tbody>${specRows}</tbody>
             </table>
             <h3 class="avoid-break" style="font-size: 14px; margin: 15px 0 8px; color: #2c3e50; text-transform: uppercase;">Расход комплектующих (на весь заказ)</h3>
@@ -1532,7 +1638,7 @@
             ${sheetHeader('Раскрой профиля', 'Москитные сетки · размеры в см')}
             <table class="lt-table">
               <thead><tr style="background-color: #ecf0f1;">
-                <th>№</th><th style="text-align: left;">Комната</th><th>Кол-во, шт</th><th>Размер Ш × В</th>
+                <th>№</th><th style="text-align: left;">Комната</th><th>Кол-во, шт</th><th>Размер Ш × В</th>${mixed ? `<th>${optHead()}</th>` : ''}
                 <th>Ш рез<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(Ш − 6), 2 шт</span></th>
                 <th>В рез<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(В − 6), 2 шт</span></th>
                 <th>Импост<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(Ш − 4,7), 1 шт</span></th>
@@ -1543,8 +1649,7 @@
               <tbody>${cutRows}</tbody>
             </table>
             <div style="margin-top: 12px;">
-              ${barsPrint(d.frameBars, 'Профиль рамочный (с пазом)', true)}
-              ${barsPrint(d.impBars, 'Импост (без паза)', false)}
+              ${d.barGroups.map(g => barsPrint(g.frame, `Профиль рамочный, ${g.name.toLowerCase()} (с пазом)`, true, g.color) + barsPrint(g.imp, `Импост, ${g.name.toLowerCase()} (без паза)`, false, g.color)).join('')}
             </div>
           </div>
 
@@ -1566,11 +1671,20 @@
     loadState();
 
     const AMO_CALC_ID = 'mesh', AMO_CALC_NAME = 'Москитные сетки', AMO_PIPELINE = 'Москитные сетки';
-    function amoDetails() { return [`Полотно: ${typeName()} · профиль: ${colorName().toLowerCase()}`]; }
-    function amoItemText(it) { return `${fmtNum(it.w)}×${fmtNum(it.h)} см, ${it.qty} шт`; }
-    function amoItemField(it) { return `${String(fmtNum(it.w)).replace('.', ',')}×${String(fmtNum(it.h)).replace('.', ',')}${it.qty > 1 ? ', ' + it.qty + ' шт' : ''}`; }
-    function amoFields() { return { 'Материал': typeName(), 'Цвет': colorName() }; }
-    function amoTags() { return [typeName(), colorName(), `${window.calcData.totals.qty} шт`]; }
+    const amoMixed = () => window.calcData.mixedType || window.calcData.mixedColor;
+    function amoDetails() {
+      const d = window.calcData;
+      const tt = d.mixedType ? countBy('type', typeNameOf) : typeNameOf(d.types[0] || meshType);
+      const cc = d.mixedColor ? countBy('color', colorNameOf) : colorNameOf(d.colors[0] || meshColor);
+      return [`Полотно: ${tt}`, `Цвет профиля: ${cc}`];
+    }
+    function amoItemText(it) { return `${fmtNum(it.w)}×${fmtNum(it.h)} см, ${it.qty} шт${amoMixed() ? ', ' + optText(it) : ''}`; }
+    function amoItemField(it) { return `${String(fmtNum(it.w)).replace('.', ',')}×${String(fmtNum(it.h)).replace('.', ',')}${it.qty > 1 ? ', ' + it.qty + ' шт' : ''}${amoMixed() ? ' · ' + optText(it) : ''}`; }
+    function amoFields() {
+      const d = window.calcData;
+      return { 'Материал': (d.types.length ? d.types : [meshType]).map(typeNameOf).join(' / '), 'Цвет': d.colors.length > 1 ? '' : colorNameOf(d.colors[0] || meshColor) };
+    }
+    function amoTags() { const d = window.calcData; return [...d.types.map(typeNameOf), ...d.colors.map(colorNameOf), `${d.totals.qty} шт`]; }
 
     // === amoCRM: «Добавить в amoCRM» ===
     // Заказ уходит через посредника (Cloudflare Worker), который хранит токен amoCRM.
