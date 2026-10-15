@@ -161,6 +161,8 @@
     .btn-add:hover { background-color: #d35400; color: #ffffff; }
     .btn-pdf { background-color: #2c3e50; border: 1px solid #2c3e50; color: white; margin-bottom: 40px; }
     .btn-pdf:hover { background-color: #1a252f; }
+    .pdf-btns { display: flex; gap: 10px; margin-bottom: 10px; }
+    .pdf-btns .btn-action { flex: 1; margin: 0; padding: 14px 8px; }
     .btn-labels { background: #ffffff; border: 1px solid #2c3e50; color: #2c3e50; margin-bottom: 10px; }
     .btn-labels:hover { background: #f0f2f5; }
     .btn-labels-tech { margin: 0 0 8px; }
@@ -419,7 +421,11 @@
       </div>
     </div>
 
-    <button id="savePdfBtn" class="btn-action btn-pdf" style="margin-bottom: 10px;">📄 Создать заказ-наряд (PDF)</button>
+    <button id="savePdfBtn" type="button" style="display:none;"></button>
+    <div class="pdf-btns">
+      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="kp">📄 КП для клиента</button>
+      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="order">🛠 Заказ-наряд</button>
+    </div><!-- /pdf-btns -->
     <button type="button" id="amoBtn" class="btn-action btn-amo">📤 Добавить в amoCRM</button>
     <div class="amo-status" id="amoStatus"></div>
     <div class="amo-settings-row"><a href="#" id="amoSettingsLink">⚙ Подключение amoCRM</a></div>
@@ -928,7 +934,7 @@
       // вес строки для разбивки выбранной цены клиента по позициям в КП
       items.forEach(it => { it.lineWeight = lineClient(it, selNow === 'b2b', selDisc); });
 
-      const roundUp = v => S.roundStep > 0 ? Math.ceil(v / S.roundStep - 1e-9) * S.roundStep : v;
+      const roundUp = v => S.roundStep > 0 ? (Math.ceil(v / S.roundStep - 1e-9) * S.roundStep || 0) : v;
       const minB2B = S.minOrder * (1 + S.b2bExtra / 100);
       const priceBase = roundUp(Math.max(priceOf(false, 0), S.minOrder));
       const price7 = roundUp(Math.max(priceOf(false, S.discount7 / 100), S.minOrder));
@@ -968,6 +974,7 @@
       err.textContent = msg; err.style.display = msg ? 'block' : 'none';
       const pdfBtn = document.getElementById('savePdfBtn');
       pdfBtn.disabled = !!problem; pdfBtn.title = problem;
+      document.querySelectorAll('.pdf-btn').forEach(b => { b.disabled = !!problem; b.title = problem; });
       document.querySelectorAll('.labels-btn').forEach(b => { b.disabled = !items.length || blocked; });
 
       const rub = v => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
@@ -1536,7 +1543,7 @@
       const printHtml = `
         <div style="font-family: Arial, sans-serif; color: #2c3e50; line-height: 1.4;">
 
-          <div class="print-section">
+          <div class="print-section kp-part">
             <div class="avoid-break">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px;">
                 <div style="width: 140px;"><img src="logo_sp-removebg-preview.png" style="max-width: 100%; max-height: 110px; object-fit: contain;" alt=""></div>
@@ -1657,8 +1664,14 @@
 
       const printArea = document.getElementById('printArea');
       printArea.innerHTML = printHtml;
+      // КП для клиента и заказ-наряд для себя — отдельными PDF
+      const pdfMode = window.__pdfMode || 'all';
+      const pdfRoot = printArea.firstElementChild;
+      if (pdfMode === 'kp') [...pdfRoot.children].forEach(el => { if (!el.classList.contains('kp-part')) el.remove(); });
+      if (pdfMode === 'order') pdfRoot.querySelectorAll('.kp-part').forEach(el => el.remove());
+      const pdfNo = orderNoRaw ? ' № ' + orderNoRaw.replace(/[\\/:*?"<>|]/g, '-') : '';
       const oldTitle = document.title;
-      if (orderNoRaw) document.title = 'Сетки заказ ' + orderNoRaw.replace(/[\\/:*?"<>|]/g, '-');
+      document.title = pdfMode === 'kp' ? `КП SunProtection${pdfNo} — москитные сетки` : `Заказ-наряд${pdfNo} — москитные сетки`;
       const imgs = [...printArea.querySelectorAll('img')].map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve());
       if (window.__onPrintReady) {   // сборка PDF-файла для amoCRM — без окна печати
         const cb = window.__onPrintReady; window.__onPrintReady = null; document.title = oldTitle;
@@ -1669,6 +1682,11 @@
 
 
     loadState();
+    // Кнопки «КП для клиента» / «Заказ-наряд»: одна сборка, разный состав
+    document.querySelectorAll('.pdf-btn').forEach(b => b.addEventListener('click', () => {
+      window.__pdfMode = b.dataset.mode;
+      try { document.getElementById('savePdfBtn').click(); } finally { window.__pdfMode = null; }
+    }));
 
     const AMO_CALC_ID = 'mesh', AMO_CALC_NAME = 'Москитные сетки', AMO_PIPELINE = 'Москитные сетки';
     const amoMixed = () => window.calcData.mixedType || window.calcData.mixedColor;
@@ -1845,7 +1863,7 @@
     }
     const dataUrlToBytes = du => { const b = atob(du.split(',')[1]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
 
-    async function printAreaToPdfBlob() {
+    async function printAreaToPdfBlob(filter) {
       const root = document.getElementById('printArea').firstElementChild;
       const host = document.createElement('div');
       host.className = 'pdf-capture';
@@ -1855,7 +1873,7 @@
       let useLib = false;
       const SCALE = 2;
       try {
-        for (const sec of [...root.children]) {
+        for (const sec of [...root.children].filter(x => !filter || filter(x))) {
           if (!sec.innerHTML.trim()) continue;
           const land = sec.classList.contains('print-landscape');
           const W = land ? 277 : 190, H = land ? 190 : 277;
@@ -1974,9 +1992,11 @@
       const btnText = amoBtn.textContent;
       amoBtn.disabled = true;
       try {
-        amoSetStatus('⏳ Готовлю PDF заказ-наряда…');
+        amoSetStatus('⏳ Готовлю PDF: заказ-наряд и КП…');
         await buildPrintAreaSilently();
-        const pdfBlob = await printAreaToPdfBlob();
+        const isKp = x => x.classList.contains('kp-part');
+        const pdfBlob = await printAreaToPdfBlob(x => !isKp(x));
+        const kpBlob = await printAreaToPdfBlob(isKp);
 
         amoSetStatus('⏳ Отправляю заказ в amoCRM…');
         const lead = await amoCall(cfg, '/lead', {
@@ -1996,11 +2016,15 @@
         try { localStorage.setItem(leadKey, String(lead.lead_id)); } catch (e) {}
 
         amoSetStatus('⏳ Прикрепляю PDF к сделке…');
-        const fileName = `Заказ ${orderNo || 'без номера'} — ${AMO_CALC_NAME}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
+        const no = orderNo ? '№ ' + orderNo : 'без номера';
+        const files = [[`Заказ-наряд ${no} — ${AMO_CALC_NAME}.pdf`, pdfBlob], [`КП SunProtection ${no} — ${AMO_CALC_NAME}.pdf`, kpBlob]];
         let fileOk = true, fileErr = '';
-        try {
-          await amoCall(cfg, `/file?lead_id=${lead.lead_id}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(fileName) }, body: pdfBlob });
-        } catch (e) { fileOk = false; fileErr = e.message; }
+        for (const [name, blob] of files) {
+          const fileName = name.replace(/[\\/:*?"<>|]/g, '-');
+          try {
+            await amoCall(cfg, `/file?lead_id=${lead.lead_id}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(fileName) }, body: blob });
+          } catch (e) { fileOk = false; fileErr = e.message; }
+        }
 
         const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
         const head = lead.created ? `Сделка создана в «${esc(AMO_PIPELINE)}» → «Изготовление»` : 'Сделка обновлена';
@@ -2008,7 +2032,7 @@
         if (lead.contact_existing) extra.push('клиент уже был в amo — сделка привязана к нему');
         if (lead.missing_fields && lead.missing_fields.length) extra.push('не заполнены поля: ' + lead.missing_fields.map(esc).join(', '));
         const tail = extra.length ? `<br><small>${extra.join('; ')}</small>` : '';
-        if (fileOk) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, PDF прикреплён — ${link}${tail}`, extra.some(x => x.startsWith('не заполнены')) ? 'warn' : 'ok');
+        if (fileOk) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, заказ-наряд и КП прикреплены — ${link}${tail}`, extra.some(x => x.startsWith('не заполнены')) ? 'warn' : 'ok');
         else amoSetStatus(`⚠ ${head}, но PDF не прикрепился: ${esc(fileErr)} — ${link}${tail}`, 'warn');
       } catch (e) {
         amoSetStatus(`✕ Не отправлено: ${esc(e.message)}`, 'err');
