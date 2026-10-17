@@ -5,7 +5,7 @@
     function spPay() {
       const d = window.calcData || {};
       const sel = document.querySelector('input[name="selectedPrice"]:checked');
-      const price = sel ? ({ base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel.value] || 0) : 0;
+      const price = sel && !d.problem ? ({ base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel.value] || 0) : 0;
       const prepay = Math.max(0, parseFloat(String(document.getElementById('prepay').value).replace(',', '.')) || 0);
       return { price, prepay, rest: price - prepay, note: document.getElementById('orderNote').value.trim() };
     }

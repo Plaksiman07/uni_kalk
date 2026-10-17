@@ -2026,26 +2026,27 @@
 
       const rub = v => `${Math.round(v).toLocaleString('ru-RU')} ₽`;
       const dash = '—';
+      const noShow = blocked || !!problem;   // при любой ошибке не показываем неполные суммы
       document.getElementById('totalFabricLength').textContent = blocked ? dash : `${totalFabricLengthM.toFixed(2)} м.п.`;
-      document.getElementById('costFabricOnly').textContent = blocked ? dash : rub(sumFabricCost);
+      document.getElementById('costFabricOnly').textContent = noShow ? dash : rub(sumFabricCost);
       document.getElementById('fabricBreakdown').innerHTML = (multiFabric && !blocked)
         ? groups.map(g => `• ${esc(specText(g.spec))}: ${g.lengthM.toFixed(2)} м.п. · ${rub(g.cost)}`).join('<br>') : '';
-      document.getElementById('costItemsOnly').textContent = blocked ? dash : rub(totalItemsCost);
-      document.getElementById('costTotal').textContent = blocked ? dash : rub(totalCost);
+      document.getElementById('costItemsOnly').textContent = noShow ? dash : rub(totalItemsCost);
+      document.getElementById('costTotal').textContent = noShow ? dash : rub(totalCost);
 
-      document.getElementById('priceBase').textContent = blocked ? dash : rub(priceBase);
-      document.getElementById('price7').textContent = blocked ? dash : rub(price7);
-      document.getElementById('price12').textContent = blocked ? dash : rub(price12);
-      document.getElementById('priceB2B').textContent = blocked ? dash : rub(priceB2B);
+      document.getElementById('priceBase').textContent = noShow ? dash : rub(priceBase);
+      document.getElementById('price7').textContent = noShow ? dash : rub(price7);
+      document.getElementById('price12').textContent = noShow ? dash : rub(price12);
+      document.getElementById('priceB2B').textContent = noShow ? dash : rub(priceB2B);
 
       const marginText = (profit, price) => {
         const pct = price > 0 ? Math.round(profit / price * 100) : 0;
         return `${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))} · ${pct}%`;
       };
-      document.getElementById('marginBase').textContent = blocked ? dash : marginText(profitOf.base, priceBase);
-      document.getElementById('margin7').textContent = blocked ? dash : marginText(profitOf.discount7, price7);
-      document.getElementById('margin12').textContent = blocked ? dash : marginText(profitOf.discount12, price12);
-      document.getElementById('marginB2B').textContent = blocked ? dash : marginText(profitOf.b2b, priceB2B);
+      document.getElementById('marginBase').textContent = noShow ? dash : marginText(profitOf.base, priceBase);
+      document.getElementById('margin7').textContent = noShow ? dash : marginText(profitOf.discount7, price7);
+      document.getElementById('margin12').textContent = noShow ? dash : marginText(profitOf.discount12, price12);
+      document.getElementById('marginB2B').textContent = noShow ? dash : marginText(profitOf.b2b, priceB2B);
 
       // === СХЕМА РАСКРОЯ (по каждой ткани) ===
       visualContainer.innerHTML = '';

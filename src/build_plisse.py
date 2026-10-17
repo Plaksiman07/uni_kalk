@@ -158,6 +158,16 @@ rep("""        problem = 'Есть сетки со слишком маленьк
         msg = 'Слишком маленький размер: ' + tooSmall.map(it => `сетка ${it.n} (${fmtNum(it.w)}×${fmtNum(it.h)})`).join(', ') + '. Ширина и высота должны быть больше 6 см.';""",
 """        problem = 'Есть изделия со слишком маленьким размером.';
         msg = 'Слишком маленький размер: ' + tooSmall.map(it => `изделие ${it.n} (${fmtNum(it.w)}×${fmtNum(it.h)})`).join(', ') + '.';""")
+rep('      const blocked = tooSmall.length > 0;\n', '''      // пределы: высота сетки — не больше высоты рулона, профиль — не длиннее хлыста
+      const L0 = S.barLen > 0 ? S.barLen : 600, rollH = (S.clothRollH > 0 ? S.clothRollH : 3) * 100;
+      const tooBig = items.filter(it => it.cut.meshH > rollH || Math.max(it.cut.profW, it.cut.profH) > L0);
+      if (!problem && tooBig.length) {
+        problem = 'Есть изделия больше допустимого размера.';
+        msg = 'Слишком большой размер: ' + tooBig.map(it => `изделие ${it.n} (${fmtNum(it.w)}×${fmtNum(it.h)}): ` +
+          (it.cut.meshH > rollH ? `высота сетки ${fmtNum(it.cut.meshH)} см больше высоты рулона ${fmtNum(rollH)} см` : `профиль ${fmtNum(Math.max(it.cut.profW, it.cut.profH))} см длиннее хлыста ${fmtNum(L0)} см`)).join('; ') + '.';
+      }
+      const blocked = tooSmall.length > 0 || tooBig.length > 0;
+''')
 region('      // расход и себестоимость: у каждой сетки', '      const tripFee = items.length ? S.tripFee : 0;', '''      // расход и себестоимость: у каждого изделия свой цвет профиля (по умолчанию — как в заказе)
       const mw = 1 + S.metalWaste / 100;
       const PROF = {

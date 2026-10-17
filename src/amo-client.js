@@ -227,7 +227,12 @@
       const { price, label, profit } = amoSelectedPrice();
       const weights = d.items.map(it => it.lineWeight != null ? it.lineWeight : it.lineCost);
       const wSum = weights.reduce((a, b) => a + b, 0);
-      const lines = d.items.map((it, i) => `${it.n}. ${it.room || '—'}: ${amoItemText(it)} — ${rubTxt(wSum > 0 ? price * weights[i] / wSum : 0)}`);
+      const sums = weights.map(w => wSum > 0 ? Math.round(price * w / wSum) : 0);
+      if (sums.length) {   // как в КП: остаток округления — в самую дорогую строку, сумма строк = итог
+        let mi = 0; sums.forEach((v, k) => { if (v > sums[mi]) mi = k; });
+        sums[mi] += Math.round(price) - sums.reduce((a, v) => a + v, 0);
+      }
+      const lines = d.items.map((it, i) => `${it.n}. ${it.room || '—'}: ${amoItemText(it)} — ${rubTxt(sums[i])}`);
       return [
         `${AMO_CALC_NAME} · заказ №${g('orderNumber') || '—'}`,
         `Клиент: ${g('clientName') || '—'}${g('clientPhone') ? ', ' + g('clientPhone') : ''}`,

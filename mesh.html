@@ -1835,7 +1835,7 @@
     function spPay() {
       const d = window.calcData || {};
       const sel = document.querySelector('input[name="selectedPrice"]:checked');
-      const price = sel ? ({ base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel.value] || 0) : 0;
+      const price = sel && !d.problem ? ({ base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel.value] || 0) : 0;
       const prepay = Math.max(0, parseFloat(String(document.getElementById('prepay').value).replace(',', '.')) || 0);
       return { price, prepay, rest: price - prepay, note: document.getElementById('orderNote').value.trim() };
     }
@@ -1911,6 +1911,33 @@
       // подсказки внутри полей — примеры, а не повтор подписи
       const PH = { orderNumber: 'например, 35', clientName: 'Имя', clientPhone: '+7 …', clientAddress: 'Улица, дом, квартира', prepay: '0 ₽' };
       Object.keys(PH).forEach(id => { const el = document.getElementById(id); if (el) el.placeholder = PH[id]; });
+    })();
+
+    // === Проверка количества: целое число от 1 (иначе расчёт блокируется) ===
+    (function () {
+      if (typeof calculateTotals !== 'function') return;
+      const orig = calculateTotals;
+      calculateTotals = function () {
+        const r = orig.apply(this, arguments);
+        const bad = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+          const q = row.querySelector('.item-qty'); if (!q) return;
+          const w = parseFloat((row.querySelector('.item-width') || {}).value) || 0, h = parseFloat((row.querySelector('.item-height') || {}).value) || 0;
+          const v = String(q.value).trim().replace(',', '.'), num = Number(v);
+          const isBad = w > 0 && h > 0 && v !== '' && !(Number.isInteger(num) && num >= 1);
+          q.classList.toggle('input-error', isBad);
+          if (isBad) bad.push(row);
+        });
+        const d = window.calcData;
+        if (bad.length && d) {
+          d.problem = 'Количество должно быть целым числом от 1.';
+          d.blocked = true;
+          const err = document.getElementById('widthError') || document.getElementById('orderError');
+          if (err) { err.textContent = 'Проверьте количество: допускается целое число от 1 (сейчас — ' + bad.map(r => '«' + r.querySelector('.item-qty').value + '»').join(', ') + ').'; err.style.display = 'block'; }
+          ['costTotal', 'priceBase', 'price7', 'price12', 'priceB2B', 'marginBase', 'margin7', 'margin12', 'marginB2B'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+        }
+        return r;
+      };
     })();
 
     // === amoCRM: «Добавить в amoCRM» ===
@@ -2141,7 +2168,12 @@
       const { price, label, profit } = amoSelectedPrice();
       const weights = d.items.map(it => it.lineWeight != null ? it.lineWeight : it.lineCost);
       const wSum = weights.reduce((a, b) => a + b, 0);
-      const lines = d.items.map((it, i) => `${it.n}. ${it.room || '—'}: ${amoItemText(it)} — ${rubTxt(wSum > 0 ? price * weights[i] / wSum : 0)}`);
+      const sums = weights.map(w => wSum > 0 ? Math.round(price * w / wSum) : 0);
+      if (sums.length) {   // как в КП: остаток округления — в самую дорогую строку, сумма строк = итог
+        let mi = 0; sums.forEach((v, k) => { if (v > sums[mi]) mi = k; });
+        sums[mi] += Math.round(price) - sums.reduce((a, v) => a + v, 0);
+      }
+      const lines = d.items.map((it, i) => `${it.n}. ${it.room || '—'}: ${amoItemText(it)} — ${rubTxt(sums[i])}`);
       return [
         `${AMO_CALC_NAME} · заказ №${g('orderNumber') || '—'}`,
         `Клиент: ${g('clientName') || '—'}${g('clientPhone') ? ', ' + g('clientPhone') : ''}`,
