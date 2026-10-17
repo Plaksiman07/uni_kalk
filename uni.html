@@ -1985,13 +1985,14 @@
         }
 
         const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
-        const head = lead.created ? `Сделка создана в «${esc(AMO_PIPELINE)}» → «Изготовление»` : 'Сделка обновлена';
+        const head = lead.created ? `Сделка создана в «${esc(lead.pipeline_name || AMO_PIPELINE)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена';
         const extra = [];
+        if (lead.status_fallback) extra.push(`в воронке нет этапа «Изготовление» — сделка поставлена в «${esc(lead.status_name)}»`);
         if (lead.contact_existing) extra.push('клиент уже был в amo — сделка привязана к нему');
         if (lead.missing_fields && lead.missing_fields.length) extra.push('не заполнены поля: ' + lead.missing_fields.map(esc).join(', '));
         const tail = extra.length ? `<br><small>${extra.join('; ')}</small>` : '';
         const filesTxt = done.length ? `прикреплены: ${done.join(', ')}` : 'файлы не прикреплены';
-        if (!failed.length) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, ${filesTxt} — ${link}${tail}`, extra.some(x => x.startsWith('не заполнены')) ? 'warn' : 'ok');
+        if (!failed.length) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, ${filesTxt} — ${link}${tail}`, (lead.status_fallback || extra.some(x => x.startsWith('не заполнены'))) ? 'warn' : 'ok');
         else amoSetStatus(`⚠ ${head}: ${rubTxt(price)}, ${filesTxt}.<br><b>Не прикрепилось:</b> ${failed.join('; ')} — ${link}${tail}`, 'warn');
       } catch (e) {
         amoSetStatus(`✕ Не отправлено: ${esc(e.message)}`, 'err');
