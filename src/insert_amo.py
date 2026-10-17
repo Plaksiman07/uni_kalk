@@ -72,7 +72,7 @@ DEFS={
       const d = window.calcData;
       return { 'Материал': (d.types.length ? d.types : [meshType]).map(typeNameOf).join(' / '), 'Цвет': d.colors.length > 1 ? '' : colorNameOf(d.colors[0] || meshColor) };
     }
-    function amoTags() { const d = window.calcData; return [...d.types.map(typeNameOf), ...d.colors.map(colorNameOf), `${d.totals.qty} шт`]; }
+    function amoTags() { const d = window.calcData; return ['Рамные МС', ...d.types.map(typeNameOf), ...d.colors.map(colorNameOf), `${d.totals.qty} шт`]; }
 """}
 DEFS['plisse.html']='''
     const AMO_CALC_ID = 'plisse', AMO_CALC_NAME = 'Сетки плиссе', AMO_PIPELINE = 'Москитные сетки';
