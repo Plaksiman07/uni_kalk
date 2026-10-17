@@ -19,6 +19,7 @@
     { "name": "Рулонные шторы UNI I", "short_name": "UNI I", "url": "./uni.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Москитные сетки", "short_name": "Сетки", "url": "./mesh.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Сетки плиссе", "short_name": "Плиссе", "url": "./plisse.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Вертикальные жалюзи", "short_name": "Вертикальные", "url": "./vert.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Вертикальные жалюзи", "short_name": "Вертикальные", "url": "./vert.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Горизонтальные жалюзи", "short_name": "Горизонтальные", "url": "./horiz.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
