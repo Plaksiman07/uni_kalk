@@ -123,7 +123,9 @@ DEFS['uni2.html']=DEFS['uni.html'].replace("['UNI I', ", "['UNI II', ").replace(
 assert "'uni2'" in DEFS['uni2.html'] and 'по штапику' in DEFS['uni2.html']
 DEFS['zebra.html']=DEFS['uni.html'].replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'zebra', AMO_CALC_NAME = 'Рулонные шторы зебра UNI I'").replace("['UNI I', ", "['UNI I зебра', ")
 assert "'zebra'" in DEFS['zebra.html'] and 'UNI I зебра' in DEFS['zebra.html']
-for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
+DEFS['zebra2.html']=DEFS['uni2.html'].replace("AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'", "AMO_CALC_ID = 'zebra2', AMO_CALC_NAME = 'Рулонные шторы зебра UNI II'").replace("['UNI II', ", "['UNI II зебра', ")
+assert "'zebra2'" in DEFS['zebra2.html'] and 'UNI II зебра' in DEFS['zebra2.html']
+for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('zebra2.html','zebra2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
     s=open(S+src).read()
     def rep(a,b):
         global s
