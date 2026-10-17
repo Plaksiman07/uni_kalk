@@ -50,5 +50,6 @@ rep('Высота изделий указана с учетом +10см намо
 rep('высота на схеме с +10 см на намотку', 'длина ткани на схеме: В × 2 + 10 см')
 rep('доп. профиля, ткани и направляющих типа С', 'доп. профиля, ткани, отвеса и направляющих типа С')
 
+rep("function barWeightName() { return 'Утяжелитель'; }", "function barWeightName() { return 'Отвес'; }")
 open(S + 'zebra2_pre_amo.html', 'w', encoding='utf-8').write(s)
 print('zebra2_pre_amo.html ok')

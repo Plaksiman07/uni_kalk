@@ -123,5 +123,6 @@ rep('''<th>Направляющие<br><span style="font-size:10px; font-weight:
 rep("Размеры труб, короба, ткани и направляющих указаны с учетом допусков для сборки системы UNI II.",
     "Размеры труб, короба, доп. профиля, ткани и направляющих типа С указаны с учетом допусков для сборки системы UNI II. Накладки — 2 шт на изделие.")
 
+rep("function barGuideName() { return 'Направляющие'; }", "function barGuideName() { return 'Направляющие типа С'; }")
 open(S + 'uni2_pre_amo.html', 'w', encoding='utf-8').write(s)
 print('uni2_pre_amo.html ok')

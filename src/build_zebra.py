@@ -70,5 +70,6 @@ rep('''                  <th>Ткань / Утяж.<br><span style="font-size:10
                   <th>Ткань длина<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(В × 2 + 10)</span></th>''')
 rep('Размеры труб, короба, ткани и направляющих указаны', 'Размеры труб, короба, доп. профиля, ткани, отвеса и направляющих указаны')
 
+rep("function barWeightName() { return 'Утяжелитель'; }", "function barWeightName() { return 'Отвес'; }")
 open(S + 'zebra_pre_amo.html', 'w', encoding='utf-8').write(s)
 print('zebra_pre_amo.html ok')

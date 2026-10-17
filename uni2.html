@@ -275,6 +275,14 @@
     .tech-table td.left, .tech-table th.left { text-align: left; }
     .tech-table td.key { font-weight: 700; color: #16a085; }
     .tech-table td.ctrl { color: #d35400; font-weight: 700; }
+    .bars-legend { font-size: 12px; color: #7f8c8d; margin-bottom: 10px; line-height: 1.45; }
+    .bars-group { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #34495e; font-size: 14px; font-weight: 800; color: #1c1e21; }
+    .bars-group span:last-child { font-size: 12px; font-weight: 600; color: #7f8c8d; white-space: nowrap; }
+    .bar-row { margin-bottom: 12px; }
+    .bar-row-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #34495e; margin-bottom: 4px; }
+    .bar-row-head span:last-child { color: #7f8c8d; font-weight: 600; white-space: nowrap; }
+    .bar-cuts { font-size: 12px; color: #34495e; margin-top: 4px; line-height: 1.5; }
+    .bars-sum td:first-child, .bars-sum th:first-child { text-align: left; }
     .tech-table th small { display: block; font-weight: 400; color: #7f8c8d; font-size: 10px; }
     .tech-empty { color: #7f8c8d; font-size: 14px; padding: 4px 0; }
     .tech-error { color: #e74c3c; font-size: 13px; font-weight: 600; margin-top: 10px; line-height: 1.4; }
@@ -567,6 +575,14 @@
           <button type="button" class="expand-btn" id="expandCut" title="На весь экран" aria-label="На весь экран"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
         </div>
         <div id="techCut"></div>
+      </div>
+
+      <div class="app-block" id="blockBars">
+        <div class="block-head">
+          <div class="block-title">Раскрой профиля по хлыстам</div>
+          <button type="button" class="expand-btn" id="expandBars" title="На весь экран" aria-label="На весь экран"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+        </div>
+        <div id="techBars"></div>
       </div>
 
       <div class="app-block" id="blockSizes">
@@ -1440,7 +1456,7 @@
       seal: 60, weightCap: 2, tape7: 6, tapeTube: 6, tape9: 15,
       markupBase: 2, discount7: 7, discount12: 12, markupB2B: 2.3,
       taxB2B: 6, tripFee: 0, minOrder: 0, roundStep: 10,
-      metalWaste: 0, fabricMode: 0, fabricWaste: 10,
+      metalWaste: 0, barLen: 400, sawKerf: 0.3, fabricMode: 0, fabricWaste: 10,
       labelW: 58, labelH: 40
     };
     const SETTINGS_DEF = [
@@ -1479,6 +1495,8 @@
         ['minOrder', 'Минимальная сумма заказа, ₽ (0 — нет)'] ] },
       { group: 'Учёт материалов', items: [
         ['metalWaste', 'Запас на обрезки профиля, %'],
+        ['barLen', 'Длина хлыста профиля, см'],
+        ['sawKerf', 'Пропил, см'],
         ['fabricMode', 'Ткань в себестоимости', [[0, 'По раскрою: весь ряд'], [1, 'По площади изделий + отход']]],
         ['fabricWaste', 'Отход ткани при расчёте по площади, %'] ] },
       { group: 'Наклейки (термопринтер)', items: [
@@ -2239,6 +2257,108 @@
       ];
     }
 
+    // === Раскрой профиля по хлыстам (первый подходящий, от длинных к коротким) ===
+    // Направляющие режутся парой: 2 хлыста сложены вместе, один рез даёт сразу обе детали изделия.
+    function barWeightName() { return 'Утяжелитель'; }
+    function barGuideName() { return 'Направляющие типа С'; }
+    function barParts(c) {
+      const p = [['box', 'Короб', c.boxLen, false], ['tube', 'Труба', c.boxLen, false]];
+      if (c.profile !== undefined) p.push(['profile', 'Доп. профиль', c.profile, false]);
+      p.push(['weight', barWeightName(), c.fabricBot, false], ['guide', barGuideName(), c.guides, true]);
+      return p;
+    }
+    function packBars(pieces) {
+      const L = SETTINGS.barLen > 0 ? SETTINGS.barLen : 400;
+      const kerf = SETTINGS.sawKerf || 0;
+      const bars = [], tooLong = [];
+      pieces.slice().sort((a, b) => b.len - a.len).forEach(pc => {
+        if (pc.len > L) { tooLong.push(pc); return; }
+        let bar = bars.find(b => b.left >= pc.len + (b.pieces.length ? kerf : 0));
+        if (!bar) { bar = { pieces: [], left: L }; bars.push(bar); }
+        bar.left -= pc.len + (bar.pieces.length ? kerf : 0);
+        bar.pieces.push(pc);
+      });
+      bars.forEach(b => { b.left = Math.max(0, Number(b.left.toFixed(1))); });
+      return { bars, tooLong, L };
+    }
+    function barPlan(order) {
+      const groups = new Map();
+      order.items.forEach(it => {
+        barParts(cutParts(it.w, it.h)).forEach(([key, label, len, pair]) => {
+          if (!groups.has(key)) groups.set(key, { key, label, pair, pieces: [] });
+          if (len > 0) for (let i = 0; i < it.qty; i++) groups.get(key).pieces.push({ n: it.n, len: Number(len) });
+        });
+      });
+      return [...groups.values()].filter(g => g.pieces.length).map(g => {
+        const pk = packBars(g.pieces), k = g.pair ? 2 : 1;
+        const needCm = g.pieces.reduce((a, pc) => a + pc.len, 0) * k;
+        const leftCm = pk.bars.reduce((a, b) => a + b.left, 0) * k;
+        return Object.assign(g, pk, { barsTotal: pk.bars.length * k, needCm, leftCm });
+      });
+    }
+    function cmT(v) { return String(fmtNum(v)).replace('.', ','); }
+    // Один хлыст в SVG; vbW — ширина в условных единицах, printWmm — ширина в мм для печати
+    function barSvgU(bar, L, pair, vbW, H, printWmm) {
+      const kerf = SETTINGS.sawKerf || 0, k = vbW / L, top = 10, bot = H - 10;
+      const hid = 'h' + vbW + (printWmm ? 'p' : 's');
+      // в печати — inline-block с размерами в мм (display:block у svg ломает страницы в Chrome)
+      const size = printWmm ? `width="${printWmm}mm" height="${(printWmm * H / vbW).toFixed(2)}mm" style="display:inline-block; vertical-align:top;"` : 'width="100%" style="display:block;"';
+      let svg = `<svg viewBox="0 0 ${vbW} ${H}" ${size} xmlns="http://www.w3.org/2000/svg">`;
+      svg += `<defs><pattern id="${hid}" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#ffffff" fill-opacity="0.6"/><line x1="0" y1="0" x2="0" y2="10" stroke="#7f8c8d" stroke-width="2" stroke-opacity="0.5"/></pattern></defs>`;
+      if (pair) svg += `<rect x="5" y="${top - 6}" width="${vbW - 6}" height="${bot - top}" rx="4" fill="#cfd4da" stroke="#8f969f" stroke-width="1.5"/>`;
+      svg += `<rect x="1" y="${top}" width="${vbW - 2 - (pair ? 4 : 0)}" height="${bot - top}" rx="4" fill="#eceff2" stroke="#8f969f" stroke-width="2"/>`;
+      let x = 1; const mid = (top + bot) / 2, maxF = (bot - top) * 0.34;
+      bar.pieces.forEach((pc, i) => {
+        if (i > 0) x += kerf * k;
+        const w = pc.len * k, cx = x + w / 2;
+        svg += `<rect x="${x.toFixed(1)}" y="${top + 3}" width="${Math.max(0, w).toFixed(1)}" height="${bot - top - 6}" fill="${i % 2 ? '#d6eaf8' : '#d4efdf'}"/>`;
+        const l1 = `№${pc.n}`, l2 = `${cmT(pc.len)} см`;
+        const f = Math.min(maxF, (w - 6) / (Math.max(l1.length, l2.length) * 0.6));
+        if (f >= (printWmm ? 9 : 11)) {
+          svg += `<text x="${cx.toFixed(1)}" y="${(mid - f * 0.2).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${f.toFixed(1)}" fill="#1c1e21">${l1}</text>`;
+          svg += `<text x="${cx.toFixed(1)}" y="${(mid + f * 0.95).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${f.toFixed(1)}" fill="#1c1e21">${l2}</text>`;
+        } else {
+          const ff = Math.max(printWmm ? 7 : 10, Math.min(maxF, (w - 2) / (String(pc.n).length * 0.6 + 0.4)));
+          svg += `<text x="${cx.toFixed(1)}" y="${(mid + ff / 3).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${ff.toFixed(1)}" fill="#1c1e21">${pc.n}</text>`;
+        }
+        x += w;
+        svg += `<line x1="${x.toFixed(1)}" y1="2" x2="${x.toFixed(1)}" y2="${H - 2}" stroke="#e74c3c" stroke-width="3"/>`;
+      });
+      const used = Math.min(vbW - 1, x + (bar.pieces.length ? kerf * k : 0)), rw = vbW - 1 - (pair ? 4 : 0) - used;
+      if (rw > 2) {
+        svg += `<rect x="${used.toFixed(1)}" y="${top + 3}" width="${rw.toFixed(1)}" height="${bot - top - 6}" fill="url(#${hid})"/>`;
+        const lt = `ост. ${cmT(bar.left)}`, fr = Math.min(maxF, (rw - 6) / (lt.length * 0.58));
+        if (fr >= 8) svg += `<text x="${(used + rw / 2).toFixed(1)}" y="${(mid + fr / 3).toFixed(1)}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="${fr.toFixed(1)}" fill="#2c3e50">${lt}</text>`;
+      }
+      return svg + '</svg>';
+    }
+    function barCutsTxt(bar) { return bar.pieces.map((pc, i) => `<span style="white-space:nowrap"><b>${i + 1})</b> №${pc.n} — ${cmT(pc.len)}</span>`).join(' · '); }
+    function barCountTxt(g) { return g.pair ? `${g.barsTotal} шт (${g.bars.length} ${g.bars.length % 10 === 1 && g.bars.length % 100 !== 11 ? 'пара' : ([2, 3, 4].includes(g.bars.length % 10) && ![12, 13, 14].includes(g.bars.length % 100) ? 'пары' : 'пар')})` : `${g.barsTotal} шт`; }
+    function barsSummaryRows(plan, td) {
+      return plan.map(g => `<tr>${td(esc(g.label) + (g.pair ? ' (парой)' : ''), 'text-align:left;')}${td('<strong>' + barCountTxt(g) + '</strong>')}${td(cmT((g.needCm / 100).toFixed(2)) + ' м')}${td(cmT((g.leftCm / 100).toFixed(2)) + ' м')}</tr>`).join('');
+    }
+    function renderBars(order) {
+      const plan = barPlan(order), box = document.getElementById('techBars');
+      if (!plan.length) { box.innerHTML = '<div class="tech-empty">Добавьте размеры на вкладке «Заказ-наряд».</div>'; return; }
+      const L = plan[0].L, td = (v, st = '') => `<td${st ? ` style="${st}"` : ''}>${v}</td>`;
+      box.innerHTML = `<div class="bars-legend">Хлыст ${cmT(L)} см, пропил ${cmT(SETTINGS.sawKerf || 0)} см. Красная линия — рез, штриховка — остаток. ${esc(barGuideName())} режутся парой: два хлыста сложены вместе, один рез — сразу 2 детали изделия.</div>
+        <div class="table-scroll"><table class="tech-table bars-sum"><thead><tr><th>Профиль</th><th>Хлыстов</th><th>Детали</th><th>Остаток</th></tr></thead><tbody>${barsSummaryRows(plan, td)}</tbody></table></div>` +
+        plan.map(g => `<div class="bars-group"><span>${esc(g.label)}${g.pair ? ' — парой' : ''}</span><span>хлыстов: ${barCountTxt(g)}</span></div>` +
+          g.bars.map((b, i) => `<div class="bar-row"><div class="bar-row-head"><span>${g.pair ? `Пара хлыстов ${i + 1} (×2)` : `Хлыст ${i + 1}`}</span><span>остаток ${cmT(b.left)} см</span></div>
+            ${barSvgU(b, g.L, g.pair, 400, 64, 0)}<div class="bar-cuts">${barCutsTxt(b)}</div></div>`).join('') +
+          (g.tooLong.length ? `<div class="tech-error">Длиннее хлыста ${cmT(g.L)} см: ${g.tooLong.map(pc => `изделие ${pc.n} (${cmT(pc.len)} см)`).join(', ')} — нужен целый профиль или стык.</div>` : '')).join('');
+    }
+    function barsPrintHtml(order, sheetHeader, model) {
+      const plan = barPlan(order); if (!plan.length) return '';
+      const L = plan[0].L, td = (v, st = '') => `<td style="border: 1px solid #95a5a6; padding: 4px 8px; text-align: center;${st}">${v}</td>`;
+      return `<div class="print-landscape">${sheetHeader('Раскрой профиля по хлыстам', `${model} · хлыст ${cmT(L)} см · пропил ${cmT(SETTINGS.sawKerf || 0)} см · ${esc(barGuideName()).toLowerCase()} режутся парой (2 хлыста — один рез)`)}
+        <table style="border-collapse: collapse; font-size: 12px; margin-bottom: 8px;"><thead><tr style="background:#ecf0f1;">${['Профиль', 'Хлыстов', 'Детали', 'Остаток'].map(h => `<th style="border: 1px solid #95a5a6; padding: 4px 8px;">${h}</th>`).join('')}</tr></thead><tbody>${barsSummaryRows(plan, td)}</tbody></table><div>` +
+        plan.map(g => g.bars.map((b, i) => `<div style="margin-bottom: 2.5mm; break-inside: avoid; page-break-inside: avoid;">${i === 0 ? `<div style="font-size: 12px; font-weight: bold; margin: 6px 0 3px;">${esc(g.label)}${g.pair ? ' — парой' : ''}: ${barCountTxt(g)}</div>` : ''}
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: bold;"><span>${g.pair ? `Пара ${i + 1} (×2)` : `Хлыст ${i + 1}`}</span><span style="color:#7f8c8d;">остаток ${cmT(b.left)} см</span></div>
+            ${barSvgU(b, g.L, g.pair, 1600, 90, 276)}<div style="font-size: 10px; color: #2c3e50;">${barCutsTxt(b)}</div></div>`).join('') +
+          (g.tooLong.length ? `<div style="color:#c0392b; font-size: 11px;">Длиннее хлыста: ${g.tooLong.map(pc => `№${pc.n} (${cmT(pc.len)} см)`).join(', ')}</div>` : '')).join('') + '</div></div>';
+    }
+
     // Вкладка «Тех. часть»
     function renderTech(order, errText) {
       const fGroups = (window.calcData && window.calcData.fabricGroups) || [];
@@ -2261,7 +2381,7 @@
 
       const empty = '<div class="tech-empty">Добавьте размеры на вкладке «Заказ-наряд».</div>';
       if (order.items.length === 0) {
-        ['techCut', 'techSizes', 'techComponents'].forEach(id => { document.getElementById(id).innerHTML = empty; });
+        ['techCut', 'techBars', 'techSizes', 'techComponents'].forEach(id => { document.getElementById(id).innerHTML = empty; });
         return;
       }
 
@@ -2297,12 +2417,13 @@
         <div class="table-scroll"><table class="tech-table">
           <thead><tr><th class="left">Наименование</th><th>Ед. изм.</th><th>Итого</th></tr></thead>
           <tbody>${componentsList(order.totals).map(r => `<tr><td class="left">${r[0]}</td><td>${r[1]}</td><td><strong>${r[2]}</strong></td></tr>`).join('')}</tbody></table></div>`;
+      renderBars(order);
     }
 
     // Развернуть таблицу на весь экран
     const ICON_EXPAND = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
     const ICON_COLLAPSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>';
-    const FULL_BLOCKS = [['blockCut', 'expandCut'], ['blockSizes', 'expandSizes']];
+    const FULL_BLOCKS = [['blockCut', 'expandCut'], ['blockBars', 'expandBars'], ['blockSizes', 'expandSizes']];
     function setFull(blockId, btnId, on) {
       const block = document.getElementById(blockId);
       const btn = document.getElementById(btnId);
@@ -2984,6 +3105,8 @@
               Размеры труб, короба, доп. профиля, ткани и направляющих типа С указаны с учетом допусков для сборки системы UNI II. Накладки — 2 шт на изделие.
             </div>
           </div>
+
+          ${barsPrintHtml(order, sheetHeader, 'Модель UNI II')}
 
           ${fabricSheetsHtml}
 
