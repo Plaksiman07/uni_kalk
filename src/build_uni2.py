@@ -19,7 +19,7 @@ s = s.replace('UNI I', 'UNI II')
 rep("'uniCalcState12'", "'uni2CalcState1'", 2)
 rep("'uniCalcPhotos'", "'uni2CalcPhotos'")
 rep("'uniCalcSettings1'", "'uni2CalcSettings1'")
-rep('<label>Ширина СП (см)</label>', '<label>Ширина по штапику</label>')
+rep('<label>Ширина СП (см)</label>', '<label>Ширина (штапик)</label>')
 
 # --- формулы раскроя
 rep('''      const wFinished = Number((w + 4).toFixed(1));            // Ш ГИ

@@ -71,7 +71,7 @@
       margin-top: 10px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--accent);
       color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
     }
-    .install .close { float: right; background: none; border: none; color: #90949c; font-size: 20px; line-height: 1; padding: 0 0 0 8px; margin: 0; width: auto; cursor: pointer; }
+    .install .close { float: right; background: none; border: none; color: #90949c; font-size: 22px; line-height: 1; padding: 0; margin: -10px -10px 0 4px; width: 44px; height: 44px; cursor: pointer; }
 
     .grp { background: var(--card); border-radius: 20px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); overflow: hidden; }
     .grp-head { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 14px; padding: 18px 16px; cursor: pointer; }
@@ -102,7 +102,8 @@
     .crm-name { display: block; font-size: 17px; font-weight: 700; color: var(--ink); }
     .crm-desc { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .crm-go { flex: none; color: #b0b3b8; }
-    .crm-edit { display: block; margin: 8px auto 0; background: none; border: none; color: #90949c; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 6px; }
+    .crm-edit[hidden] { display: none; }
+    .crm-edit { display: block; min-height: 40px; margin: 8px auto 0; background: none; border: none; color: #90949c; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 6px; }
     .crm-set { background: var(--card); border-radius: 16px; padding: 14px 16px; margin-top: 10px; font-size: 14px; }
     .crm-set label { display: block; font-weight: 700; margin-bottom: 8px; }
     .crm-row { display: flex; gap: 8px; }
@@ -224,7 +225,7 @@
       </a>
       <form class="crm-set" id="amoSet" hidden>
         <label for="amoAddr">Адрес вашей amoCRM</label>
-        <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="например, firma.amocrm.ru"><button type="submit">Сохранить</button></div>
+        <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="firma.amocrm.ru"><button type="submit">Сохранить</button></div>
         <div class="crm-msg" id="amoMsg"></div>
         <div class="crm-ios" id="amoIos" hidden>
           <label class="crm-opt"><input type="checkbox" id="amoDirect"> Открывать приложение amoCRM напрямую (через «Команды»)</label>
@@ -245,7 +246,7 @@
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.26</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.27</footer>
   </main>
 
   <script>

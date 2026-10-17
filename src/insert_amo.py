@@ -129,6 +129,7 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     rep('    </div><!-- /pdf-btns -->\n', HTML)
     rep('    .pdf-btns { display: flex; gap: 10px; margin-bottom: 40px; }', '    .pdf-btns { display: flex; gap: 10px; margin-bottom: 10px; }')
     rep(HOOK_OLD, HOOK_NEW)
+    rep('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">', '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">')
     rep('  </style>\n</head>', CSS+open(S+'polish.css').read()+'  </style>\n</head>')
     rep('      <div class="form-group"><input type="text" id="clientAddress" placeholder="Адрес объекта" oninput="saveState()"></div>\n', EXTRA_FIELDS)
     rep("      if (pdfMode === 'order') pdfRoot.querySelectorAll('.kp-part').forEach(el => el.remove());\n",

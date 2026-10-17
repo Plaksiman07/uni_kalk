@@ -36,3 +36,53 @@
         radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)) left center / 12px 100% no-repeat scroll,
         radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)) right center / 12px 100% no-repeat scroll;
     }
+    /* === Ревью дизайна №2 === */
+    /* поля в одной строке — на одной линии, ровные отступы карточек */
+    .row { row-gap: 12px; align-items: flex-end; }
+    .row > .form-group { margin-bottom: 0; }
+    .row:not(:last-child) { margin-bottom: 16px; }
+    .row + .row { margin-top: 0 !important; }
+    /* заголовки блоков: штрих не сжимается при переносе */
+    .block-title::before { flex: none; }
+    /* одинаковые отступы: вкладки → блоки */
+    .tabs { margin-bottom: 0; }
+    #calculatorUI { gap: 16px; }
+    /* таблицы тех. части: длинное название комнаты/ткани переносится, цифры — нет */
+    .tech-table td.left { white-space: normal; min-width: 80px; max-width: 150px; overflow-wrap: break-word; }
+    #techComponents td.left, #techComponents td:first-child { max-width: none; }
+    @media (min-width: 900px) { #calculatorUI { max-width: 760px; } }
+    /* режим «на весь экран» */
+    #tabTech > .app-block.block-full { margin: 0; }
+    .app-block.block-full { padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom)); }
+    .app-block.block-full .tech-table th, .app-block.block-full .tech-table td { white-space: nowrap; }
+    .app-block.block-full .tech-table td.left { white-space: normal; min-width: 90px; max-width: 160px; }
+    /* цены для клиента: ровные прямые разделители */
+    .client-price-row, .client-price-row:first-child, .client-price-row:last-child { box-shadow: none; position: relative; }
+    .client-price-row + .client-price-row::before { content: ''; position: absolute; left: 10px; right: 10px; top: 0; border-top: 1px solid #e4e6eb; }
+    .client-price-row.rs-row { margin-top: 6px; }
+    .client-price-row.rs-row::before { border-top: 2px dashed #e4e6eb; top: -4px; }
+    .client-price-row:has(input:checked)::before, .client-price-row:has(input:checked) + .client-price-row::before { border-color: transparent; }
+    .client-margin-box { flex: none; max-width: 52%; }
+    .client-margin-box .margin-value { white-space: nowrap; font-size: 13px; padding: 5px 8px; }
+    .client-price-row { gap: 12px; }
+    .client-price-title { white-space: nowrap; }
+    @media (max-width: 380px) { .client-price-title { white-space: normal; } }
+    /* название комнаты — больше места */
+    .room-header { gap: 8px; }
+    /* длинная панель настроек: шапка с ✕ всегда видна */
+    .settings-panel-head { position: sticky; top: -20px; background: #ffffff; z-index: 2; padding: 8px 0; margin-top: -8px; }
+    .settings-panel select { min-height: 42px; }
+    /* мелочи: кнопки и ссылки — удобная зона нажатия */
+    .amo-settings-row a { display: inline-block; padding: 12px; }
+    .expand-btn { width: 40px; height: 40px; }
+    textarea#orderNote { field-sizing: content; min-height: 84px; max-height: 260px; }
+    /* вырез iPhone в установленном приложении */
+    body { padding-top: calc(15px + env(safe-area-inset-top)); padding-bottom: calc(15px + env(safe-area-inset-bottom)); }
+    @media print {
+      body { padding: 0 !important; }
+      #printArea { padding: 0 1px; box-sizing: border-box; }
+      #printArea h3 { break-after: avoid; page-break-after: avoid; }
+    }
+    .settings-row:has(select) { flex-wrap: wrap; }
+    .settings-row:has(select) label { flex: 1 1 100%; }
+    .settings-row:has(select) select { width: 100% !important; max-width: none !important; }
