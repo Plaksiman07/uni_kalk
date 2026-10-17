@@ -335,6 +335,12 @@
     .amo-status a { color: inherit; font-weight: 700; }
     .amo-settings-row { text-align: center; margin: 8px 0 40px; font-size: 13px; }
     .amo-settings-row a { color: #7f8c8d; }
+    textarea#orderNote { width: 100%; padding: 14px; font-size: 16px; border: 1px solid #ced0d4; border-radius: 10px; background-color: #f7f8fa; color: #1c1e21; box-sizing: border-box; font-family: inherit; resize: vertical; min-height: 54px; }
+    textarea#orderNote:focus { outline: none; border-color: #d35400; background-color: #ffffff; }
+    .prepay-hint { font-size: 13px; color: #65676b; margin-top: 6px; line-height: 1.4; }
+    .prepay-hint:empty { display: none; }
+    .prepay-hint b { color: #1c1e21; }
+    .prepay-hint.neg b { color: #c0392b; }
     .amo-cfg-msg { font-size: 13px; min-height: 18px; margin-top: 4px; line-height: 1.4; }
     /* копия печатных стилей для сборки PDF-файла */
     .pdf-capture .lt-table, .pdf-capture .print-table { width: 100%; border-collapse: collapse; }
@@ -361,6 +367,8 @@
       <div class="form-group"><input type="text" id="clientName" placeholder="Имя клиента" oninput="saveState()"></div>
       <div class="form-group"><input type="text" id="clientPhone" placeholder="Телефон" oninput="saveState()"></div>
       <div class="form-group"><input type="text" id="clientAddress" placeholder="Адрес объекта" oninput="saveState()"></div>
+      <div class="form-group"><input type="number" id="prepay" placeholder="Предоплата, ₽" inputmode="decimal" min="0" step="1"><div class="prepay-hint" id="prepayHint"></div></div>
+      <div class="form-group"><textarea id="orderNote" rows="2" placeholder="Доп. информация: например, установка через неделю, оплата в рассрочку…"></textarea></div>
     </div>
 
     <div class="app-block">
@@ -1642,6 +1650,66 @@
     }
     function amoTags() { return []; }
 
+    // === Предоплата и доп. информация (общие для всех калькуляторов) ===
+    const SP_EXTRA_KEY = 'spExtra:' + AMO_CALC_ID;
+    const spRub = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
+    function spPay() {
+      const d = window.calcData || {};
+      const sel = document.querySelector('input[name="selectedPrice"]:checked');
+      const price = sel ? ({ base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B }[sel.value] || 0) : 0;
+      const prepay = Math.max(0, parseFloat(String(document.getElementById('prepay').value).replace(',', '.')) || 0);
+      return { price, prepay, rest: price - prepay, note: document.getElementById('orderNote').value.trim() };
+    }
+    // «К доплате»: если предоплата больше стоимости — 0 и пометка о переплате
+    const spRestTxt = p => p.rest >= 0 ? spRub(p.rest) : `0 ₽ (предоплата больше стоимости на ${spRub(-p.rest)})`;
+    function spPayLines() {   // строки для примечания в amoCRM
+      const p = spPay();
+      return [
+        `Предоплата: ${p.prepay > 0 ? spRub(p.prepay) : 'без предоплаты'}`,
+        `К доплате после установки: ${spRestTxt(p)}`,
+        ...(p.note ? ['', 'Доп. информация:', p.note] : [])
+      ];
+    }
+    function spPayHint() {
+      const el = document.getElementById('prepayHint');
+      if (!el) return;
+      const p = spPay();
+      el.innerHTML = p.price > 0
+        ? `${p.prepay > 0 ? 'Предоплата ' + spRub(p.prepay) : 'Без предоплаты'} · к доплате после установки: <b>${spRestTxt(p)}</b>`
+        : '';
+      el.classList.toggle('neg', p.rest < 0);
+    }
+    (function () {
+      let x = {};
+      try { x = JSON.parse(localStorage.getItem(SP_EXTRA_KEY) || '{}') || {}; } catch (e) {}
+      document.getElementById('prepay').value = x.prepay || '';
+      document.getElementById('orderNote').value = x.note || '';
+      const save = () => { try { localStorage.setItem(SP_EXTRA_KEY, JSON.stringify({ prepay: document.getElementById('prepay').value, note: document.getElementById('orderNote').value })); } catch (e) {} };
+      ['prepay', 'orderNote'].forEach(id => document.getElementById(id).addEventListener('input', save));
+      // подсказка «к доплате» — после пересчёта цены (любое изменение в форме или настройках)
+      ['input', 'change', 'click'].forEach(ev => document.addEventListener(ev, () => setTimeout(spPayHint, 0)));
+      spPayHint();
+    })();
+    // Блок «Оплата и доп. информация» во внутреннем заказ-наряде (после данных клиента)
+    window.spDecoratePrint = function (root) {
+      const sec = root.querySelector('.print-section:not(.kp-part)');
+      if (!sec) return;
+      const info = [...sec.querySelectorAll('table')].find(t => /Адрес:/.test(t.textContent));
+      if (!info) return;
+      const p = spPay();
+      const box = document.createElement('table');
+      box.setAttribute('style', 'width: 100%; margin: 0 0 15px; font-size: 14px; border-collapse: collapse;');
+      box.innerHTML = `<tr><td style="background: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; border-radius: 4px; vertical-align: top;">
+          <table style="border-collapse: collapse; font-size: 14px;"><tr>
+            <td style="padding: 0 24px 0 0; white-space: nowrap;"><strong>Стоимость для клиента:</strong> ${spRub(p.price)}</td>
+            <td style="padding: 0 24px 0 0; white-space: nowrap;"><strong>Предоплата:</strong> ${p.prepay > 0 ? spRub(p.prepay) : 'без предоплаты'}</td>
+            <td style="padding: 0; white-space: nowrap;"><strong>К доплате после установки:</strong> <span style="color: #c0392b; font-weight: 800;">${spRestTxt(p)}</span></td>
+          </tr></table>
+          ${p.note ? `<div style="margin-top: 6px;"><strong>Доп. информация:</strong> ${esc(p.note).replace(/\n/g, '<br>')}</div>` : ''}
+        </td></tr>`;
+      info.parentNode.insertBefore(box, info.nextSibling);
+    };
+
     // === amoCRM: «Добавить в amoCRM» ===
     // Заказ уходит через посредника (Cloudflare Worker), который хранит токен amoCRM.
     // Адрес посредника и ключ доступа вводятся один раз и общие для всех калькуляторов на устройстве.
@@ -1882,6 +1950,7 @@
         ...lines,
         '',
         `Итого для клиента (${label}): ${rubTxt(price)}`,
+        ...(typeof spPayLines === 'function' ? spPayLines() : []),
         'Полный заказ-наряд с раскроем — в файле PDF этой сделки.',
         `Отправлено из калькулятора ${new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
       ].join('\n');
@@ -2805,6 +2874,7 @@
       const pdfRoot = printArea.firstElementChild;
       if (pdfMode === 'kp') [...pdfRoot.children].forEach(el => { if (!el.classList.contains('kp-part')) el.remove(); });
       if (pdfMode === 'order') pdfRoot.querySelectorAll('.kp-part').forEach(el => el.remove());
+      if (window.spDecoratePrint) window.spDecoratePrint(pdfRoot);
       const pdfNo = orderNoRaw ? ' № ' + orderNoRaw.replace(/[\\/:*?"<>|]/g, '-') : '';
       const oldTitle = document.title;
       document.title = pdfMode === 'kp' ? `КП SunProtection${pdfNo} — рулонные шторы` : `Заказ-наряд${pdfNo} — рулонные шторы`;
