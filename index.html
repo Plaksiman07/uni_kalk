@@ -111,6 +111,11 @@
     .crm-row button { flex: none; padding: 0 14px; border: none; border-radius: 10px; background: #2f6fd6; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
     .crm-msg { font-size: 13px; color: #c0392b; margin-top: 6px; min-height: 0; }
     .crm-msg:empty { display: none; }
+    .crm-ios { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .crm-set .crm-opt { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; margin: 0; line-height: 1.35; }
+    .crm-opt input { transform: scale(1.3); margin-top: 3px; accent-color: #2f6fd6; flex: none; }
+    .crm-steps { margin: 10px 0 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .crm-steps b { color: var(--ink); }
     footer { text-align: center; font-size: 12px; color: #90949c; margin-top: 26px; }
   </style>
 </head>
@@ -221,6 +226,15 @@
         <label for="amoAddr">Адрес вашей amoCRM</label>
         <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="например, firma.amocrm.ru"><button type="submit">Сохранить</button></div>
         <div class="crm-msg" id="amoMsg"></div>
+        <div class="crm-ios" id="amoIos" hidden>
+          <label class="crm-opt"><input type="checkbox" id="amoDirect"> Открывать приложение amoCRM напрямую (через «Команды»)</label>
+          <ol class="crm-steps">
+            <li>Откройте на iPhone приложение <b>«Команды»</b> → <b>+</b> (новая команда).</li>
+            <li>Добавьте действие <b>«Открыть приложение»</b> и выберите <b>amoCRM</b>.</li>
+            <li>Назовите команду ровно <b>amoCRM</b> и нажмите «Готово».</li>
+            <li>Включите галочку выше и нажмите «Сохранить».</li>
+          </ol>
+        </div>
       </form>
       <button type="button" class="crm-edit" id="amoEdit">изменить адрес amoCRM</button>
     </div>
@@ -231,7 +245,7 @@
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.24</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.25</footer>
   </main>
 
   <script>
@@ -255,36 +269,47 @@
       });
     })();
 
-    // Кнопка amoCRM: адрес запоминается после первой сделки из калькулятора или вводится вручную
+    // Кнопка amoCRM: адрес запоминается после первой сделки из калькулятора или вводится вручную.
+    // На iPhone можно открывать приложение amoCRM напрямую через команду «amoCRM» в приложении «Команды».
     (function () {
       const btn = document.getElementById('amoOpen'), form = document.getElementById('amoSet');
       const input = document.getElementById('amoAddr'), msg = document.getElementById('amoMsg');
       const desc = document.getElementById('amoDesc'), edit = document.getElementById('amoEdit');
+      const iosBox = document.getElementById('amoIos'), direct = document.getElementById('amoDirect');
       const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      const get = () => { try { return localStorage.getItem('spAmoBase') || ''; } catch (e) { return ''; } };
+      const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const SHORTCUT = 'shortcuts://run-shortcut?name=' + encodeURIComponent('amoCRM');
+      const ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) { return ''; } };
+      const get = () => ls('spAmoBase');
+      const isDirect = () => isIOS && ls('spAmoDirect') === '1';
       const norm = v => {
         v = String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
         if (/^[a-z0-9-]+$/.test(v)) v += '.amocrm.ru';
         return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v) ? 'https://' + v : '';
       };
       function render() {
-        const base = get();
-        btn.href = base ? base + '/leads/pipeline/' : '#';
-        // В установленном приложении ссылка открывается в том же окне — тогда iPhone передаёт её приложению amoCRM, а не Safari
-        if (standalone) btn.removeAttribute('target'); else btn.setAttribute('target', '_blank');
-        desc.textContent = base ? base.replace(/^https:\/\//, '') : 'Сделки, воронки и заказы';
-        edit.hidden = !base;
+        const base = get(), dir = isDirect();
+        btn.href = dir ? SHORTCUT : (base ? base + '/leads/pipeline/' : '#');
+        if (dir || standalone) btn.removeAttribute('target'); else btn.setAttribute('target', '_blank');
+        desc.textContent = dir ? 'Откроется приложение amoCRM' : (base ? base.replace(/^https:\/\//, '') : 'Сделки, воронки и заказы');
+        edit.textContent = isIOS ? 'настройка открытия amoCRM' : 'изменить адрес amoCRM';
+        edit.hidden = !(base || dir || isIOS);
       }
-      function showForm() { form.hidden = false; input.value = get().replace(/^https:\/\//, ''); msg.textContent = ''; input.focus(); }
-      btn.addEventListener('click', e => { if (!get()) { e.preventDefault(); showForm(); } });
+      function showForm() {
+        form.hidden = false; input.value = get().replace(/^https:\/\//, ''); msg.textContent = '';
+        iosBox.hidden = !isIOS; direct.checked = isDirect();
+        if (!isIOS) input.focus();
+      }
+      btn.addEventListener('click', e => { if (!isDirect() && !get()) { e.preventDefault(); showForm(); } });
       edit.addEventListener('click', () => form.hidden ? showForm() : (form.hidden = true));
       form.addEventListener('submit', e => {
         e.preventDefault();
-        const base = norm(input.value);
-        if (!base) { msg.textContent = 'Введите адрес, например firma.amocrm.ru'; return; }
-        try { localStorage.setItem('spAmoBase', base); } catch (err) {}
+        const raw = input.value.trim(), base = raw ? norm(raw) : '';
+        if (raw && !base) { msg.textContent = 'Введите адрес, например firma.amocrm.ru'; return; }
+        if (!base && !(isIOS && direct.checked)) { msg.textContent = 'Введите адрес, например firma.amocrm.ru'; return; }
+        if (base) ls('spAmoBase', base);
+        if (isIOS) ls('spAmoDirect', direct.checked ? '1' : '0');
         form.hidden = true; render();
-        if (standalone) location.href = base + '/leads/pipeline/'; else window.open(base + '/leads/pipeline/', '_blank', 'noopener');
       });
       render();
     })();
