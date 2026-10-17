@@ -1,5 +1,5 @@
 // Работа без интернета: сначала сеть (всегда свежая версия), при отсутствии сети — сохранённая копия.
-const CACHE = 'sp-calc-v2.16';
+const CACHE = 'sp-calc-v2.17';
 const CORE = [
   './', './index.html', './uni.html', './mesh.html', './plisse.html', './vert.html', './horiz.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-64.png',
@@ -7,7 +7,8 @@ const CORE = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
+  // cache: 'reload' — берём свежие файлы с сайта, а не из кеша браузера
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(CORE.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -18,7 +19,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req).then(res => {
+    // no-cache: каждый раз сверяемся с сайтом (GitHub Pages разрешает браузеру держать файлы 10 минут)
+    fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
