@@ -1930,11 +1930,13 @@
       const btnText = amoBtn.textContent;
       amoBtn.disabled = true;
       try {
-        amoSetStatus('⏳ Готовлю PDF: заказ-наряд и КП…');
+        amoSetStatus('⏳ Готовлю PDF: заказ-наряд, КП и наклейки…');
         await buildPrintAreaSilently();
         const isKp = x => x.classList.contains('kp-part');
         const pdfBlob = await printAreaToPdfBlob(x => !isKp(x));
         const kpBlob = await printAreaToPdfBlob(isKp);
+        let labelsBlob = null, labelsErr = '';
+        try { labelsBlob = makeLabelsPdf().blob; } catch (e) { labelsErr = (e && e.message) || String(e); }
 
         amoSetStatus('⏳ Отправляю заказ в amoCRM…');
         const lead = await amoCall(cfg, '/lead', {
@@ -1953,15 +1955,26 @@
         });
         try { localStorage.setItem(leadKey, String(lead.lead_id)); } catch (e) {}
 
-        amoSetStatus('⏳ Прикрепляю PDF к сделке…');
         const no = orderNo ? '№ ' + orderNo : 'без номера';
-        const files = [[`Заказ-наряд ${no} — ${AMO_CALC_NAME}.pdf`, pdfBlob], [`КП SunProtection ${no} — ${AMO_CALC_NAME}.pdf`, kpBlob]];
-        let fileOk = true, fileErr = '';
-        for (const [name, blob] of files) {
+        const files = [
+          ['заказ-наряд', `Заказ-наряд ${no} — ${AMO_CALC_NAME}.pdf`, pdfBlob],
+          ['КП', `КП SunProtection ${no} — ${AMO_CALC_NAME}.pdf`, kpBlob],
+          ['наклейки', `Наклейки ${no} — ${AMO_CALC_NAME}.pdf`, labelsBlob]
+        ];
+        const done = [], failed = [];
+        if (!labelsBlob) failed.push(`наклейки (не собрались: ${esc(labelsErr)})`);
+        for (const [label, name, blob] of files) {
+          if (!blob) continue;
+          amoSetStatus(`⏳ Прикрепляю к сделке: ${label} (${done.length + failed.length + 1} из 3)…`);
           const fileName = name.replace(/[\\/:*?"<>|]/g, '-');
-          try {
-            await amoCall(cfg, `/file?lead_id=${lead.lead_id}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(fileName) }, body: blob });
-          } catch (e) { fileOk = false; fileErr = e.message; }
+          let err = '';
+          for (let attempt = 1; attempt <= 2; attempt++) {   // при сбое сети — ещё одна попытка
+            try {
+              const r = await amoCall(cfg, `/file?lead_id=${lead.lead_id}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(fileName) }, body: blob });
+              err = ''; done.push(r && r.in_feed === false ? `${label} (в «Файлах», не в ленте)` : label); break;
+            } catch (e) { err = e.message; }
+          }
+          if (err) failed.push(`${label} — ${esc(err)}`);
         }
 
         const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
@@ -1970,8 +1983,9 @@
         if (lead.contact_existing) extra.push('клиент уже был в amo — сделка привязана к нему');
         if (lead.missing_fields && lead.missing_fields.length) extra.push('не заполнены поля: ' + lead.missing_fields.map(esc).join(', '));
         const tail = extra.length ? `<br><small>${extra.join('; ')}</small>` : '';
-        if (fileOk) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, заказ-наряд и КП прикреплены — ${link}${tail}`, extra.some(x => x.startsWith('не заполнены')) ? 'warn' : 'ok');
-        else amoSetStatus(`⚠ ${head}, но PDF не прикрепился: ${esc(fileErr)} — ${link}${tail}`, 'warn');
+        const filesTxt = done.length ? `прикреплены: ${done.join(', ')}` : 'файлы не прикреплены';
+        if (!failed.length) amoSetStatus(`✓ ${head}: ${rubTxt(price)}, ${filesTxt} — ${link}${tail}`, extra.some(x => x.startsWith('не заполнены')) ? 'warn' : 'ok');
+        else amoSetStatus(`⚠ ${head}: ${rubTxt(price)}, ${filesTxt}.<br><b>Не прикрепилось:</b> ${failed.join('; ')} — ${link}${tail}`, 'warn');
       } catch (e) {
         amoSetStatus(`✕ Не отправлено: ${esc(e.message)}`, 'err');
       } finally {
