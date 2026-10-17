@@ -88,6 +88,7 @@ region('    function renderChoices() {', "    document.getElementById('vMatSelec
       document.getElementById('vColorInput').value = meshColor;
       const m = MAT_BY[meshType];
       document.getElementById('vMatInfo').textContent = m ? `${V_GROUPS[m.g].title}, цвет ${m.name}: ${matPriceTxt(m)} у дилера` : '';
+      attachMatSearch(sel);
     }
 ''')
 

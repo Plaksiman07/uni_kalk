@@ -312,6 +312,20 @@
     .io-opts label.chk small { display: block; font-weight: 400; color: #7f8c8d; font-size: 12px; }
     .tech-table td.opts { white-space: normal; text-align: left; font-size: 12px; min-width: 120px; }
 
+    /* поиск материала (как поиск ткани в UNI) */
+    .ms-box { position: relative; }
+    .ms-box input { padding-right: 40px; }
+    .ms-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #90949c; font-size: 16px; width: 30px; height: 30px; cursor: pointer; display: none; padding: 0; }
+    .ms-box.has-value .ms-clear { display: block; }
+    .ms-list { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid #ced0d4; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .ms-list.open { display: block; }
+    .ms-item { padding: 12px 14px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; gap: 10px; }
+    .ms-item:last-child { border-bottom: none; }
+    .ms-item.active, .ms-item:hover { background: #fdf0e6; }
+    .ms-item mark { background: none; color: #d35400; font-weight: 700; }
+    .ms-item .ms-meta { color: #90949c; font-size: 13px; white-space: nowrap; }
+    .ms-empty { padding: 12px 14px; color: #90949c; font-size: 14px; }
+
     /* полотно и цвет отдельной сетки */
     .item-opt-btn { display: block; width: 100%; margin-top: 12px; text-align: left; padding: 10px 12px; border: 1px dashed #ced0d4; border-radius: 10px;
       background: #f7f8fa; font-size: 13px; line-height: 1.35; color: #65676b; cursor: pointer; }
@@ -620,9 +634,59 @@
       document.getElementById('vColorInput').value = meshColor;
       const m = MAT_BY[meshType];
       document.getElementById('vMatInfo').textContent = m ? `${V_GROUPS[m.g].title}${m.g === 'fabric' ? ', ' + m.cat.toLowerCase() : ''}: ${matPriceTxt(m)} у дилера` : '';
+      attachMatSearch(sel);
     }
     document.getElementById('vMatSelect').addEventListener('change', e => { meshType = e.target.value; renderChoices(); calculateTotals(); });
     document.getElementById('vColorInput').addEventListener('input', e => { meshColor = e.target.value; calculateTotals(); });
+
+    // === Поиск по списку материалов: превращает <select> в строку поиска с подсказками ===
+    function attachMatSearch(sel) {
+      if (sel.__ms) { sel.__ms.sync(); return sel.__ms; }
+      const box = document.createElement('div'); box.className = 'ms-box';
+      box.innerHTML = '<input type="text" autocomplete="off" spellcheck="false" placeholder="Название или номер цвета…"><button type="button" class="ms-clear" tabindex="-1" title="Очистить">✕</button><div class="ms-list"></div>';
+      sel.insertAdjacentElement('beforebegin', box); sel.style.display = 'none';
+      const inp = box.querySelector('input'), list = box.querySelector('.ms-list');
+      const norm = t => String(t).toLowerCase().replace(/ё/g, 'е').replace(/[.,·—()«»]/g, ' ').replace(/\s+/g, ' ').trim();
+      let matches = [], active = -1;
+      const opts = () => [...sel.options].map(o => ({ v: o.value, t: o.text, g: o.parentElement.tagName === 'OPTGROUP' ? o.parentElement.label : '' }));
+      const label = () => { const o = sel.options[sel.selectedIndex]; return o && o.value ? o.text : ''; };
+      const hl = (t, q) => { const w = q.split(' ').filter(Boolean)[0]; if (!w) return esc(t); const i = norm(t).indexOf(w); return i < 0 ? esc(t) : esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + w.length)) + '</mark>' + esc(t.slice(i + w.length)); };
+      function render() {
+        const q = norm(inp.value), words = q.split(' ').filter(Boolean);
+        matches = opts().filter(o => { const h = norm(o.t + ' ' + o.g); return words.every(w => h.includes(w)); });
+        if (words.length) matches.sort((a, b) => (norm(b.t).startsWith(words[0]) ? 1 : 0) - (norm(a.t).startsWith(words[0]) ? 1 : 0));
+        active = matches.length ? 0 : -1;
+        list.innerHTML = matches.length
+          ? matches.map((o, i) => `<div class="ms-item${i === active ? ' active' : ''}" data-i="${i}"><span>${hl(o.t, q)}</span><span class="ms-meta">${esc(o.g)}</span></div>`).join('')
+          : '<div class="ms-empty">Ничего не найдено</div>';
+        list.classList.add('open'); box.classList.toggle('has-value', inp.value !== '');
+      }
+      function setActive(i) {
+        const it = list.querySelectorAll('.ms-item'); if (!it.length) return;
+        active = (i + it.length) % it.length; it.forEach((el, k) => el.classList.toggle('active', k === active)); it[active].scrollIntoView({ block: 'nearest' });
+      }
+      function sync() { inp.value = label(); box.classList.toggle('has-value', inp.value !== ''); }
+      function pick(o) {
+        list.classList.remove('open');
+        if (sel.value !== o.v) { sel.value = o.v; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        sync(); inp.blur();
+      }
+      inp.addEventListener('focus', () => { inp.select(); render(); });
+      inp.addEventListener('input', render);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); if (!list.classList.contains('open')) render(); else setActive(active + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (active >= 0 && matches[active]) pick(matches[active]); }
+        else if (e.key === 'Escape') { list.classList.remove('open'); sync(); inp.blur(); }
+      });
+      list.addEventListener('mousedown', e => { e.preventDefault(); const it = e.target.closest('.ms-item'); if (it) pick(matches[+it.dataset.i]); });
+      inp.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== inp) { list.classList.remove('open'); sync(); } }, 150));
+      box.querySelector('.ms-clear').addEventListener('mousedown', e => { e.preventDefault(); inp.value = ''; inp.focus(); render(); });
+      sel.addEventListener('change', sync);
+      sel.__ms = { sync };
+      sync();
+      return sel.__ms;
+    }
 
     // Длина управления — 2/3 высоты (стандарт дилера)
     function cutParts(w, h) {
@@ -939,6 +1003,7 @@
       sel.innerHTML = src.innerHTML;
       sel.options[0].text = `как в заказе: ${typeName()}`;
       sel.value = row.dataset.type || '';
+      attachMatSearch(sel);
       const apply = () => {
         if (sel.value) row.dataset.type = sel.value; else delete row.dataset.type;
         const c = ov.querySelector('[data-c]').value.trim();

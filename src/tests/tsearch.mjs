@@ -1,0 +1,40 @@
+import { chromium } from '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs';
+const b = await chromium.launch(); const p = await (await b.newContext({viewport:{width:390,height:844}})).newPage();
+const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+let ok=true; const chk=(n,c,x='')=>{console.log((c?'OK  ':'FAIL')+' '+n+' '+x); if(!c) ok=false;};
+const list = () => p.$$eval('.ms-box >> nth=0 >> .ms-item', els=>els.map(e=>e.innerText.replace(/\n/g,' | ')));
+// горизонтальные
+await p.goto('http://localhost:8765/horiz.html'); await p.evaluate(()=>localStorage.clear()); await p.reload();
+const inpH = p.locator('.ms-box input').first();
+await inpH.click(); await inpH.fill('1852');
+let L = await p.$$eval('.ms-list.open .ms-item', els=>els.map(e=>e.innerText.replace(/\n/g,' | ')));
+console.log('horiz «1852»:', L); chk('1852 найден в 25 и 50 мм', L.length>=2 && L.every(x=>x.includes('1852')));
+await inpH.fill('50 мм бел'); L = await p.$$eval('.ms-list.open .ms-item', els=>els.map(e=>e.innerText.replace(/\n/g,' | ')));
+console.log('horiz «50 мм бел»:', L); chk('50 мм белый — один', L.length===1 && /0120 БЕЛЫЙ/.test(L[0]));
+await p.keyboard.press('Enter');
+chk('выбран 50 мм 0120', await p.evaluate(()=>meshType)==='l50:0120 БЕЛЫЙ', await p.evaluate(()=>meshType));
+chk('строка показывает выбор', /0120 БЕЛЫЙ/.test(await inpH.inputValue()), await inpH.inputValue());
+chk('цена пересчиталась', (await p.textContent('#vMatInfo')).includes('42.35'));
+await p.reload(); chk('после перезагрузки выбор на месте', /0120 БЕЛЫЙ/.test(await p.locator('.ms-box input').first().inputValue()));
+await p.screenshot({path:'srch_h.png'});
+// вертикальные
+await p.goto('http://localhost:8765/vert.html'); await p.evaluate(()=>localStorage.clear()); await p.reload();
+const inpV = p.locator('.ms-box input').first();
+await inpV.click(); await inpV.fill('венера');
+L = await p.$$eval('.ms-list.open .ms-item', els=>els.map(e=>e.innerText.replace(/\n/g,' | ')));
+console.log('vert «венера»:', L); chk('Венера + золото/серебро', L.length===3);
+await p.screenshot({path:'srch_v.png'});
+await inpV.fill('кат 4'); L = await p.$$eval('.ms-list.open .ms-item', els=>els.length); chk('кат 4 → 15 тканей', L===15, L);
+await inpV.fill('скрин'); await p.locator('.ms-list.open .ms-item').first().click();
+chk('выбран СКРИН кликом', await p.evaluate(()=>meshType)==='fabric:СКРИН');
+// окно изделия
+await p.fill('.item-width','100'); await p.fill('.item-height','150');
+await p.click('.item-opt-btn'); const mi = p.locator('.settings-panel .ms-box input');
+chk('в окне изделия есть поиск', await mi.count()===1);
+await mi.click(); await mi.fill('бриз double'); L = await p.$$eval('.settings-panel .ms-list.open .ms-item', els=>els.map(e=>e.innerText));
+console.log('modal «бриз double»:', L); await p.keyboard.press('Enter');
+await p.screenshot({path:'srch_modal.png'});
+await p.click('.settings-panel [data-x] >> nth=1');
+chk('изделию задан Бриз DOUBLE', await p.evaluate(()=>document.querySelector('.item-row').dataset.type)==='breeze:БРИЗ DOUBLE');
+chk('цена изделия по Бризу', Math.abs(await p.evaluate(()=>window.calcData.items[0].usd) - 1*105.93) < 0.01);
+console.log('errors', errs, ok?'ALL OK':'HAS FAILS'); await b.close();
