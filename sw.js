@@ -1,5 +1,5 @@
 // Работа без интернета: сначала сеть (всегда свежая версия), при отсутствии сети — сохранённая копия.
-const CACHE = 'sp-calc-v2.11';
+const CACHE = 'sp-calc-v2.12';
 const CORE = [
   './', './index.html', './uni.html', './mesh.html', './plisse.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-64.png',
