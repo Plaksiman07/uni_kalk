@@ -119,7 +119,9 @@ DEFS['horiz.html']='''
     }
     function amoTags() { return ['Горизонтальные', `${window.calcData.totals.qty} шт`]; }
 '''
-for f,src in [('uni.html','uni_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
+DEFS['uni2.html']=DEFS['uni.html'].replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'").replace(" (Ш гот. ${cutParts(it.w, it.h).wFinished})", " по штапику")
+assert "'uni2'" in DEFS['uni2.html'] and 'по штапику' in DEFS['uni2.html']
+for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
     s=open(S+src).read()
     def rep(a,b):
         global s

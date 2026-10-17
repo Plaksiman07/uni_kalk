@@ -25,7 +25,7 @@ globalThis.fetch = async (url, opts = {}) => {
   if (/notes$/.test(url)) { fs.writeFileSync(OUT + 'amo_note.json', opts.body); return J({}); }
   if (/leads\/\d+$/.test(url)) { fs.writeFileSync(OUT + 'amo_patch.json', opts.body); return J({}); }
   if (url.endsWith('/v1.0/sessions')) { up = []; fs.writeFileSync(OUT + 'amo_session.json', opts.body); fs.appendFileSync(OUT + 'amo_files.log', opts.body + '\n'); return J({ upload_url: 'https://drive-x.amocrm.ru/upload/T0', max_part_size: 131072 }); }
-  if (url.includes('/upload/T')) { up.push(Buffer.from(opts.body)); const total = JSON.parse(fs.readFileSync('amo_session.json')).file_size; const got = up.reduce((a, b) => a + b.length, 0);
+  if (url.includes('/upload/T')) { up.push(Buffer.from(opts.body)); const total = JSON.parse(fs.readFileSync(OUT + 'amo_session.json')).file_size; const got = up.reduce((a, b) => a + b.length, 0);
     if (got < total) return J({ next_url: 'https://drive-x.amocrm.ru/upload/T' + up.length }); fs.writeFileSync(OUT + 'amo_uploaded.pdf', Buffer.concat(up)); return J({ uuid: 'u-1' }); }
   if (/files$/.test(url)) return J({});
   return J({ e: 'nomock' }, 404);
