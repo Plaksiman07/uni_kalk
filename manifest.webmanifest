@@ -17,6 +17,7 @@
   ],
   "shortcuts": [
     { "name": "Рулонные шторы UNI I", "short_name": "UNI I", "url": "./uni.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Москитные сетки", "short_name": "Сетки", "url": "./mesh.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Москитные сетки", "short_name": "Сетки", "url": "./mesh.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Сетки плиссе", "short_name": "Плиссе", "url": "./plisse.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
