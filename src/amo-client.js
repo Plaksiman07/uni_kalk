@@ -343,7 +343,8 @@
         }
 
         try { if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
-        const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
+        const spStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const link = `<a href="${esc(lead.url)}"${spStandalone ? '' : ' target="_blank"'} rel="noopener">открыть сделку</a>`;
         const head = lead.created ? `Сделка создана в «${esc(lead.pipeline_name || AMO_PIPELINE)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена';
         const extra = [];
         if (lead.status_fallback) extra.push(`в воронке нет этапа «Изготовление» — сделка поставлена в «${esc(lead.status_name)}»`);

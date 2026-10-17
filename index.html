@@ -231,7 +231,7 @@
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.23</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.24</footer>
   </main>
 
   <script>
@@ -260,6 +260,7 @@
       const btn = document.getElementById('amoOpen'), form = document.getElementById('amoSet');
       const input = document.getElementById('amoAddr'), msg = document.getElementById('amoMsg');
       const desc = document.getElementById('amoDesc'), edit = document.getElementById('amoEdit');
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       const get = () => { try { return localStorage.getItem('spAmoBase') || ''; } catch (e) { return ''; } };
       const norm = v => {
         v = String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -269,6 +270,8 @@
       function render() {
         const base = get();
         btn.href = base ? base + '/leads/pipeline/' : '#';
+        // В установленном приложении ссылка открывается в том же окне — тогда iPhone передаёт её приложению amoCRM, а не Safari
+        if (standalone) btn.removeAttribute('target'); else btn.setAttribute('target', '_blank');
         desc.textContent = base ? base.replace(/^https:\/\//, '') : 'Сделки, воронки и заказы';
         edit.hidden = !base;
       }
@@ -281,7 +284,7 @@
         if (!base) { msg.textContent = 'Введите адрес, например firma.amocrm.ru'; return; }
         try { localStorage.setItem('spAmoBase', base); } catch (err) {}
         form.hidden = true; render();
-        window.open(base + '/leads/pipeline/', '_blank', 'noopener');
+        if (standalone) location.href = base + '/leads/pipeline/'; else window.open(base + '/leads/pipeline/', '_blank', 'noopener');
       });
       render();
     })();
