@@ -1814,19 +1814,25 @@
       }
     }
     // Своя отрисовка HTML → canvas через SVG foreignObject (без внешних библиотек)
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    // Свой рендер HTML → canvas через SVG foreignObject (без внешних библиотек)
     async function renderBoxToCanvas(box, scale) {
       const w = Math.ceil(box.scrollWidth), h = Math.ceil(box.scrollHeight);
+      // у iPhone предел размера canvas (~16 млн точек): высокие листы рисуем чуть мельче, иначе получится пустая страница
+      const sc = Math.min(scale, Math.sqrt(15e6 / Math.max(1, w * h)));
       const clone = box.cloneNode(true);
       await inlineImages(clone);
       clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
       const xhtml = new XMLSerializer().serializeToString(clone);
       const style = `<style>${captureCss().replace(/</g, '&lt;')} *{box-sizing:border-box;} </style>`;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" class="pdf-capture">${style}${xhtml}</div></foreignObject></svg>`;
-      const img = new Image();
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      await img.decode();
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * sc}" height="${h * sc}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" class="pdf-capture">${style}${xhtml}</div></foreignObject></svg>`;
+      const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      const load = () => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('svg render')); im.src = src; });
+      let img = await load();
+      // Safari/iPhone с первого раза часто не дорисовывает картинки (фото, логотип) — даём время и рисуем повторно
+      if (clone.querySelector('img')) { await sleep(400); img = await load(); await sleep(200); }
       const cv = document.createElement('canvas');
-      cv.width = w * scale; cv.height = h * scale;
+      cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
       const ctx = cv.getContext('2d');
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.drawImage(img, 0, 0, cv.width, cv.height);
@@ -1836,7 +1842,8 @@
     // Запасной путь — библиотека html2canvas с CDN (для браузеров, где foreignObject не рисуется)
     async function renderBoxWithLib(box, scale) {
       if (!window.html2canvas) await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      return window.html2canvas(box, { scale, backgroundColor: '#ffffff', logging: false, useCORS: true });
+      const sc = Math.min(scale, Math.sqrt(15e6 / Math.max(1, box.scrollWidth * box.scrollHeight)));
+      return window.html2canvas(box, { scale: sc, backgroundColor: '#ffffff', logging: false, useCORS: true });
     }
 
     // Минимальный PDF из JPEG-картинок: одна картинка на страницу A4 (книжная или альбомная)

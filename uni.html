@@ -1745,19 +1745,25 @@
       }
     }
     // Своя отрисовка HTML → canvas через SVG foreignObject (без внешних библиотек)
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    // Свой рендер HTML → canvas через SVG foreignObject (без внешних библиотек)
     async function renderBoxToCanvas(box, scale) {
       const w = Math.ceil(box.scrollWidth), h = Math.ceil(box.scrollHeight);
+      // у iPhone предел размера canvas (~16 млн точек): высокие листы рисуем чуть мельче, иначе получится пустая страница
+      const sc = Math.min(scale, Math.sqrt(15e6 / Math.max(1, w * h)));
       const clone = box.cloneNode(true);
       await inlineImages(clone);
       clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
       const xhtml = new XMLSerializer().serializeToString(clone);
       const style = `<style>${captureCss().replace(/</g, '&lt;')} *{box-sizing:border-box;} </style>`;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" class="pdf-capture">${style}${xhtml}</div></foreignObject></svg>`;
-      const img = new Image();
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      await img.decode();
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w * sc}" height="${h * sc}" viewBox="0 0 ${w} ${h}"><foreignObject x="0" y="0" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml" class="pdf-capture">${style}${xhtml}</div></foreignObject></svg>`;
+      const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      const load = () => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('svg render')); im.src = src; });
+      let img = await load();
+      // Safari/iPhone с первого раза часто не дорисовывает картинки (фото, логотип) — даём время и рисуем повторно
+      if (clone.querySelector('img')) { await sleep(400); img = await load(); await sleep(200); }
       const cv = document.createElement('canvas');
-      cv.width = w * scale; cv.height = h * scale;
+      cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
       const ctx = cv.getContext('2d');
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.drawImage(img, 0, 0, cv.width, cv.height);
@@ -1767,7 +1773,8 @@
     // Запасной путь — библиотека html2canvas с CDN (для браузеров, где foreignObject не рисуется)
     async function renderBoxWithLib(box, scale) {
       if (!window.html2canvas) await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-      return window.html2canvas(box, { scale, backgroundColor: '#ffffff', logging: false, useCORS: true });
+      const sc = Math.min(scale, Math.sqrt(15e6 / Math.max(1, box.scrollWidth * box.scrollHeight)));
+      return window.html2canvas(box, { scale: sc, backgroundColor: '#ffffff', logging: false, useCORS: true });
     }
 
     // Минимальный PDF из JPEG-картинок: одна картинка на страницу A4 (книжная или альбомная)
@@ -2537,27 +2544,35 @@
         const rowStart = fRows.map(r => { const st = fromCm; fromCm += r.maxHeight * 100; return st; });
         const totalCm = fromCm;
 
+        // Ряд рисуется одной SVG-картинкой (без position:absolute) — одинаково в печати, Chrome и Safari/iPhone
         const rowHtml = i => {
           const row = fRows[i];
           const rowCm = row.maxHeight * 100;
-          let itemsHtml = '';
+          const W = drawW, H = rowCm * k, TH = LBL + H;
+          const pt = v => (v * 0.3528).toFixed(2);   // pt → мм (единица viewBox — мм)
+          const f2 = v => v.toFixed(2);
+          let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${f2(W)}mm" height="${f2(TH)}mm" viewBox="0 0 ${f2(W)} ${f2(TH)}" style="display: inline-block; vertical-align: top;" font-family="Arial, Helvetica, sans-serif">`;
+          svg += `<text x="0" y="${f2(LBL - 0.9)}" font-size="${pt(8)}" font-weight="700" fill="#2c3e50">Ряд ${i + 1} · <tspan fill="#c0392b">✂ ${r1(rowCm)} см</tspan></text>`;
+          if (W >= 45) svg += `<text x="${f2(W)}" y="${f2(LBL - 0.9)}" text-anchor="end" font-size="${pt(8)}" fill="#7f8c8d">${r1(rowStart[i])}→${r1(rowStart[i] + rowCm)}</text>`;
+          svg += `<rect x="0.18" y="${f2(LBL + 0.18)}" width="${f2(W - 0.35)}" height="${f2(H - 0.35)}" fill="#f4f6f7" stroke="#7f8c8d" stroke-width="0.35"/>`;
           row.items.forEach(item => {
+            const x = item.x * 100 * k, y = LBL + item.y * 100 * k;
             const wMm = item.width * 100 * k, hMm = item.height * 100 * k;
             const fs = Math.max(6, Math.min(11, wMm / 3.4, hMm / 2.6));
             const size = `${r1(item.originalW * 100)}×${r1(item.originalH * 100)}`;
-            const lbl = (wMm < 13 || hMm < 9)
-              ? `<div>№${item.n}</div>`
-              : `<div><div style="font-size:${(fs + 1).toFixed(1)}pt;">№${item.n}</div><div>${size}</div></div>`;
-            itemsHtml += `<div style="position: absolute; left: ${(item.x * 100 * k).toFixed(2)}mm; top: ${(item.y * 100 * k).toFixed(2)}mm; width: ${wMm.toFixed(2)}mm; height: ${hMm.toFixed(2)}mm; background: #d6eaf8; border: 0.35mm solid #2471a3; box-sizing: border-box; display: flex; align-items: center; justify-content: center; text-align: center; font-size: ${fs.toFixed(1)}pt; line-height: 1.15; font-weight: 700; color: #1b2631; overflow: hidden;">${lbl}</div>`;
+            const cx = x + wMm / 2, cy = y + hMm / 2;
+            svg += `<rect x="${f2(x + 0.18)}" y="${f2(y + 0.18)}" width="${f2(Math.max(0, wMm - 0.35))}" height="${f2(Math.max(0, hMm - 0.35))}" fill="#d6eaf8" stroke="#2471a3" stroke-width="0.35"/>`;
+            if (wMm < 13 || hMm < 9) {
+              svg += `<text x="${f2(cx)}" y="${f2(cy + fs * 0.3528 * 0.35)}" text-anchor="middle" font-size="${pt(fs)}" font-weight="700" fill="#1b2631">№${item.n}</text>`;
+            } else {
+              const a = (fs + 1) * 0.3528, b = fs * 0.3528;
+              svg += `<text x="${f2(cx)}" y="${f2(cy - 0.15 * a)}" text-anchor="middle" font-size="${pt(fs + 1)}" font-weight="700" fill="#1b2631">№${item.n}</text>`;
+              svg += `<text x="${f2(cx)}" y="${f2(cy + 0.95 * b)}" text-anchor="middle" font-size="${pt(fs)}" font-weight="700" fill="#1b2631">${size}</text>`;
+            }
           });
+          svg += `<line x1="0" y1="${f2(TH - 0.3)}" x2="${f2(W)}" y2="${f2(TH - 0.3)}" stroke="#c0392b" stroke-width="0.6" stroke-dasharray="1.6 1"/>`;
           return `
-            <div style="break-inside: avoid; page-break-inside: avoid;">
-              <div style="height: ${LBL}mm; position: relative; font-size: 8pt; line-height: 1; box-sizing: border-box; white-space: nowrap; overflow: hidden; width: ${drawW.toFixed(2)}mm;">
-                <span style="position: absolute; left: 0; bottom: 0.6mm;"><strong>Ряд ${i + 1}</strong> · <strong style="color: #c0392b;">✂ ${r1(rowCm)} см</strong></span>
-                <span style="position: absolute; right: 0; bottom: 0.6mm; color: #7f8c8d;">${r1(rowStart[i])}→${r1(rowStart[i] + rowCm)}</span>
-              </div>
-              <div style="position: relative; width: ${drawW.toFixed(2)}mm; height: ${(rowCm * k).toFixed(2)}mm; background: #f4f6f7; border: 0.35mm solid #7f8c8d; border-bottom: 0.6mm dashed #c0392b; box-sizing: border-box;">${itemsHtml}</div>
-            </div>`;
+            <div style="break-inside: avoid; page-break-inside: avoid; line-height: 0;">${svg}</svg></div>`;
         };
 
         const pages = [];
