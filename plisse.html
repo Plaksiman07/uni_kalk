@@ -387,7 +387,7 @@
       <div class="summary-box">
         <div class="summary-row"><span>Профиль рамочный и створочный:</span><span class="summary-value" id="costProfile">0 ₽</span></div>
         <div class="summary-row"><span>Полотно плиссе:</span><span class="summary-value" id="costCloth">0 ₽</span></div>
-        <div class="summary-row"><span>Лента, нить, комплектующие:</span><span class="summary-value" id="costParts">0 ₽</span></div>
+        <div class="summary-row"><span>Ленты, нить, клепки, комплектующие:</span><span class="summary-value" id="costParts">0 ₽</span></div>
         <div class="summary-row"><span>Работы<span id="tripLabel"></span>:</span><span class="summary-value" id="costLabor">0 ₽</span></div>
         <div id="orderError" class="error-msg"></div>
         <div class="total-cost-row"><span>ИТОГО СЕБЕСТОИМОСТЬ:</span><span id="costTotal">0 ₽</span></div>
@@ -543,11 +543,18 @@
     }
 
     // === НАСТРОЙКИ ===
+    // Цены — прайс ТБМ от 08.05.2026, узкая серия 18 мм. Вводятся как в прайсе (за хлыст, рулон, моток…).
     const DEFAULT_SETTINGS = {
       laborMake: 500, laborInstall: 500,
-      frameWhite: 190, sashWhite: 280, frameBrown: 190, sashBrown: 280, frameAnthracite: 190, sashAnthracite: 280,
-      cloth: 118, clothWaste: 0, tape: 33, thread: 3,
-      accKit: 76.3, overlayKit: 60, plugs: 1.2, screwsPress: 39, screws40: 6, screws19: 1.8,
+      frameBarWhite: 1170.57, frameBarBrown: 1264.44, frameBarAnthracite: 1206.76,
+      sashBarWhite: 1710.81, sashBarBrown: 1763.73, sashBarAnthracite: 1763.73,
+      priceBarM: 6,
+      clothRoll: 10751.14, clothRollArea: 80, clothRollH: 3, clothWaste: 0,
+      tapePack: 144.67, tapePackLen: 4.5,
+      thread100: 304.05,
+      magnet: 85.44,
+      rivets1000: 816, rivetsQty: 16,
+      accKit: 123.89, overlayKit: 61.83, plugs: 1.2, screwsPress: 39, screws40: 6, screws19: 1.8,
       markup: 4, discount7: 7, discount12: 12, b2bExtra: 15,
       taxB2B: 6, tripFee: 0, minOrder: 0, roundStep: 10,
       laborMarkup: 0,
@@ -558,18 +565,30 @@
       { group: 'Работы', items: [
         ['laborMake', 'Изготовление, ₽ за изделие'],
         ['laborInstall', 'Установка, ₽ за изделие'] ] },
-      { group: 'Профиль, ₽/м.п. — по цветам', items: [
-        ['frameWhite', 'Рамочный, белый'], ['sashWhite', 'Створочный, белый'],
-        ['frameBrown', 'Рамочный, коричневый'], ['sashBrown', 'Створочный, коричневый'],
-        ['frameAnthracite', 'Рамочный, антрацит'], ['sashAnthracite', 'Створочный, антрацит'] ] },
-      { group: 'Полотно и расходники', items: [
-        ['cloth', 'Сетка плиссе, ₽/м² (по размеру готового изделия)'],
-        ['clothWaste', 'Запас сетки, %'],
-        ['tape', 'Окантовочная лента, ₽/м.п.'],
-        ['thread', 'Нить плиссе, ₽/м.п.'] ] },
+      { group: 'Профиль рамы узкой серии 18 мм, ₽ за хлыст', items: [
+        ['frameBarWhite', 'Белый RAL9016 (PLIS0008.07)'],
+        ['frameBarBrown', 'Коричневый RAL8017 (PLIS0008.05)'],
+        ['frameBarAnthracite', 'Антрацит RAL7016 (PLIS0008.41)'] ] },
+      { group: 'Профиль створки узкой серии 18 мм, ₽ за хлыст', items: [
+        ['sashBarWhite', 'Белый RAL9016 (PLIS0010.07)'],
+        ['sashBarBrown', 'Коричневый RAL8017 (PLIS0010.05)'],
+        ['sashBarAnthracite', 'Антрацит RAL7016 (PLIS0010.41)'],
+        ['priceBarM', 'Длина хлыста в прайсе, м'] ] },
+      { group: 'Полотно плиссе (считается по погонному метру ширины ГИ)', items: [
+        ['clothRoll', 'Рулон, ₽ (PLIS0015/3000 — высота 3 м, изгиб 15 мм)'],
+        ['clothRollArea', 'Площадь рулона, м²'],
+        ['clothRollH', 'Высота рулона, м'],
+        ['clothWaste', 'Запас полотна, %'] ] },
+      { group: 'Лента, нить, клепки', items: [
+        ['tapePack', 'Окантовочная лента 14 мм, ₽ за моток (PLIS0052)'],
+        ['tapePackLen', 'Длина мотка ленты, м'],
+        ['thread100', 'Нить, ₽ за 100 м (PLIS0006)'],
+        ['magnet', 'Магнитная лента, ₽/м (PLIS0412) — по высоте створки'],
+        ['rivets1000', 'Клепки размер 3, ₽ за 1000 шт (PLIS0003/1)'],
+        ['rivetsQty', 'Клепок на изделие, шт'] ] },
       { group: 'Комплектующие (на одно изделие)', items: [
-        ['accKit', 'Комплект аксессуаров (углы, ролики, шконты, люверсы и т. п.), ₽'],
-        ['overlayKit', 'Комплект накладок, ₽'],
+        ['accKit', 'Комплект аксессуаров, чёрный (PLIS0042.06), ₽'],
+        ['overlayKit', 'Комплект накладок (PLIS0021), ₽'],
         ['plugs', 'Заглушки 8 мм, ₽ за 2 шт'],
         ['screwsPress', 'Саморезы с пресс-шайбой, ₽ за 18 шт'],
         ['screws40', 'Саморезы 40 мм, ₽ за 4 шт'],
@@ -585,21 +604,23 @@
       { group: 'Заказ целиком', items: [
         ['tripFee', 'Выезд (замер, доставка), ₽ за заказ — в себестоимость'],
         ['minOrder', 'Минимальная сумма заказа, ₽ (0 — нет)'] ] },
-      { group: 'Профиль: хлысты и отход', items: [
-        ['barLen', 'Длина хлыста профиля, см'],
+      { group: 'Профиль: раскрой хлыстов и отход', items: [
+        ['barLen', 'Длина хлыста для раскроя, см'],
         ['sawKerf', 'Пропил, см'],
         ['metalWaste', 'Запас на обрезки профиля в себестоимости, %'] ] },
       { group: 'Наклейки (термопринтер)', items: [
         ['labelW', 'Ширина наклейки, мм'],
         ['labelH', 'Высота наклейки, мм'] ] }
     ];
-    const SETTINGS_KEY = 'plisseCalcSettings2';
+    const SETTINGS_KEY = 'plisseCalcSettings3';
     let SETTINGS = Object.assign({}, DEFAULT_SETTINGS);
     try {
       let savedS = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
-      if (!savedS) {   // переход с первой версии: цены сохраняем, работу берём новую по умолчанию (500 / 500)
-        savedS = JSON.parse(localStorage.getItem('plisseCalcSettings1') || '{}') || {};
-        delete savedS.laborMake; delete savedS.laborInstall;
+      if (!savedS) {   // переход на цены из прайса: из прежних настроек берём только работу, наценки и прочее, цены — новые
+        const old = JSON.parse(localStorage.getItem('plisseCalcSettings2') || '{}') || {};
+        savedS = {};
+        ['laborMake', 'laborInstall', 'markup', 'discount7', 'discount12', 'b2bExtra', 'taxB2B', 'tripFee', 'minOrder', 'roundStep', 'laborMarkup',
+         'metalWaste', 'barLen', 'sawKerf', 'labelW', 'labelH'].forEach(k => { if (k in old) savedS[k] = old[k]; });
       }
       Object.keys(DEFAULT_SETTINGS).forEach(k => {
         if (typeof savedS[k] === 'number' && isFinite(savedS[k]) && savedS[k] >= 0) SETTINGS[k] = savedS[k];
@@ -888,31 +909,37 @@
 
       // расход и себестоимость: у каждого изделия свой цвет профиля (по умолчанию — как в заказе)
       const mw = 1 + S.metalWaste / 100;
+      const perM = bar => bar / (S.priceBarM > 0 ? S.priceBarM : 6);           // ₽ за хлыст → ₽/м
       const PROF = {
-        white: [S.frameWhite, S.sashWhite], brown: [S.frameBrown, S.sashBrown], anthracite: [S.frameAnthracite, S.sashAnthracite]
+        white: [perM(S.frameBarWhite), perM(S.sashBarWhite)],
+        brown: [perM(S.frameBarBrown), perM(S.sashBarBrown)],
+        anthracite: [perM(S.frameBarAnthracite), perM(S.sashBarAnthracite)]
       };
-      const t = { qty: 0, frameCm: 0, impCm: 0, clothM: 0, cordCm: 0, threadCm: 0, byColor: {}, byType: {} };
+      const clothPerM = S.clothRollArea > 0 && S.clothRollH > 0 ? S.clothRoll / (S.clothRollArea / S.clothRollH) : 0;   // ₽ за погонный метр рулона
+      const tapePerM = S.tapePackLen > 0 ? S.tapePack / S.tapePackLen : 0;
+      const threadPerM = S.thread100 / 100;
+      const t = { qty: 0, frameCm: 0, impCm: 0, clothM: 0, cordCm: 0, threadCm: 0, magnetCm: 0, byColor: {}, byType: {} };
       let costProfile = 0, costCloth = 0, costParts = 0, costLabor = 0;
       const unitLabor = S.laborMake + (noInstall ? 0 : S.laborInstall);
-      const kitPerItem = S.accKit + S.overlayKit + S.plugs + S.screwsPress + S.screws40 + S.screws19;
+      const kitPerItem = S.accKit + S.overlayKit + S.plugs + S.screwsPress + S.screws40 + S.screws19 + S.rivetsQty * S.rivets1000 / 1000;
       items.forEach(it => {
         const c = it.cut;
         const [pFrame, pSash] = PROF[it.color] || PROF.white;
         const frameCm = 2 * (c.profW + c.profH), impCm = c.imp;
-        const clothM2 = (c.giW / 100) * (c.giH / 100) * (1 + S.clothWaste / 100);   // сетка, м² по ГИ
-        const tapeCm = 2 * c.tape, threadCm = 4 * c.thread;
+        const clothM = (c.giW / 100) * (1 + S.clothWaste / 100);            // полотно: погонные метры по ширине ГИ (рулон 3 м)
+        const tapeCm = 2 * c.tape, threadCm = 4 * c.thread, magnetCm = impCm;  // магнитная лента — по высоте створки
         const prof = (frameCm / 100) * mw * pFrame + (impCm / 100) * mw * pSash;
-        const cloth = clothM2 * S.cloth;
-        const parts = (tapeCm / 100) * S.tape + (threadCm / 100) * S.thread + kitPerItem;
+        const cloth = clothM * clothPerM;
+        const parts = (tapeCm / 100) * tapePerM + (threadCm / 100) * threadPerM + (magnetCm / 100) * S.magnet + kitPerItem;
         it.markup = S.markup;
         it.unitMat = prof + cloth + parts;
         it.unitCost = it.unitMat + unitLabor;
         costProfile += prof * it.qty; costCloth += cloth * it.qty; costParts += parts * it.qty; costLabor += unitLabor * it.qty;
-        t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM2 * it.qty;
-        t.cordCm += tapeCm * it.qty; t.threadCm += threadCm * it.qty;
+        t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM * it.qty;
+        t.cordCm += tapeCm * it.qty; t.threadCm += threadCm * it.qty; t.magnetCm += magnetCm * it.qty;
         const bc = t.byColor[it.color] || (t.byColor[it.color] = { frameCm: 0, impCm: 0 });
         bc.frameCm += frameCm * it.qty; bc.impCm += impCm * it.qty;
-        t.byType[it.type] = (t.byType[it.type] || 0) + clothM2 * it.qty;
+        t.byType[it.type] = (t.byType[it.type] || 0) + clothM * it.qty;
       });
       const tripFee = items.length ? S.tripFee : 0;
       const totalCost = costProfile + costCloth + costParts + costLabor + tripFee;
@@ -968,7 +995,7 @@
       };
       roomsContainer.querySelectorAll('.item-row').forEach(renderItemOpt);
 
-      const pricesEmpty = ['frameWhite', 'sashWhite', 'cloth', 'tape', 'thread', 'accKit', 'overlayKit', 'laborMake']
+      const pricesEmpty = ['frameBarWhite', 'sashBarWhite', 'clothRoll', 'tapePack', 'thread100', 'accKit', 'overlayKit', 'laborMake']
         .every(k => !(S[k] > 0));
       document.getElementById('priceWarning').style.display = pricesEmpty ? 'block' : 'none';
 
@@ -1005,19 +1032,20 @@
       return [
         ...cols.map(c => [`Профиль рамочный, ${c.name.toLowerCase()} (хлыстов: ${bars(c.key, 'frame')})`, 'м.п.', m(t.byColor[c.key].frameCm)]),
         ...cols.map(c => [`Профиль створочный, ${c.name.toLowerCase()} (хлыстов: ${bars(c.key, 'imp')})`, 'м.п.', m(t.byColor[c.key].impCm)]),
-        [`Сетка плиссе (по размеру ГИ${SETTINGS.clothWaste ? ', запас ' + fmtNum(SETTINGS.clothWaste) + '%' : ''})`, 'м²', t.clothM.toFixed(2)],
+        [`Полотно плиссе, рулон ${fmtNum(SETTINGS.clothRollH)} м (по ширине ГИ${SETTINGS.clothWaste ? ', запас ' + fmtNum(SETTINGS.clothWaste) + '%' : ''})`, 'м.п.', t.clothM.toFixed(2)],
         ['Окантовочная лента (2 шт на изделие)', 'м.п.', m(t.cordCm)],
         ['Нить плиссе (4 шт на изделие)', 'м.п.', m(t.threadCm)],
+        ['Магнитная лента (по высоте створки)', 'м.п.', m(t.magnetCm)],
         ['Углы', 'шт', q * 4],
         ['Ролики', 'шт', q * 2],
         ['Шконты', 'шт', q * 2],
         ['Заглушки 8 мм', 'шт', q * 2],
         ['Заглушки на углы', 'шт', q * 4],
-        ['Люверсы 5 мм', 'шт', q * 16],
+        ['Клепки размер 3 (люверсы)', 'шт', q * SETTINGS.rivetsQty],
         ['Саморезы с пресс-шайбой', 'шт', q * 18],
         ['Саморезы 40 мм', 'шт', q * 4],
         ['Саморезы 19 мм', 'шт', q * 2],
-        ['Комплект аксессуаров', 'компл', q],
+        ['Комплект аксессуаров (чёрный)', 'компл', q],
         ['Комплект накладок', 'компл', q]
       ];
     }
