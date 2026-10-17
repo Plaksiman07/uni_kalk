@@ -93,6 +93,24 @@
     .grp .tool-icon { width: 46px; height: 46px; border-radius: 12px; }
     .grp .tool-name { font-size: 16px; }
     @media (prefers-reduced-motion: reduce) { .grp-list, .grp-chev { transition: none; } }
+    .crm { margin-top: 4px; }
+    .crm-btn { display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 20px; padding: 14px 16px; text-decoration: none; color: inherit; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid transparent; transition: transform 0.15s, border-color 0.15s; }
+    .crm-btn:active { transform: scale(0.98); }
+    .crm-btn:hover { border-color: #2f6fd6; }
+    .crm-icon { flex: none; width: 48px; height: 48px; border-radius: 14px; background: #2f6fd6; color: #fff; display: flex; align-items: center; justify-content: center; }
+    .crm-body { flex: 1; min-width: 0; display: block; }
+    .crm-name { display: block; font-size: 17px; font-weight: 700; color: var(--ink); }
+    .crm-desc { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .crm-go { flex: none; color: #b0b3b8; }
+    .crm-edit { display: block; margin: 8px auto 0; background: none; border: none; color: #90949c; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 6px; }
+    .crm-set { background: var(--card); border-radius: 16px; padding: 14px 16px; margin-top: 10px; font-size: 14px; }
+    .crm-set label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .crm-row { display: flex; gap: 8px; }
+    .crm-row input { flex: 1; min-width: 0; padding: 12px; font-size: 16px; border: 1px solid #ced0d4; border-radius: 10px; background: #f7f8fa; }
+    .crm-row input:focus { outline: none; border-color: #2f6fd6; background: #fff; }
+    .crm-row button { flex: none; padding: 0 14px; border: none; border-radius: 10px; background: #2f6fd6; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .crm-msg { font-size: 13px; color: #c0392b; margin-top: 6px; min-height: 0; }
+    .crm-msg:empty { display: none; }
     footer { text-align: center; font-size: 12px; color: #90949c; margin-top: 26px; }
   </style>
 </head>
@@ -193,13 +211,27 @@
       </div></div>
     </section>
 
+    <div class="crm">
+      <a class="crm-btn" id="amoOpen" href="#" target="_blank" rel="noopener">
+        <span class="crm-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><path d="M8 13h3M8 16h6"/><path d="M15.5 13.5l1.2 1.2 2.3-2.4"/></svg></span>
+        <span class="crm-body"><span class="crm-name">amoCRM</span><span class="crm-desc" id="amoDesc">Сделки, воронки и заказы</span></span>
+        <svg class="crm-go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </a>
+      <form class="crm-set" id="amoSet" hidden>
+        <label for="amoAddr">Адрес вашей amoCRM</label>
+        <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="например, firma.amocrm.ru"><button type="submit">Сохранить</button></div>
+        <div class="crm-msg" id="amoMsg"></div>
+      </form>
+      <button type="button" class="crm-edit" id="amoEdit">изменить адрес amoCRM</button>
+    </div>
+
     <div class="install" id="installBox">
       <button type="button" class="close" id="installClose" aria-label="Скрыть">&times;</button>
       <div id="installText"></div>
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.22</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.23</footer>
   </main>
 
   <script>
@@ -221,6 +253,37 @@
           if (on) setTimeout(() => { const r = g.getBoundingClientRect(); if (r.bottom > innerHeight) g.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, 300);
         });
       });
+    })();
+
+    // Кнопка amoCRM: адрес запоминается после первой сделки из калькулятора или вводится вручную
+    (function () {
+      const btn = document.getElementById('amoOpen'), form = document.getElementById('amoSet');
+      const input = document.getElementById('amoAddr'), msg = document.getElementById('amoMsg');
+      const desc = document.getElementById('amoDesc'), edit = document.getElementById('amoEdit');
+      const get = () => { try { return localStorage.getItem('spAmoBase') || ''; } catch (e) { return ''; } };
+      const norm = v => {
+        v = String(v || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+        if (/^[a-z0-9-]+$/.test(v)) v += '.amocrm.ru';
+        return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v) ? 'https://' + v : '';
+      };
+      function render() {
+        const base = get();
+        btn.href = base ? base + '/leads/pipeline/' : '#';
+        desc.textContent = base ? base.replace(/^https:\/\//, '') : 'Сделки, воронки и заказы';
+        edit.hidden = !base;
+      }
+      function showForm() { form.hidden = false; input.value = get().replace(/^https:\/\//, ''); msg.textContent = ''; input.focus(); }
+      btn.addEventListener('click', e => { if (!get()) { e.preventDefault(); showForm(); } });
+      edit.addEventListener('click', () => form.hidden ? showForm() : (form.hidden = true));
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const base = norm(input.value);
+        if (!base) { msg.textContent = 'Введите адрес, например firma.amocrm.ru'; return; }
+        try { localStorage.setItem('spAmoBase', base); } catch (err) {}
+        form.hidden = true; render();
+        window.open(base + '/leads/pipeline/', '_blank', 'noopener');
+      });
+      render();
     })();
 
     // Подсказка «добавить на главный экран» (не показываем, если уже открыто как приложение)

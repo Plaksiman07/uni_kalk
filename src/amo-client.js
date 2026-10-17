@@ -342,6 +342,7 @@
           if (err) failed.push(`${label} — ${esc(err)}`);
         }
 
+        try { if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
         const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
         const head = lead.created ? `Сделка создана в «${esc(lead.pipeline_name || AMO_PIPELINE)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена';
         const extra = [];
