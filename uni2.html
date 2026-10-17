@@ -1690,7 +1690,7 @@
       const colors = [...new Set(g.map(x => capFirst(x.spec.color)).filter(Boolean))];
       return { 'Материал': names.join(' / '), 'Цвет': colors.length === 1 ? colors[0] : '' };
     }
-    function amoTags() { return []; }
+    function amoTags() { return ['UNI II', `${readOrder().totals.qty} шт`]; }
 
     // === Предоплата и доп. информация (общие для всех калькуляторов) ===
     const SP_EXTRA_KEY = 'spExtra:' + AMO_CALC_ID;

@@ -46,7 +46,7 @@ for (const [m,n] of [['kp',1],['order',2]]) { await p.click(`.pdf-btn[data-mode=
 await p.evaluate(()=>{ const of=window.fetch; window.fetch=(u,o)=>{ if(String(u).endsWith('/lead')) window.__lead=JSON.parse(o.body); return of(u,o); }; });
 await p.click('#amoBtn'); await p.waitForFunction(()=>{ const t=document.getElementById('amoStatus').textContent; return /✓|⚠|✕/.test(t) && !/⏳/.test(t); },null,{timeout:60000});
 console.log('amo:', await p.innerText('#amoStatus'));
-const lead=await p.evaluate(()=>window.__lead); console.log(lead.pipeline||'', JSON.stringify(lead.fields)); console.log(lead.note.split('\n').slice(0,8).join('\n'));
+const lead=await p.evaluate(()=>window.__lead); console.log(lead.pipeline||'', JSON.stringify(lead.tags), JSON.stringify(lead.fields)); console.log(lead.note.split('\n').slice(0,8).join('\n'));
 // UNI I не затронут: отдельное хранилище
 await p.goto('http://localhost:8765/uni.html'); chk('UNI I хранит своё', await p.evaluate(()=>localStorage.getItem('uniCalcState12')===null || !localStorage.getItem('uniCalcState12').includes('UNI II')));
 console.log('errors', errs, ok?'ALL OK':'HAS FAILS'); await b.close();

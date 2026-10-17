@@ -55,7 +55,7 @@ DEFS={
       const colors = [...new Set(g.map(x => capFirst(x.spec.color)).filter(Boolean))];
       return { 'Материал': names.join(' / '), 'Цвет': colors.length === 1 ? colors[0] : '' };
     }
-    function amoTags() { return []; }
+    function amoTags() { return ['UNI I', `${readOrder().totals.qty} шт`]; }
 """,
  'mesh.html':"""
     const AMO_CALC_ID = 'mesh', AMO_CALC_NAME = 'Москитные сетки', AMO_PIPELINE = 'Москитные сетки';
@@ -75,7 +75,7 @@ DEFS={
     function amoTags() { const d = window.calcData; return [...d.types.map(typeNameOf), ...d.colors.map(colorNameOf), `${d.totals.qty} шт`]; }
 """}
 DEFS['plisse.html']='''
-    const AMO_CALC_ID = 'plisse', AMO_CALC_NAME = 'Сетки плиссе', AMO_PIPELINE = 'Сетки плиссе';
+    const AMO_CALC_ID = 'plisse', AMO_CALC_NAME = 'Сетки плиссе', AMO_PIPELINE = 'Москитные сетки';
     const amoMixed = () => window.calcData.mixedColor;
     function amoDetails() {
       const d = window.calcData;
@@ -119,7 +119,7 @@ DEFS['horiz.html']='''
     }
     function amoTags() { return ['Горизонтальные', `${window.calcData.totals.qty} шт`]; }
 '''
-DEFS['uni2.html']=DEFS['uni.html'].replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'").replace(" (Ш гот. ${cutParts(it.w, it.h).wFinished})", " по штапику")
+DEFS['uni2.html']=DEFS['uni.html'].replace("['UNI I', ", "['UNI II', ").replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'").replace(" (Ш гот. ${cutParts(it.w, it.h).wFinished})", " по штапику")
 assert "'uni2'" in DEFS['uni2.html'] and 'по штапику' in DEFS['uni2.html']
 for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
     s=open(S+src).read()
