@@ -1,0 +1,10 @@
+// Настройки посредника amoCRM для Cloudflare (Workers Builds).
+// Cloudflare сам выкладывает amo-worker.js при каждом обновлении репозитория.
+// Секреты (AMO_TOKEN, APP_KEY) и переменные (AMO_DOMAIN, ALLOWED_ORIGINS) остаются в настройках Cloudflare — здесь их нет.
+{
+  "name": "sp-amo",
+  "main": "amo-worker.js",
+  "compatibility_date": "2025-01-01",
+  "workers_dev": true,
+  "keep_vars": true
+}
