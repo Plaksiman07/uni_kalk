@@ -2151,7 +2151,7 @@
         if (!last || !last.number) { hint.innerHTML = ''; return; }
         const next = last.number + 1;
         inp.placeholder = `последний в amo: ${last.number}`;
-        hint.innerHTML = `Последний номер в amoCRM: <b>№ ${last.number}</b>` + (inp.value.trim() ? '' : ` · <button type="button" class="amo-num-fill">Подставить ${next}</button>`);
+        hint.innerHTML = `Последний заказ в amoCRM: <b>№ ${last.number}</b>` + (inp.value.trim() ? '' : ` · <button type="button" class="amo-num-fill">Подставить ${next}</button>`);
         const b = hint.querySelector('.amo-num-fill');
         if (b) b.onclick = () => { inp.value = String(next); inp.dispatchEvent(new Event('input', { bubbles: true })); show(last); };
       }

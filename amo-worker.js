@@ -213,26 +213,30 @@ export default {
         return json({ ok: true, file_uuid: fileInfo.uuid, name, in_feed: inFeed });
       }
 
-      // Последний номер заказа: максимальный «№ …» среди недавних сделок всех воронок
+      // Последний номер заказа: номер самой «свежей» сделки (по дате добавления или закрытия), текущей или закрытой
       if (url.pathname === '/last-number') {
         const numOf = l => {
-          const cands = [];
           const m = String(l.name || '').match(/№\s*(\d{1,7})/) || String(l.name || '').match(/^\s*(\d{1,7})(?!\d)(?![.,]\d)/);
-          if (m) cands.push(Number(m[1]));
+          if (m) return Number(m[1]);
           for (const f of l.custom_fields_values || []) {
-            if (/номер\s*заказа|№\s*заказа/i.test(f.field_name || '')) (f.values || []).forEach(v => { const mm = String(v.value || '').match(/\d{1,7}/); if (mm) cands.push(Number(mm[0])); });
+            if (/номер\s*заказа|№\s*заказа/i.test(f.field_name || '')) for (const v of f.values || []) { const mm = String(v.value || '').match(/\d{1,7}/); if (mm) return Number(mm[0]); }
           }
-          return cands.length ? Math.max(...cands) : 0;
+          return 0;
         };
-        let best = null;
-        for (let page = 1; page <= 2; page++) {
-          const r = await fetch(`${base}/api/v4/leads?limit=250&page=${page}&order[created_at]=desc`, { headers: auth });
-          if (r.status === 204) break;
+        const seen = new Map();
+        // недавно добавленные и недавно изменённые (туда попадают и недавно закрытые)
+        for (const order of ['created_at', 'updated_at']) {
+          const r = await fetch(`${base}/api/v4/leads?limit=250&page=1&order[${order}]=desc`, { headers: auth });
+          if (r.status === 204) continue;
           if (!r.ok) throw new Error(`amoCRM ответил ${r.status}: ${(await r.text()).slice(0, 300)}`);
           const j = await r.json();
-          const list = (j._embedded && j._embedded.leads) || [];
-          for (const l of list) { const n = numOf(l); if (n && (!best || n > best.number)) best = { number: n, lead_id: l.id, name: l.name, created_at: l.created_at }; }
-          if (list.length < 250) break;
+          for (const l of (j._embedded && j._embedded.leads) || []) seen.set(l.id, l);
+        }
+        let best = null;
+        for (const l of seen.values()) {
+          const n = numOf(l); if (!n) continue;
+          const fresh = Math.max(l.created_at || 0, l.closed_at || 0);
+          if (!best || fresh > best.fresh) best = { number: n, lead_id: l.id, name: l.name, fresh, by: (l.closed_at || 0) > (l.created_at || 0) ? 'closed' : 'created' };
         }
         return json({ ok: true, last: best, worker_version: 3 });
       }

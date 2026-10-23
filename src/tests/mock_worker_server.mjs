@@ -20,9 +20,8 @@ globalThis.fetch = async (url, opts = {}) => {
     { id: 103, name: 'Адрес', type: 'text' },
     ...[1,2,3,4,5,6,7,8].map(i => ({ id: 110 + i, name: 'Изделие ' + i, type: 'text' })) ] } });
   if (url.includes('/api/v4/leads?limit=250&page=')) {
-    if (!url.includes('page=1')) return new Response(null, { status: 204 });
-    return J({ _embedded: { leads: [ { id: 1, name: '№ 1212 ул. Красная 12' }, { id: 2, name: '1215 Иванов, сетки' }, { id: 3, name: 'Сделка без номера' },
-      { id: 4, name: 'Заказ', custom_fields_values: [{ field_name: 'Номер заказа', values: [{ value: '1209' }] }] }, { id: 5, name: '3.5 м карниз' } ] } });
+    return J({ _embedded: { leads: [ { id: 1, name: '№ 1212 ул. Красная 12', created_at: 1000 }, { id: 2, name: '1215 Иванов, сетки', created_at: 900 }, { id: 3, name: 'Сделка без номера', created_at: 5000 },
+      { id: 4, name: 'Заказ', created_at: 800, closed_at: 1200, custom_fields_values: [{ field_name: 'Номер заказа', values: [{ value: '1209' }] }] }, { id: 5, name: '3.5 м карниз', created_at: 4000 } ] } });
   }
   if (url.includes('/api/v4/leads?with=contacts')) {
     if (!url.includes('page=1')) return new Response(null, { status: 204 });
