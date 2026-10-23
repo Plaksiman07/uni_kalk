@@ -367,3 +367,32 @@
     }
     amoBtn.addEventListener('click', amoSend);
     document.getElementById('amoSettingsLink').addEventListener('click', e => { e.preventDefault(); amoConfigDialog(); });
+
+    // === Номер заказа: подсказка «последний номер в amoCRM» и кнопка «подставить следующий» ===
+    (function () {
+      const inp = document.getElementById('orderNumber');
+      if (!inp) return;
+      const hint = document.createElement('div');
+      hint.className = 'amo-num-hint';
+      inp.insertAdjacentElement('afterend', hint);
+      const KEY = 'spAmoLastNum';
+      function show(last) {
+        if (!last || !last.number) { hint.innerHTML = ''; return; }
+        const next = last.number + 1;
+        inp.placeholder = `последний в amo: ${last.number}`;
+        hint.innerHTML = `Последний номер в amoCRM: <b>№ ${last.number}</b>` + (inp.value.trim() ? '' : ` · <button type="button" class="amo-num-fill">Подставить ${next}</button>`);
+        const b = hint.querySelector('.amo-num-fill');
+        if (b) b.onclick = () => { inp.value = String(next); inp.dispatchEvent(new Event('input', { bubbles: true })); show(last); };
+      }
+      let cached = null;
+      try { cached = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) {}
+      if (cached) show(cached.last);
+      inp.addEventListener('input', () => show(cached && cached.last));
+      const cfg = amoCfg();
+      if (!cfg.url || !cfg.key || (cached && Date.now() - cached.t < 2 * 60 * 1000)) return;
+      amoCall(cfg, '/last-number', { method: 'POST' }).then(d => {
+        cached = { t: Date.now(), last: d.last || null };
+        try { sessionStorage.setItem(KEY, JSON.stringify(cached)); } catch (e) {}
+        show(cached.last);
+      }).catch(() => {});   // старый посредник или нет сети — просто без подсказки
+    })();

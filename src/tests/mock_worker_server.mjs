@@ -19,6 +19,11 @@ globalThis.fetch = async (url, opts = {}) => {
     { id: 102, name: 'Цвет', type: 'select', enums: [{ id: 1, value: 'Белый' }, { id: 2, value: 'Коричневый' }, { id: 3, value: 'Антрацит' }] },
     { id: 103, name: 'Адрес', type: 'text' },
     ...[1,2,3,4,5,6,7,8].map(i => ({ id: 110 + i, name: 'Изделие ' + i, type: 'text' })) ] } });
+  if (url.includes('/api/v4/leads?limit=250&page=')) {
+    if (!url.includes('page=1')) return new Response(null, { status: 204 });
+    return J({ _embedded: { leads: [ { id: 1, name: '№ 1212 ул. Красная 12' }, { id: 2, name: '1215 Иванов, сетки' }, { id: 3, name: 'Сделка без номера' },
+      { id: 4, name: 'Заказ', custom_fields_values: [{ field_name: 'Номер заказа', values: [{ value: '1209' }] }] }, { id: 5, name: '3.5 м карниз' } ] } });
+  }
   if (url.includes('/api/v4/leads?with=contacts')) {
     if (!url.includes('page=1')) return new Response(null, { status: 204 });
     const now = Math.floor(Date.now() / 1000), day = 86400;

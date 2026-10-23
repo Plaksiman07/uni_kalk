@@ -17,6 +17,10 @@ CSS="""
     .prepay-hint:empty { display: none; }
     .prepay-hint b { color: #1c1e21; }
     .prepay-hint.neg b { color: #c0392b; }
+    .amo-num-hint { font-size: 13px; color: #65676b; margin-top: 6px; line-height: 1.4; }
+    .amo-num-hint:empty { display: none; }
+    .amo-num-hint b { color: #1c1e21; }
+    .amo-num-fill { border: 1px solid #d35400; background: #fdf0e6; color: #a04000; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 700; cursor: pointer; margin-left: 2px; }
     .amo-cfg-msg { font-size: 13px; min-height: 18px; margin-top: 4px; line-height: 1.4; }
     /* копия печатных стилей для сборки PDF-файла */
     .pdf-capture .lt-table, .pdf-capture .print-table { width: 100%; border-collapse: collapse; }

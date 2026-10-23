@@ -213,6 +213,30 @@ export default {
         return json({ ok: true, file_uuid: fileInfo.uuid, name, in_feed: inFeed });
       }
 
+      // Последний номер заказа: максимальный «№ …» среди недавних сделок всех воронок
+      if (url.pathname === '/last-number') {
+        const numOf = l => {
+          const cands = [];
+          const m = String(l.name || '').match(/№\s*(\d{1,7})/) || String(l.name || '').match(/^\s*(\d{1,7})(?!\d)(?![.,]\d)/);
+          if (m) cands.push(Number(m[1]));
+          for (const f of l.custom_fields_values || []) {
+            if (/номер\s*заказа|№\s*заказа/i.test(f.field_name || '')) (f.values || []).forEach(v => { const mm = String(v.value || '').match(/\d{1,7}/); if (mm) cands.push(Number(mm[0])); });
+          }
+          return cands.length ? Math.max(...cands) : 0;
+        };
+        let best = null;
+        for (let page = 1; page <= 2; page++) {
+          const r = await fetch(`${base}/api/v4/leads?limit=250&page=${page}&order[created_at]=desc`, { headers: auth });
+          if (r.status === 204) break;
+          if (!r.ok) throw new Error(`amoCRM ответил ${r.status}: ${(await r.text()).slice(0, 300)}`);
+          const j = await r.json();
+          const list = (j._embedded && j._embedded.leads) || [];
+          for (const l of list) { const n = numOf(l); if (n && (!best || n > best.number)) best = { number: n, lead_id: l.id, name: l.name, created_at: l.created_at }; }
+          if (list.length < 250) break;
+        }
+        return json({ ok: true, last: best, worker_version: 3 });
+      }
+
       // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
       if (url.pathname === '/orders') {
         let d = {};
