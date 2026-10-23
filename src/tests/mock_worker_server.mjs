@@ -19,6 +19,28 @@ globalThis.fetch = async (url, opts = {}) => {
     { id: 102, name: 'Цвет', type: 'select', enums: [{ id: 1, value: 'Белый' }, { id: 2, value: 'Коричневый' }, { id: 3, value: 'Антрацит' }] },
     { id: 103, name: 'Адрес', type: 'text' },
     ...[1,2,3,4,5,6,7,8].map(i => ({ id: 110 + i, name: 'Изделие ' + i, type: 'text' })) ] } });
+  if (url.includes('/api/v4/leads?with=contacts')) {
+    if (!url.includes('page=1')) return new Response(null, { status: 204 });
+    const now = Math.floor(Date.now() / 1000), day = 86400;
+    const L = (id, name, price, pid, sid, ago, cid, fields, tags) => ({ id, name, price, pipeline_id: pid, status_id: sid, created_at: now - ago * day - 3 * day, updated_at: now - ago * day,
+      custom_fields_values: Object.entries(fields).map(([k, v]) => ({ field_name: k, values: [{ value: v }] })), _embedded: { tags: tags.map(t => ({ name: t })), contacts: [{ id: cid, is_main: true }] } });
+    return J({ _embedded: { leads: [
+      L(501, 'Рулонные шторы UNI I · заказ №1203', 28790, 9662970, 21, 1, 701, { 'Адрес': 'г. Краснодар, ул. Красная 12, кв. 5', 'Материал': 'Омега', 'Цвет': 'Белый', 'Изделие 1': '120×150 л', 'Изделие 2': '80×140 п, 2 шт' }, ['UNI I', '3 шт']),
+      L(502, 'Вертикальные жалюзи · заказ №1207', 41500, 9662970, 21, 4, 702, { 'Адрес': 'ст. Динская, ул. Мира 3', 'Материал': 'Вертикальные: Венера', 'Изделие 1': '200×250 п' }, ['Вертикальные', '1 шт']),
+      L(503, 'Зебра UNI II · заказ №1199', 19400, 9662970, 22, 2, 703, { 'Адрес': 'г. Краснодар, ул. Северная 300', 'Материал': 'Рино', 'Цвет': 'Белый', 'Изделие 1': '74,5×135 л', 'Изделие 2': '66×128 п' }, ['UNI II зебра', '2 шт']),
+      L(504, 'Москитные сетки · заказ №1210', 12600, 1987228, 11, 0, 704, { 'Адрес': 'г. Краснодар, ул. Ставропольская 150, кв. 88', 'Материал': 'Антикошка', 'Цвет': 'Белый', 'Изделие 1': '60×120', 'Изделие 2': '58×118, 2 шт' }, ['Рамные МС', 'Антикошка', 'Белый', '3 шт']),
+      L(505, 'Сетки плиссе · заказ №1195', 46470, 1987228, 13, 6, 705, { 'Адрес': 'п. Яблоновский, ул. Гагарина 1', 'Материал': 'Плиссе', 'Цвет': 'Коричневый', 'Изделие 1': '95×215' }, ['Плиссе', 'Коричневый', '1 шт']),
+    ] } });
+  }
+  if (url.includes('/api/v4/contacts?limit=250')) return J({ _embedded: { contacts: [
+    { id: 701, name: 'Иванова Анна', custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '+7 918 111-22-33' }] }] },
+    { id: 702, name: 'Петров Сергей', custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '+7 928 444-55-66' }] }] },
+    { id: 703, name: 'Сидорова Мария' }, { id: 704, name: 'Кузнецов Олег', custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '89186913293' }] }] },
+    { id: 705, name: 'Смирнова Елена', custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '+7 961 000-11-22' }] }] } ] } });
+  if (url.includes('/api/v4/leads/notes?')) return J({ _embedded: { notes: [
+    { entity_id: 501, created_at: 1, params: { text: 'Рулонные шторы UNI I · заказ №1203\nКлиент: Иванова Анна, +7 918 111-22-33\nАдрес: г. Краснодар, ул. Красная 12, кв. 5\nТкань: ОМЕГА — 250 см, белый\nМонтаж: включён\n\nПозиции:\n1. Кухня: 120×150 см (Ш гот. 124), упр. Л, 1 шт — 10 220 ₽\n2. Спальня: 80×140 см (Ш гот. 84), упр. П, 2 шт — 18 570 ₽\n\nИтого для клиента (Базовая): 28 790 ₽\nПредоплата: 10 000 ₽\nК доплате после установки: 18 790 ₽\n\nДоп. информация:\nУстановка после 18:00' } },
+    { entity_id: 501, created_at: 2, params: { text: 'Позвонить за час' } },
+    { entity_id: 504, created_at: 5, params: { text: 'Москитные сетки · заказ №1210\nПозиции:\n1. Кухня: 60×120 см, 1 шт — 4 200 ₽\n2. Детская: 58×118 см, 2 шт — 8 400 ₽\n\nИтого для клиента (Базовая): 12 600 ₽\nПредоплата: без предоплаты\nК доплате после установки: 12 600 ₽' } } ] } });
   if (url.includes('/api/v4/contacts?query=')) { return url.includes('9186913293') ? J({ _embedded: { contacts: [{ id: 555, custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '+7 918 691-32-93' }] }] }] } }) : new Response(null, { status: 204 }); }
   if (url.endsWith('/api/v4/account?with=drive_url')) return J({ drive_url: 'https://drive-x.amocrm.ru' });
   if (url.endsWith('/api/v4/leads/complex')) { fs.writeFileSync(OUT + 'amo_lead.json', opts.body); return J([{ id: ++leadN }]); }

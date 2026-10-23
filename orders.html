@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Текущие заказы — SunProtection</title>
+  <meta name="theme-color" content="#24282e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <style>
+    :root { --bg: #f0f2f5; --card: #ffffff; --ink: #1c1e21; --muted: #65676b; --line: #e4e6eb; --accent: #d35400; --soft: #fdf0e6; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink);
+      padding: calc(12px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .icon-btn { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid #ced0d4; background: #fff; color: #34495e; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; padding: 0; }
+    .icon-btn:active { transform: scale(0.96); }
+    .icon-btn.spin svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { flex: 1; min-width: 0; margin: 0; font-size: 20px; font-weight: 800; }
+    h1 small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+    .seg { display: flex; gap: 6px; background: #e4e6eb; padding: 4px; border-radius: 12px; margin-bottom: 10px; }
+    .seg button { flex: 1; border: none; background: transparent; border-radius: 9px; padding: 10px 6px; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .seg button.on { background: #fff; color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .search { width: 100%; padding: 12px 14px; font-size: 16px; border: 1px solid #ced0d4; border-radius: 12px; background: #fff; margin-bottom: 12px; }
+    .search:focus { outline: none; border-color: var(--accent); }
+    .msg { background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; font-size: 14px; line-height: 1.45; border-left: 4px solid #e0a33a; }
+    .msg.err { border-left-color: #c0392b; color: #c0392b; }
+    .msg:empty { display: none; }
+    .board { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 900px) { .board { grid-template-columns: repeat(3, 1fr); align-items: start; } }
+    .col { background: #e9ebef; border-radius: 16px; padding: 10px; }
+    .col-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 10px; cursor: pointer; user-select: none; }
+    .col-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .col-name { font-size: 15px; font-weight: 800; flex: 1; min-width: 0; }
+    .col-meta { font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .col-chev { color: #9aa0a6; transition: transform 0.2s; flex: none; }
+    .col.closed .col-chev { transform: rotate(-90deg); }
+    .col.closed .cards { display: none; }
+    .empty { font-size: 13px; color: var(--muted); padding: 6px 6px 8px; }
+    .card { background: var(--card); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .card:last-child { margin-bottom: 0; }
+    .c-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+    .c-title { font-size: 15px; font-weight: 800; line-height: 1.3; min-width: 0; }
+    .c-price { font-size: 15px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+    .c-pipe { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 3px; }
+    .c-row { display: flex; gap: 8px; font-size: 14px; margin-top: 6px; line-height: 1.35; align-items: flex-start; }
+    .c-row svg { flex: none; margin-top: 1px; color: #90949c; }
+    .c-row a { color: #2f6fd6; text-decoration: none; font-weight: 600; }
+    .c-items { margin: 8px 0 0; padding: 8px 10px; background: #f7f8fa; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+    .c-items div { display: flex; gap: 6px; }
+    .c-items b { color: var(--muted); font-weight: 700; min-width: 18px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--soft); color: #a04000; }
+    .c-age { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .c-age.old { color: #c0392b; font-weight: 700; }
+    .c-pay { font-size: 13px; margin-top: 6px; }
+    .c-pay b { color: #1e8449; }
+    .c-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .c-actions button, .c-actions a { flex: 1; min-height: 40px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+    .btn-more { border: 1px solid #ced0d4; background: #fff; color: #34495e; }
+    .btn-amo { border: 1px solid #2f6fd6; background: #2f6fd6; color: #fff; }
+    .note { display: none; margin-top: 10px; white-space: pre-wrap; font-size: 13px; line-height: 1.5; background: #f7f8fa; border-radius: 10px; padding: 10px; overflow-wrap: anywhere; }
+    .note.open { display: block; }
+    .note h4 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; }
+    .note h4:not(:first-child) { margin-top: 10px; }
+    .cfg { background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; font-size: 14px; }
+    .cfg label { display: block; font-weight: 700; font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
+    .cfg input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ced0d4; border-radius: 10px; background: #f7f8fa; }
+    .cfg button { margin-top: 12px; width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .cfg[hidden] { display: none; }
+    .foot { text-align: center; font-size: 12px; color: #90949c; margin-top: 18px; }
+    .foot button { background: none; border: none; color: #90949c; text-decoration: underline; font-size: 12px; cursor: pointer; padding: 10px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="icon-btn" href="index.html" title="На главный экран" aria-label="На главный экран"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></a>
+    <h1>Текущие заказы<small id="stamp">загрузка…</small></h1>
+    <button type="button" class="icon-btn" id="reload" title="Обновить" aria-label="Обновить"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+  </div>
+
+  <div class="seg" id="seg">
+    <button type="button" data-p="all" class="on">Все</button>
+    <button type="button" data-p="Солнцезащитные системы">Солнцезащитные</button>
+    <button type="button" data-p="Москитные сетки">Москитные</button>
+  </div>
+  <input class="search" id="q" type="search" placeholder="Поиск: клиент, телефон, адрес, № заказа" autocomplete="off">
+
+  <form class="cfg" id="cfg" hidden>
+    <b>Подключение amoCRM</b>
+    <div style="color:var(--muted); margin-top:4px; line-height:1.4;">То же, что в калькуляторах («⚙ Подключение amoCRM»). Если калькуляторы уже подключены на этом устройстве — заполнится само.</div>
+    <label for="cfgUrl">Адрес посредника</label><input id="cfgUrl" type="url" placeholder="https://sp-amo.….workers.dev" autocomplete="off">
+    <label for="cfgKey">Ключ доступа</label><input id="cfgKey" type="password" autocomplete="off">
+    <button type="submit">Сохранить и загрузить</button>
+  </form>
+
+  <div class="msg" id="msg"></div>
+  <div class="board" id="board"></div>
+  <div class="foot">Только просмотр: изменения в сделках делаются в amoCRM.<br><button type="button" id="cfgToggle">подключение amoCRM</button></div>
+</div>
+
+<script>
+  const CFG_KEY = 'spAmoConfig', CACHE_KEY = 'spOrdersCache', UI_KEY = 'spOrdersUi';
+  const STAGES = ['Изготовление', 'Готов к установке', 'На установку'];
+  const STAGE_COLOR = { 'Изготовление': '#d35400', 'Готов к установке': '#2f6fd6', 'На установку': '#1e8449' };
+  const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rub = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
+  const norm = v => String(v || '').toLowerCase().replace(/ё/g, 'е');
+  const ui = Object.assign({ pipe: 'all', closed: {} }, ls.get(UI_KEY, {}));
+  let data = ls.get(CACHE_KEY, null);
+
+  const I = {
+    user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+    phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+    pin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+    box: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>'
+  };
+
+  function daysAgo(ts) {
+    if (!ts) return '';
+    const d = Math.floor((Date.now() / 1000 - ts) / 86400);
+    return d <= 0 ? 'сегодня' : d === 1 ? 'вчера' : `${d} ${d % 10 === 1 && d % 100 !== 11 ? 'день' : [2, 3, 4].includes(d % 10) && ![12, 13, 14].includes(d % 100) ? 'дня' : 'дней'} назад`;
+  }
+  // Из примечания калькулятора: предоплата / к доплате
+  function payInfo(note) {
+    const pre = (note.match(/Предоплата: ([^\n]+)/) || [])[1], rest = (note.match(/К доплате после установки: ([^\n]+)/) || [])[1];
+    return pre || rest ? { pre, rest } : null;
+  }
+
+  function cardHtml(l, pipeName, showPipe) {
+    const f = l.fields || {}, c = l.contact || {};
+    const items = Object.keys(f).filter(k => /^Изделие \d+$/.test(k)).sort((a, b) => parseInt(a.slice(8)) - parseInt(b.slice(8))).map(k => [k.slice(8), f[k]]);
+    const phoneDigits = String(c.phone || '').replace(/[^\d+]/g, '');
+    const addr = f['Адрес'] || '';
+    const mat = [f['Материал'], f['Цвет']].filter(Boolean).join(' · ');
+    const pay = payInfo(l.note || '');
+    const age = daysAgo(l.updated_at);
+    const old = l.updated_at && (Date.now() / 1000 - l.updated_at) > 7 * 86400;
+    const tags = (l.tags || []).filter(t => !/^\d+ шт$/.test(t));
+    return `<div class="card" data-s="${esc(norm([l.name, c.name, c.phone, phoneDigits, addr, mat, items.map(x => x[1]).join(' '), (l.tags || []).join(' '), l.note, l.lastNote].join(' ')))}">
+      ${showPipe ? `<div class="c-pipe">${esc(pipeName)}</div>` : ''}
+      <div class="c-top"><div class="c-title">${esc(l.name || 'Сделка ' + l.id)}</div><div class="c-price">${l.price ? rub(l.price) : ''}</div></div>
+      ${c.name ? `<div class="c-row">${I.user}<span>${esc(c.name)}</span></div>` : ''}
+      ${c.phone ? `<div class="c-row">${I.phone}<a href="tel:${esc(phoneDigits)}">${esc(c.phone)}</a></div>` : ''}
+      ${addr ? `<div class="c-row">${I.pin}<a href="https://yandex.ru/maps/?text=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${esc(addr)}</a></div>` : ''}
+      ${mat ? `<div class="c-row">${I.box}<span>${esc(mat)}</span></div>` : ''}
+      ${items.length ? `<div class="c-items">${items.map(([n, v]) => `<div><b>${esc(n)}.</b><span>${esc(v)}</span></div>`).join('')}</div>` : ''}
+      ${pay ? `<div class="c-pay">Предоплата: ${esc(pay.pre || '—')} · к доплате: <b>${esc(pay.rest || '—')}</b></div>` : ''}
+      ${tags.length ? `<div class="tags">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${age ? `<div class="c-age${old ? ' old' : ''}">Обновлено ${age}${old ? ' — давно без движения' : ''}</div>` : ''}
+      <div class="c-actions">
+        ${l.note || l.lastNote ? '<button type="button" class="btn-more">Подробнее</button>' : ''}
+        <a class="btn-amo" href="${esc(l.url)}" target="_blank" rel="noopener">Открыть в amoCRM</a>
+      </div>
+      ${l.note || l.lastNote ? `<div class="note">${l.note ? `<h4>Из калькулятора</h4>${esc(l.note)}` : ''}${l.lastNote ? `<h4>Последнее примечание</h4>${esc(l.lastNote)}` : ''}</div>` : ''}
+    </div>`;
+  }
+
+  function render() {
+    document.querySelectorAll('#seg button').forEach(b => b.classList.toggle('on', b.dataset.p === ui.pipe));
+    const board = $('board');
+    if (!data) { board.innerHTML = ''; return; }
+    const pipes = (data.pipelines || []).filter(p => ui.pipe === 'all' || p.name === ui.pipe || norm(p.name) === norm(ui.pipe));
+    const missing = (data.pipelines || []).flatMap(p => p.missing ? [`воронка «${p.name}»`] : p.statuses.filter(s => s.missing).map(s => `этап «${s.name}» в «${p.name}»`));
+    if (missing.length && !$('msg').classList.contains('err')) $('msg').textContent = 'В amoCRM не найдены: ' + missing.join(', ') + '.';
+    const q = norm($('q').value).trim();
+    board.innerHTML = STAGES.map(stage => {
+      const list = [];
+      pipes.forEach(p => (p.statuses || []).filter(s => norm(s.name) === norm(stage)).forEach(s => s.leads.forEach(l => list.push([l, p.name]))));
+      list.sort((a, b) => (b[0].updated_at || 0) - (a[0].updated_at || 0));
+      const cards = list.map(([l, pn]) => cardHtml(l, pn, ui.pipe === 'all')).join('');
+      const sum = list.reduce((a, [l]) => a + (l.price || 0), 0);
+      const closed = !!ui.closed[stage];
+      return `<div class="col${closed ? ' closed' : ''}" data-stage="${esc(stage)}">
+        <div class="col-head"><span class="col-dot" style="background:${STAGE_COLOR[stage]}"></span><span class="col-name">${esc(stage)}</span>
+          <span class="col-meta">${list.length} шт${sum ? ' · ' + rub(sum) : ''}</span>
+          <svg class="col-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></div>
+        <div class="cards">${cards || '<div class="empty">Нет заказов</div>'}</div></div>`;
+    }).join('');
+    if (q) board.querySelectorAll('.card').forEach(c => { c.style.display = c.dataset.s.includes(q) ? '' : 'none'; });
+    const d = new Date(data.updated || Date.now());
+    $('stamp').textContent = `данные на ${d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  async function load() {
+    const cfg = ls.get(CFG_KEY, {});
+    if (!cfg.url || !cfg.key) { showCfg(true); $('stamp').textContent = 'нужно подключение amoCRM'; return; }
+    const btn = $('reload'); btn.classList.add('spin'); btn.disabled = true;
+    $('msg').classList.remove('err'); $('msg').textContent = '';
+    try {
+      const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/orders', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}' });
+      let d = {}; try { d = await r.json(); } catch (e) {}
+      if (r.status === 404 || d.error === 'Неизвестный адрес') throw new Error('Посредник amoCRM ещё старой версии — обновите его код в Cloudflare (инструкция в сообщении от Claude).');
+      if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
+      data = d; ls.set(CACHE_KEY, d);
+    } catch (e) {
+      $('msg').classList.add('err');
+      $('msg').textContent = 'Не удалось обновить: ' + (e.message || e) + (data ? ' Показаны последние загруженные данные.' : '');
+    } finally { btn.classList.remove('spin'); btn.disabled = false; render(); }
+  }
+
+  function showCfg(on) {
+    const f = $('cfg'); f.hidden = !on;
+    if (on) { const c = ls.get(CFG_KEY, {}); $('cfgUrl').value = c.url || ''; $('cfgKey').value = c.key || ''; }
+  }
+  $('cfg').addEventListener('submit', e => {
+    e.preventDefault();
+    const url = $('cfgUrl').value.trim(), key = $('cfgKey').value.trim();
+    if (!/^https:\/\//.test(url) || !key) { $('msg').classList.add('err'); $('msg').textContent = 'Введите адрес посредника (начинается с https://) и ключ.'; return; }
+    ls.set(CFG_KEY, { url, key }); showCfg(false); load();
+  });
+  $('cfgToggle').addEventListener('click', () => showCfg($('cfg').hidden));
+  $('reload').addEventListener('click', load);
+  $('seg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ui.pipe = b.dataset.p; ls.set(UI_KEY, ui); render(); });
+  $('q').addEventListener('input', render);
+  $('board').addEventListener('click', e => {
+    const head = e.target.closest('.col-head');
+    if (head) { const st = head.parentElement.dataset.stage; ui.closed[st] = !ui.closed[st]; ls.set(UI_KEY, ui); head.parentElement.classList.toggle('closed'); return; }
+    const more = e.target.closest('.btn-more');
+    if (more) { const n = more.closest('.card').querySelector('.note'); n.classList.toggle('open'); more.textContent = n.classList.contains('open') ? 'Свернуть' : 'Подробнее'; }
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && data && Date.now() - (data.updated || 0) > 5 * 60 * 1000) load(); });
+
+  render(); load();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

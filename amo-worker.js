@@ -12,6 +12,8 @@
  *   ALLOWED_ORIGINS  — адрес калькулятора, например  https://plaksiman07.github.io
  *   RESPONSIBLE_ID   — (необязательно) ID ответственного пользователя
  *
+ * /orders — текущие заказы (только чтение): сделки этапов «Изготовление», «Готов к установке», «На установку».
+ *
  * Воронку и этап калькулятор передаёт по названию («Москитные сетки» / «Изготовление»),
  * поля сделки — по названию («Адрес», «Материал», «Цвет», «Изделие 1»…). Посредник сам находит их номера.
  */
@@ -129,7 +131,7 @@ export default {
       // Проверка связи
       if (url.pathname === '/ping') {
         const acc = await amo('/api/v4/account');
-        return json({ ok: true, account: acc.name || domain, worker_version: 2 });
+        return json({ ok: true, account: acc.name || domain, worker_version: 3 });
       }
 
       // Создать сделку (или обновить существующую) + примечание
@@ -207,6 +209,85 @@ export default {
           await amo(`/api/v4/leads/${leadId}/notes`, 'POST', [{ note_type: 'attachment', params }]);
         } catch (e) { inFeed = false; }
         return json({ ok: true, file_uuid: fileInfo.uuid, name, in_feed: inFeed });
+      }
+
+      // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
+      if (url.pathname === '/orders') {
+        let d = {};
+        try { d = await request.json(); } catch (e) {}
+        const wantPipes = Array.isArray(d.pipelines) && d.pipelines.length ? d.pipelines : ['Солнцезащитные системы', 'Москитные сетки'];
+        const wantSts = Array.isArray(d.statuses) && d.statuses.length ? d.statuses : ['Изготовление', 'Готов к установке', 'На установку'];
+        const pd = await amo('/api/v4/leads/pipelines');
+        const pipes = (pd._embedded && pd._embedded.pipelines) || [];
+        const out = [], filters = [], stIndex = {};
+        for (const wp of wantPipes) {
+          const pipe = pipes.find(p => sameName(p.name, wp));
+          if (!pipe) { out.push({ name: wp, missing: true, statuses: [] }); continue; }
+          const sts = (pipe._embedded && pipe._embedded.statuses) || [];
+          const po = { id: pipe.id, name: pipe.name, statuses: [] };
+          for (const ws of wantSts) {
+            const st = sts.find(s => sameName(s.name, ws));
+            const so = st ? { id: st.id, name: st.name, color: st.color || '', leads: [] } : { name: ws, missing: true, leads: [] };
+            po.statuses.push(so);
+            if (st) { filters.push([pipe.id, st.id]); stIndex[pipe.id + ':' + st.id] = so; }
+          }
+          out.push(po);
+        }
+        // сделки (до 1000)
+        const leads = [];
+        if (filters.length) {
+          const fq = filters.map(([p, s], i) => `filter[statuses][${i}][pipeline_id]=${p}&filter[statuses][${i}][status_id]=${s}`).join('&');
+          for (let page = 1; page <= 4; page++) {
+            const r = await fetch(`${base}/api/v4/leads?with=contacts&limit=250&page=${page}&order[updated_at]=desc&${fq}`, { headers: auth });
+            if (r.status === 204) break;
+            if (!r.ok) throw new Error(`amoCRM ответил ${r.status}: ${(await r.text()).slice(0, 300)}`);
+            const j = await r.json();
+            const list = (j._embedded && j._embedded.leads) || [];
+            leads.push(...list);
+            if (list.length < 250) break;
+          }
+        }
+        const chunks = (arr, n) => { const res = []; for (let i = 0; i < arr.length; i += n) res.push(arr.slice(i, i + n)); return res; };
+        // контакты: имя и телефон
+        const contactIds = [...new Set(leads.flatMap(l => ((l._embedded && l._embedded.contacts) || []).filter(c => c.is_main !== false).map(c => c.id)))];
+        const contacts = {};
+        for (const part of chunks(contactIds, 50)) {
+          const r = await fetch(`${base}/api/v4/contacts?limit=250&${part.map(id => `filter[id][]=${id}`).join('&')}`, { headers: auth });
+          if (!r.ok || r.status === 204) continue;
+          const j = await r.json().catch(() => ({}));
+          for (const c of (j._embedded && j._embedded.contacts) || []) {
+            const ph = (c.custom_fields_values || []).find(f => f.field_code === 'PHONE');
+            contacts[c.id] = { name: c.name || [c.first_name, c.last_name].filter(Boolean).join(' '), phone: ph && ph.values && ph.values[0] ? String(ph.values[0].value || '') : '' };
+          }
+        }
+        // последнее текстовое примечание (из калькулятора — с позициями и раскладкой цены)
+        const notes = {};
+        for (const part of chunks(leads.map(l => l.id), 40)) {
+          const r = await fetch(`${base}/api/v4/leads/notes?limit=250&filter[note_type]=common&${part.map(id => `filter[entity_id][]=${id}`).join('&')}`, { headers: auth });
+          if (!r.ok || r.status === 204) continue;
+          const j = await r.json().catch(() => ({}));
+          for (const n of (j._embedded && j._embedded.notes) || []) {
+            const t = n.params && n.params.text ? String(n.params.text) : '';
+            if (!t) continue;
+            const o = notes[n.entity_id] = notes[n.entity_id] || {};
+            const k = /заказ №|Позиции:/.test(t) ? 'calc' : 'other';   // примечание калькулятора и последнее «ручное»
+            if (!o[k] || n.created_at > o[k].at) o[k] = { text: t.slice(0, 6000), at: n.created_at };
+          }
+        }
+        for (const l of leads) {
+          const so = stIndex[l.pipeline_id + ':' + l.status_id];
+          if (!so) continue;
+          const fields = {};
+          for (const f of l.custom_fields_values || []) fields[f.field_name] = (f.values || []).map(v => v.value).filter(v => v !== undefined && v !== null).join(', ');
+          const cs = ((l._embedded && l._embedded.contacts) || []).map(c => contacts[c.id]).filter(Boolean);
+          so.leads.push({
+            id: l.id, name: l.name || '', price: l.price || 0, created_at: l.created_at, updated_at: l.updated_at,
+            tags: ((l._embedded && l._embedded.tags) || []).map(t => t.name), fields, contact: cs[0] || null,
+            note: notes[l.id] && notes[l.id].calc ? notes[l.id].calc.text : '',
+            lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`
+          });
+        }
+        return json({ ok: true, base, updated: Date.now(), pipelines: out, worker_version: 3 });
       }
 
       return json({ error: 'Неизвестный адрес' }, 404);
