@@ -32,6 +32,8 @@ export default {
     };
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 
+    // Версия посредника (без ключа, ничего не раскрывает) — чтобы проверить обновление
+    if (new URL(request.url).pathname === '/version') return json({ worker_version: 3 });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (!originOk) return json({ error: 'Запрос не с адреса калькулятора (ALLOWED_ORIGINS)' }, 403);
     if (request.method !== 'POST') return json({ error: 'Только POST' }, 405);
