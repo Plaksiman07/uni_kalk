@@ -198,10 +198,23 @@
     const btn = $('reload'); btn.classList.add('spin'); btn.disabled = true;
     $('msg').classList.remove('err'); $('msg').textContent = '';
     try {
-      const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/orders', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}' });
-      let d = {}; try { d = await r.json(); } catch (e) {}
-      if (r.status === 404 || d.error === 'Неизвестный адрес') throw new Error('Посредник amoCRM ещё старой версии — обновите его код в Cloudflare (инструкция в сообщении от Claude).');
-      if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
+      // до 3 попыток: мобильная сеть и VPN иногда обрывают запросы к *.workers.dev
+      let d = null, lastErr = null;
+      for (let attempt = 1; attempt <= 3 && !d; attempt++) {
+        try {
+          const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/orders', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}', cache: 'no-store' });
+          let j = null; try { j = await r.json(); } catch (e) {}
+          if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — обновите его в Cloudflare.'), { final: true });
+          if (j && j.error && r.status !== 502) throw Object.assign(new Error(j.error), { final: true });   // ключ, адрес калькулятора — повтор не поможет
+          if (!r.ok || !j || j.error) throw new Error(j && j.error ? j.error : `ответ ${r.status} не от посредника — похоже, сеть или VPN подменяет ответ`);
+          d = j;
+        } catch (e) {
+          lastErr = e;
+          if (e.final) break;
+          if (attempt < 3) await new Promise(res => setTimeout(res, 1200 * attempt));
+        }
+      }
+      if (!d) throw lastErr;
       data = d; ls.set(CACHE_KEY, d);
     } catch (e) {
       $('msg').classList.add('err');

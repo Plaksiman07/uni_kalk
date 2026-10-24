@@ -2066,9 +2066,19 @@
     const amoBase = c => String(c.url || '').trim().replace(/\/+$/, '');
 
     async function amoCall(cfg, path, init = {}) {
+      // запросы только на чтение повторяем до 3 раз (мобильная сеть/VPN иногда обрывают *.workers.dev); создание сделки — без повтора
+      const readOnly = /^\/(ping|last-number|orders)\b/.test(path);
       let r;
-      try { r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } }); }
-      catch (e) { throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`); }
+      for (let attempt = 1; ; attempt++) {
+        try {
+          r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } });
+          if (readOnly && attempt < 3 && r.status === 404 && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('not worker');
+          break;
+        } catch (e) {
+          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`);
+          await new Promise(res => setTimeout(res, 1200 * attempt));
+        }
+      }
       let d = {};
       try { d = await r.json(); } catch (e) {}
       if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
