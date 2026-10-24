@@ -2066,7 +2066,9 @@
     const amoBase = c => String(c.url || '').trim().replace(/\/+$/, '');
 
     async function amoCall(cfg, path, init = {}) {
-      const r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } });
+      let r;
+      try { r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } }); }
+      catch (e) { throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`); }
       let d = {};
       try { d = await r.json(); } catch (e) {}
       if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);

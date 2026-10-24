@@ -205,7 +205,9 @@
       data = d; ls.set(CACHE_KEY, d);
     } catch (e) {
       $('msg').classList.add('err');
-      $('msg').textContent = 'Не удалось обновить: ' + (e.message || e) + (data ? ' Показаны последние загруженные данные.' : '');
+      const m = String((e && e.message) || e);
+      const net = /failed to fetch|load failed|networkerror|network request failed/i.test(m);
+      $('msg').textContent = 'Не удалось обновить: ' + (net ? `нет связи с посредником amoCRM (${String(cfg.url).replace(/^https?:\/\//, '')}). Проверьте интернет; если адрес *.workers.dev не открывается у этого оператора — включите или выключите VPN. Также проверьте адрес в «подключение amoCRM».` : m) + (data ? ' Показаны последние загруженные данные.' : '');
     } finally { btn.classList.remove('spin'); btn.disabled = false; render(); }
   }
 
