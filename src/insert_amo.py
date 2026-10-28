@@ -1,6 +1,6 @@
 import os
 S = os.path.dirname(os.path.abspath(__file__)) + '/'
-client=open(S + 'pdf-lib.js').read()+open(S + 'amo-client.js').read()+open(S + 'combo-client.js').read()
+client=open(S + 'amo-client.js').read()
 CSS="""
     /* === amoCRM === */
     .btn-amo { background: #2f6fd6; border: 1px solid #2f6fd6; color: #ffffff; }
@@ -17,14 +17,6 @@ CSS="""
     .prepay-hint:empty { display: none; }
     .prepay-hint b { color: #1c1e21; }
     .prepay-hint.neg b { color: #c0392b; }
-    .btn-combo { background: #fdf0e6; border: 1px solid #d35400; color: #a04000; margin-bottom: 8px; }
-    .btn-combo.stale { background: #d35400; color: #fff; }
-    .combo-banner { display: flex; gap: 12px; align-items: center; background: #fdf0e6; border: 1px solid #f0c9a8; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.4; }
-    .combo-banner:empty { display: none; }
-    .combo-banner .cb-main { flex: 1; min-width: 0; }
-    .combo-banner .cb-sub { font-size: 12px; color: #65676b; margin-top: 3px; }
-    .combo-banner .cb-warn { color: #c0392b; }
-    .combo-banner .cb-open { flex: none; background: #d35400; color: #fff; text-decoration: none; font-weight: 700; border-radius: 10px; padding: 10px 14px; }
     .amo-num-hint { font-size: 13px; color: #65676b; margin-top: 6px; line-height: 1.4; }
     .amo-num-hint:empty { display: none; }
     .amo-num-hint b { color: #1c1e21; }

@@ -241,12 +241,6 @@
       </div></div>
     </section>
 
-    <a class="crm-btn orders-btn" href="combo.html">
-      <span class="crm-icon" style="background: linear-gradient(135deg, #f6b13b, #d35400);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1.5 10.5a1.5 1.5 0 0 1-1.5 1.3H8a1.5 1.5 0 0 1-1.5-1.3z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/></svg></span>
-      <span class="crm-body"><span class="crm-name">Общий заказ</span><span class="crm-desc" id="comboDesc">Шторы, жалюзи и сетки на одном адресе</span></span>
-      <svg class="crm-go" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-    </a>
-
     <a class="crm-btn orders-btn" href="orders.html">
       <span class="crm-icon" style="background: linear-gradient(135deg, #f6b13b, #d35400);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span>
       <span class="crm-body"><span class="crm-name">Текущие заказы</span><span class="crm-desc">Изготовление · готов к установке · на установку</span></span>
@@ -282,7 +276,7 @@
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.37</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.36</footer>
   </main>
 
   <script>
@@ -349,13 +343,6 @@
         form.hidden = true; render();
       });
       render();
-    })();
-
-    // Общий заказ: показать, что он открыт
-    (function () {
-      try { const c = JSON.parse(localStorage.getItem('spCombo') || 'null');
-        if (c && c.active) { const n = Object.keys(c.parts || {}).length; document.getElementById('comboDesc').textContent = `Открыт${c.client && c.client.orderNumber ? ' № ' + c.client.orderNumber : ''}${c.client && c.client.clientName ? ' · ' + c.client.clientName : ''} · частей: ${n}`; }
-      } catch (e) {}
     })();
 
     // Подсказка «добавить на главный экран» (не показываем, если уже открыто как приложение)
