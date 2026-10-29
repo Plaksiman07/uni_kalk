@@ -17,7 +17,7 @@
           if (readOnly && attempt < 3 && r.status === 404 && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('not worker');
           break;
         } catch (e) {
-          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`);
+          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «Подключение amoCRM»`);
           await new Promise(res => setTimeout(res, 1200 * attempt));
         }
       }
@@ -60,7 +60,7 @@
           const c = read();
           if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
           msg('Проверяю…', true);
-          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть ✓ Аккаунт amoCRM: ${d.account}`, true); }
+          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть. Аккаунт amoCRM: ${d.account}`, true); }
           catch (e) { msg('Нет связи: ' + e.message); }
         };
         $('[data-save]').onclick = () => {
@@ -138,7 +138,12 @@
     const amoBtn = document.getElementById('amoBtn');
     const amoStatus = document.getElementById('amoStatus');
     function amoSetStatus(html, kind) {
-      amoStatus.innerHTML = html;
+      // символ в начале (⏳ ✓ ⚠ ✕) → SVG-иконка и цвет сообщения
+      const m = String(html || '').match(/^(⏳|✓|✕|⚠)\s*/);
+      if (m) { html = html.slice(m[0].length); kind = kind || { '⏳': 'busy', '✓': 'ok', '✕': 'err', '⚠': 'warn' }[m[1]]; }
+      const P = { busy: '<path d="M21 12a9 9 0 1 1-6.2-8.56"/>', ok: '<path d="M5 12.5l4.5 4.5L19 7"/>', err: '<path d="M6 6l12 12M18 6L6 18"/>', warn: '<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/>' }[m ? kind : ''];
+      const ic = P ? `<svg class="ui-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px">${P}</svg>` : '';
+      amoStatus.innerHTML = html ? ic + '<span>' + html + '</span>' : '';
       amoStatus.className = 'amo-status' + (kind ? ' ' + kind : '');
     }
 

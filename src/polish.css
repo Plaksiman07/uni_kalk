@@ -86,3 +86,94 @@
     .settings-row:has(select) { flex-wrap: wrap; }
     .settings-row:has(select) label { flex: 1 1 100%; }
     .settings-row:has(select) select { width: 100% !important; max-width: none !important; }
+    /* === Стиль v3: как «Новый заказ» — Manrope, тёплый фон, мягкие карточки, SVG-иконки === */
+    body { font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased;
+      background: #f5f4f1; color: #16181d; }
+    button, input, select, textarea { font-family: inherit; font-feature-settings: inherit; }
+    .ui-ic { flex: none; }
+    #tabOrder, #tabTech { display: flex; flex-direction: column; gap: 16px; }
+    #tabOrder > * + *, #tabTech > * + * { margin-top: 0; }
+    .app-block { border-radius: 20px; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); padding: 18px 16px; }
+    .block-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #16181d; }
+    .block-title::before { background: #ea580c; height: 16px; }
+    label, .form-group > label.cf-label { color: #3f434b; font-weight: 600; }
+    .visual-hint, .fabric-breakdown, .type-card .io-sub, .client-price-title, .summary-row, .amo-num-hint { color: #6b7079; }
+    select, input[type="text"], input[type="number"], input[type="tel"], textarea {
+      border: 0; border-radius: 14px; background-color: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); padding: 13px 14px; font-weight: 600; color: #16181d; text-overflow: ellipsis; }
+    select:focus, input:focus, textarea:focus { box-shadow: inset 0 0 0 2px #ea580c; background-color: #ffffff; border-color: transparent; }
+    input::placeholder, textarea::placeholder { color: #a3a8b0; font-weight: 500; }
+    input[type="checkbox"], input[type="radio"] { accent-color: #ea580c; }
+    .input-error { box-shadow: inset 0 0 0 2px #dc2626 !important; background-color: #fef2f2 !important; }
+    /* вкладки — сегменты */
+    .tab-btn { border: 0; border-radius: 14px; background: #ffffff; color: #6b7079; font-size: 15px; font-weight: 700; min-height: 46px; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    .tab-btn.active { background: linear-gradient(180deg, #f97316, #ea580c); color: #ffffff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .tabs .settings-toggle, .home-btn { border: 0; border-radius: 14px; width: 46px; background: #ffffff; color: #3f434b; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    .settings-toggle:hover, .home-btn:hover { color: #ea580c; }
+    /* комнаты и изделия */
+    .room-block { border: 0; background: #f3f2ef; border-radius: 16px; padding: 12px; }
+    .room-name-input { background-color: #ffffff !important; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); font-weight: 800; }
+    .room-name-input:focus { box-shadow: inset 0 0 0 2px #ea580c !important; }
+    .btn-remove-room { background: #fef2f2; color: #dc2626; border-radius: 14px; width: 46px; height: 46px; }
+    .btn-room-photo { background: #e8f3ff; color: #0b72e7; border-radius: 14px; width: 46px; height: 46px; }
+    .btn-room-photo .photo-count { background: #0b72e7; }
+    .room-fabric-btn { border: 0; border-radius: 12px; background: #ffffff; color: #3f434b; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); }
+    .room-fabric-btn:hover { color: #c2410c; }
+    .room-fabric-btn.own { border: 0; background: #fff1e8; color: #c2410c; box-shadow: inset 0 0 0 1px rgba(234,88,12,0.35); }
+    .room-fabric-btn b { color: #16181d; }
+    .item-row { border: 0; border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,0.06); padding: 14px; }
+    .item-header { border-bottom: 1px solid rgba(22,24,29,0.08); }
+    .item-title, .item-header > span:first-child, .item-header > b { color: #16181d; font-weight: 800; }
+    .btn-remove { color: #a3a8b0; }
+    .btn-remove:hover { color: #dc2626; }
+    .btn-add-item, .btn-add { display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 14px; min-height: 48px; font-weight: 700; }
+    .btn-add-item { background: #e8f3ff; color: #0b72e7; }
+    .btn-add-item:hover { background: #d9ebff; }
+    .btn-add { background: #fff1e8; color: #c2410c; }
+    .btn-add:hover { background: #ffe4d1; color: #c2410c; }
+    /* выбор полотна / цвета */
+    .type-card { border: 0; border-radius: 14px; background: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); padding: 12px 6px; }
+    .type-card .tc-icon { color: #6b7079; display: flex; }
+    .type-card .tc-name { color: #3f434b; }
+    .type-card.active { background: #fff1e8; box-shadow: inset 0 0 0 2px #ea580c; }
+    .type-card.active .tc-name, .type-card.active .tc-icon { color: #c2410c; }
+    /* итоги и цены */
+    .summary-box { background: #f3f2ef; border-radius: 16px; padding: 16px; }
+    .summary-value { color: #16181d; }
+    .total-cost-row { color: #16181d; font-size: 17px; border-top-color: rgba(22,24,29,0.08); }
+    .client-price-value { color: #16181d; }
+    .client-price-row:has(input:checked) { background: #fff1e8; }
+    .client-price-row + .client-price-row::before { border-top-color: rgba(22,24,29,0.08); }
+    .btn-margin { background: #f3f2ef; color: #6b7079; border-radius: 12px; }
+    .margin-value { color: #15803d; background: #ecfdf3; border-radius: 8px; }
+    .price-warning { background: #fff7e6; color: #b45309; border-radius: 14px; font-weight: 600; }
+    /* кнопки действий */
+    .btn-action { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; font-weight: 700; min-height: 50px; }
+    .btn-pdf { background: #16181d; border-color: #16181d; }
+    .btn-pdf:hover { background: #2a2d34; }
+    .btn-labels { background: #ffffff; border: 0; color: #16181d; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.12); }
+    .btn-labels:hover { background: #f3f2ef; }
+    .btn-amo { background: #0b72e7; border-color: #0b72e7; }
+    .btn-amo:hover { background: #0a63c9; }
+    .amo-status { display: flex; gap: 8px; align-items: flex-start; border-radius: 14px; padding: 10px 12px; background: #f3f2ef; font-weight: 600; }
+    .amo-status.ok { background: #ecfdf3; color: #15803d; } .amo-status.warn { background: #fff7e6; color: #b45309; } .amo-status.err { background: #fef2f2; color: #dc2626; }
+    .amo-status.busy .ui-ic { animation: spSpin 0.9s linear infinite; }
+    @keyframes spSpin { to { transform: rotate(360deg); } }
+    .amo-settings-row a { color: #6b7079; display: inline-flex; align-items: center; gap: 6px; }
+    .amo-num-fill { border: 0; background: #fff1e8; color: #c2410c; border-radius: 10px; }
+    /* настройки */
+    .settings-panel { border-radius: 20px; }
+    .settings-close { border-radius: 12px; background: #f3f2ef; }
+    .settings-group-title { color: #6b7079; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+    .fabric-search-list, .rf-list { border: 0; border-radius: 14px; box-shadow: 0 12px 32px rgba(16,24,40,0.14); }
+    .rf-list { box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); }
+    .fabric-search-item.active, .fabric-search-item:hover, .rf-list .fabric-search-item.sel { background: #fff1e8; }
+    .fabric-search-item mark { color: #c2410c; }
+    .fabric-search-clear { display: none; align-items: center; justify-content: center; color: #8a8f98; }
+    .fabric-search.has-value .fabric-search-clear { display: flex; }
+    /* раздел комбинированного заказа */
+    .sp-embed body { background: #f5f4f1; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+    @media print { body { font-family: Arial, sans-serif; } }
+    .total-cost-row { text-transform: none; font-weight: 800; }
+    .summary-row > span:first-child { color: #6b7079; }
+    .color-card { border: 0; border-radius: 14px; background: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); color: #3f434b; }
+    .color-card.active { background: #fff1e8; box-shadow: inset 0 0 0 2px #ea580c; color: #c2410c; }

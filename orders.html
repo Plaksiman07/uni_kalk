@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="icons/favicon-64.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <style>
-    :root { --bg: #f5f4f1; --card: #ffffff; --ink: #16181d; --ink2: #3f434b; --muted: #8a8f98; --sep: rgba(22,24,29,0.08); --fill: #f3f2ef; --line: rgba(22,24,29,0.08);
+    :root { --bg: #f5f4f1; --card: #ffffff; --ink: #16181d; --ink2: #3f434b; --muted: #6b7079; --sep: rgba(22,24,29,0.08); --fill: #f3f2ef; --line: rgba(22,24,29,0.08);
       --accent: #ea580c; --accent-2: #f97316; --accent-ink: #c2410c; --soft: #fff1e8; --blue: #0b72e7; --blue-soft: #e8f3ff; --red: #dc2626; --green: #15803d;
       --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
     * { box-sizing: border-box; }
@@ -29,14 +29,14 @@
     .icon-btn.spin svg { animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     h1 { flex: 1; min-width: 0; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
-    h1 small { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-top: 2px; letter-spacing: 0; }
+    h1 small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; letter-spacing: 0; }
     .seg { display: flex; gap: 4px; background: rgba(22,24,29,0.06); padding: 4px; border-radius: 14px; margin-bottom: 10px; }
-    .seg button { flex: 1; border: none; background: transparent; border-radius: 11px; padding: 10px 6px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .seg button { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; border: none; background: transparent; border-radius: 11px; padding: 10px 4px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; }
     .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.10); }
     .search { width: 100%; padding: 13px 14px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); border: 0; border-radius: 14px; background: #fff; margin-bottom: 14px; box-shadow: var(--shadow); }
     .search::placeholder { color: #c3c6cc; font-weight: 500; }
     .search:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
-    .msg { background: #fff7e6; color: #b45309; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-size: 13.5px; font-weight: 600; line-height: 1.45; }
+    .msg { background: #fff7e6; color: #b45309; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 600; line-height: 1.45; }
     .msg.err { background: #fef2f2; color: var(--red); }
     .msg:empty { display: none; }
     .board { display: grid; grid-template-columns: 1fr; gap: 16px; }
@@ -63,13 +63,14 @@
     .c-items div { display: flex; gap: 6px; }
     .c-items b { color: var(--muted); font-weight: 700; min-width: 18px; }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-    .tag { font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 8px; background: var(--soft); color: var(--accent-ink); }
+    .tags.mos .tag { background: var(--blue-soft); color: var(--blue); }
+    .tag { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 8px; background: var(--soft); color: var(--accent-ink); }
     .c-age { font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 9px; }
     .c-age.old { color: var(--red); font-weight: 700; }
     .c-pay { font-size: 13px; font-weight: 600; margin-top: 7px; color: var(--ink2); }
-    .c-pay b { color: var(--green); }
+    .c-pay b { color: var(--green); white-space: nowrap; }
     .c-actions { display: flex; gap: 8px; margin-top: 12px; }
-    .c-actions button, .c-actions a { flex: 1; min-height: 42px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; }
+    .c-actions button, .c-actions a { flex: 1; min-height: 42px; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; text-align: center; line-height: 1.2; min-height: 44px; }
     .btn-more { border: 0; background: var(--fill); color: var(--ink); box-shadow: inset 0 0 0 1px var(--sep); }
     .btn-amo { border: 0; background: var(--blue-soft); color: var(--blue); }
     .note { display: none; margin-top: 10px; white-space: pre-wrap; font-size: 13px; font-weight: 500; line-height: 1.5; background: var(--fill); border-radius: 12px; padding: 11px; overflow-wrap: anywhere; }
@@ -89,21 +90,21 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="icon-btn" href="index.html" title="На главный экран" aria-label="На главный экран"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></a>
+    <a class="icon-btn" href="index.html" title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
     <h1>Текущие заказы<small id="stamp">загрузка…</small></h1>
     <button type="button" class="icon-btn" id="reload" title="Обновить" aria-label="Обновить"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
   </div>
 
   <div class="seg" id="seg">
     <button type="button" data-p="all" class="on">Все</button>
-    <button type="button" data-p="Солнцезащитные системы">Солнцезащитные</button>
-    <button type="button" data-p="Москитные сетки">Москитные</button>
+    <button type="button" data-p="Солнцезащитные системы">Шторы</button>
+    <button type="button" data-p="Москитные сетки">Сетки</button>
   </div>
-  <input class="search" id="q" type="search" placeholder="Поиск: клиент, телефон, адрес, № заказа" autocomplete="off">
+  <input class="search" id="q" type="search" placeholder="Клиент, телефон, адрес, №" autocomplete="off">
 
   <form class="cfg" id="cfg" hidden>
     <b>Подключение amoCRM</b>
-    <div style="color:var(--muted); margin-top:4px; line-height:1.4;">То же, что в калькуляторах («⚙ Подключение amoCRM»). Если калькуляторы уже подключены на этом устройстве — заполнится само.</div>
+    <div style="color:var(--muted); margin-top:4px; line-height:1.4;">То же, что в калькуляторах («Подключение amoCRM»). Если калькуляторы уже подключены на этом устройстве — заполнится само.</div>
     <label for="cfgUrl">Адрес посредника</label><input id="cfgUrl" type="url" placeholder="https://sp-amo.….workers.dev" autocomplete="off">
     <label for="cfgKey">Ключ доступа</label><input id="cfgKey" type="password" autocomplete="off">
     <button type="submit">Сохранить и загрузить</button>
@@ -163,11 +164,11 @@
       ${mat ? `<div class="c-row">${I.box}<span>${esc(mat)}</span></div>` : ''}
       ${items.length ? `<div class="c-items">${items.map(([n, v]) => `<div><b>${esc(n)}.</b><span>${esc(v)}</span></div>`).join('')}</div>` : ''}
       ${pay ? `<div class="c-pay">Предоплата: ${esc(pay.pre || '—')} · к доплате: <b>${esc(pay.rest || '—')}</b></div>` : ''}
-      ${tags.length ? `<div class="tags">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${tags.length ? `<div class="tags${/москит/i.test(pipeName) ? ' mos' : ''}">${tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
       ${age ? `<div class="c-age${old ? ' old' : ''}">Обновлено ${age}${old ? ' — давно без движения' : ''}</div>` : ''}
       <div class="c-actions">
         ${l.note || l.lastNote ? '<button type="button" class="btn-more">Подробнее</button>' : ''}
-        <a class="btn-amo" href="${esc(l.url)}" target="_blank" rel="noopener">Открыть в amoCRM</a>
+        <a class="btn-amo" href="${esc(l.url)}" target="_blank" rel="noopener">В amoCRM</a>
       </div>
       ${l.note || l.lastNote ? `<div class="note">${l.note ? `<h4>Из калькулятора</h4>${esc(l.note)}` : ''}${l.lastNote ? `<h4>Последнее примечание</h4>${esc(l.lastNote)}` : ''}</div>` : ''}
     </div>`;

@@ -39,7 +39,7 @@ await p.evaluate(()=>{window.print=()=>{window.__p=(window.__p||0)+1;}});
 for (const [m,n] of [['kp',1],['order',2]]) { await p.click(`.pdf-btn[data-mode="${m}"]`); await p.waitForFunction(k=>window.__p===k,n);
   await p.emulateMedia({media:'print'}); await p.pdf({path:`h_${m}.pdf`,preferCSSPageSize:true,printBackground:true}); await p.emulateMedia({media:'screen'}); }
 await p.evaluate(()=>{ const of=window.fetch; window.fetch=(u,o)=>{ if(String(u).endsWith('/lead')) window.__lead=JSON.parse(o.body); return of(u,o); }; });
-await p.click('#amoBtn'); await p.waitForFunction(()=>{ const t=document.getElementById('amoStatus').textContent; return /✓|⚠|✕/.test(t) && !/⏳/.test(t); },null,{timeout:60000});
+await p.click('#amoBtn'); await p.waitForFunction(()=>{ return /\b(ok|warn|err)\b/.test(document.getElementById('amoStatus').className); },null,{timeout:60000});
 console.log('amo:', await p.innerText('#amoStatus'));
 console.log(JSON.stringify((await p.evaluate(()=>window.__lead)).fields));
 console.log((await p.evaluate(()=>window.__lead.note)).split('\n').slice(0,10).join('\n'));

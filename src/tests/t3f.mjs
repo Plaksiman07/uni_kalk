@@ -1,7 +1,7 @@
 import { chromium } from '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs';
 const b = await chromium.launch(); const p = await (await b.newContext({viewport:{width:390,height:844}})).newPage();
 const errs=[]; p.on('pageerror',e=>errs.push(e.message)); p.on('dialog',d=>d.accept());
-const done = () => p.waitForFunction(()=>{ const t=document.getElementById('amoStatus').textContent; return /✓|⚠|✕/.test(t) && !/⏳/.test(t); },null,{timeout:60000});
+const done = () => p.waitForFunction(()=>{ return /\b(ok|warn|err)\b/.test(document.getElementById('amoStatus').className); },null,{timeout:60000});
 for (const [page,setup] of [['uni.html', async()=>{
     await p.click('#fabricSearch'); await p.fill('#fabricSearch','омега'); await p.keyboard.press('Enter'); await p.selectOption('#fabricWidthSelect','250'); await p.selectOption('#fabricColor','белый');
     await p.fill('.item-width','150'); await p.fill('.item-height','160'); await p.fill('.item-qty','2'); await p.dispatchEvent('.item-qty','input'); }],

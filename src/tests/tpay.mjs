@@ -34,7 +34,7 @@ for (const [page, setup] of Object.entries(setups)) {
   chk('КП без предоплаты/доп.инфо', !/Предоплата|рассрочку/.test(txt));
   // amo: перехватываем текст примечания
   await p.evaluate(()=>{ const of=window.fetch; window.fetch=(u,o)=>{ if(String(u).endsWith('/lead')) window.__lead=JSON.parse(o.body); return of(u,o); }; });
-  await p.click('#amoBtn'); await p.waitForFunction(()=>{ const t=document.getElementById('amoStatus').textContent; return /✓|⚠|✕/.test(t) && !/⏳/.test(t); },null,{timeout:60000});
+  await p.click('#amoBtn'); await p.waitForFunction(()=>{ return /\b(ok|warn|err)\b/.test(document.getElementById('amoStatus').className); },null,{timeout:60000});
   const note = await p.evaluate(()=>window.__lead && window.__lead.note);
   chk('amo: статус', /✓|⚠/.test(await p.textContent('#amoStatus')), await p.textContent('#amoStatus'));
   chk('amo: предоплата и доплата', /Предоплата: 3\s000 ₽/.test(note) && /К доплате после установки: /.test(note));

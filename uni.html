@@ -22,6 +22,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="SunProtection">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="icons/favicon-64.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -461,14 +464,104 @@
     .settings-row:has(select) { flex-wrap: wrap; }
     .settings-row:has(select) label { flex: 1 1 100%; }
     .settings-row:has(select) select { width: 100% !important; max-width: none !important; }
+    /* === Стиль v3: как «Новый заказ» — Manrope, тёплый фон, мягкие карточки, SVG-иконки === */
+    body { font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased;
+      background: #f5f4f1; color: #16181d; }
+    button, input, select, textarea { font-family: inherit; font-feature-settings: inherit; }
+    .ui-ic { flex: none; }
+    #tabOrder, #tabTech { display: flex; flex-direction: column; gap: 16px; }
+    #tabOrder > * + *, #tabTech > * + * { margin-top: 0; }
+    .app-block { border-radius: 20px; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); padding: 18px 16px; }
+    .block-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: #16181d; }
+    .block-title::before { background: #ea580c; height: 16px; }
+    label, .form-group > label.cf-label { color: #3f434b; font-weight: 600; }
+    .visual-hint, .fabric-breakdown, .type-card .io-sub, .client-price-title, .summary-row, .amo-num-hint { color: #6b7079; }
+    select, input[type="text"], input[type="number"], input[type="tel"], textarea {
+      border: 0; border-radius: 14px; background-color: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); padding: 13px 14px; font-weight: 600; color: #16181d; text-overflow: ellipsis; }
+    select:focus, input:focus, textarea:focus { box-shadow: inset 0 0 0 2px #ea580c; background-color: #ffffff; border-color: transparent; }
+    input::placeholder, textarea::placeholder { color: #a3a8b0; font-weight: 500; }
+    input[type="checkbox"], input[type="radio"] { accent-color: #ea580c; }
+    .input-error { box-shadow: inset 0 0 0 2px #dc2626 !important; background-color: #fef2f2 !important; }
+    /* вкладки — сегменты */
+    .tab-btn { border: 0; border-radius: 14px; background: #ffffff; color: #6b7079; font-size: 15px; font-weight: 700; min-height: 46px; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    .tab-btn.active { background: linear-gradient(180deg, #f97316, #ea580c); color: #ffffff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .tabs .settings-toggle, .home-btn { border: 0; border-radius: 14px; width: 46px; background: #ffffff; color: #3f434b; box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    .settings-toggle:hover, .home-btn:hover { color: #ea580c; }
+    /* комнаты и изделия */
+    .room-block { border: 0; background: #f3f2ef; border-radius: 16px; padding: 12px; }
+    .room-name-input { background-color: #ffffff !important; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); font-weight: 800; }
+    .room-name-input:focus { box-shadow: inset 0 0 0 2px #ea580c !important; }
+    .btn-remove-room { background: #fef2f2; color: #dc2626; border-radius: 14px; width: 46px; height: 46px; }
+    .btn-room-photo { background: #e8f3ff; color: #0b72e7; border-radius: 14px; width: 46px; height: 46px; }
+    .btn-room-photo .photo-count { background: #0b72e7; }
+    .room-fabric-btn { border: 0; border-radius: 12px; background: #ffffff; color: #3f434b; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); }
+    .room-fabric-btn:hover { color: #c2410c; }
+    .room-fabric-btn.own { border: 0; background: #fff1e8; color: #c2410c; box-shadow: inset 0 0 0 1px rgba(234,88,12,0.35); }
+    .room-fabric-btn b { color: #16181d; }
+    .item-row { border: 0; border-radius: 14px; box-shadow: 0 1px 2px rgba(16,24,40,0.06); padding: 14px; }
+    .item-header { border-bottom: 1px solid rgba(22,24,29,0.08); }
+    .item-title, .item-header > span:first-child, .item-header > b { color: #16181d; font-weight: 800; }
+    .btn-remove { color: #a3a8b0; }
+    .btn-remove:hover { color: #dc2626; }
+    .btn-add-item, .btn-add { display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 14px; min-height: 48px; font-weight: 700; }
+    .btn-add-item { background: #e8f3ff; color: #0b72e7; }
+    .btn-add-item:hover { background: #d9ebff; }
+    .btn-add { background: #fff1e8; color: #c2410c; }
+    .btn-add:hover { background: #ffe4d1; color: #c2410c; }
+    /* выбор полотна / цвета */
+    .type-card { border: 0; border-radius: 14px; background: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); padding: 12px 6px; }
+    .type-card .tc-icon { color: #6b7079; display: flex; }
+    .type-card .tc-name { color: #3f434b; }
+    .type-card.active { background: #fff1e8; box-shadow: inset 0 0 0 2px #ea580c; }
+    .type-card.active .tc-name, .type-card.active .tc-icon { color: #c2410c; }
+    /* итоги и цены */
+    .summary-box { background: #f3f2ef; border-radius: 16px; padding: 16px; }
+    .summary-value { color: #16181d; }
+    .total-cost-row { color: #16181d; font-size: 17px; border-top-color: rgba(22,24,29,0.08); }
+    .client-price-value { color: #16181d; }
+    .client-price-row:has(input:checked) { background: #fff1e8; }
+    .client-price-row + .client-price-row::before { border-top-color: rgba(22,24,29,0.08); }
+    .btn-margin { background: #f3f2ef; color: #6b7079; border-radius: 12px; }
+    .margin-value { color: #15803d; background: #ecfdf3; border-radius: 8px; }
+    .price-warning { background: #fff7e6; color: #b45309; border-radius: 14px; font-weight: 600; }
+    /* кнопки действий */
+    .btn-action { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 16px; font-weight: 700; min-height: 50px; }
+    .btn-pdf { background: #16181d; border-color: #16181d; }
+    .btn-pdf:hover { background: #2a2d34; }
+    .btn-labels { background: #ffffff; border: 0; color: #16181d; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.12); }
+    .btn-labels:hover { background: #f3f2ef; }
+    .btn-amo { background: #0b72e7; border-color: #0b72e7; }
+    .btn-amo:hover { background: #0a63c9; }
+    .amo-status { display: flex; gap: 8px; align-items: flex-start; border-radius: 14px; padding: 10px 12px; background: #f3f2ef; font-weight: 600; }
+    .amo-status.ok { background: #ecfdf3; color: #15803d; } .amo-status.warn { background: #fff7e6; color: #b45309; } .amo-status.err { background: #fef2f2; color: #dc2626; }
+    .amo-status.busy .ui-ic { animation: spSpin 0.9s linear infinite; }
+    @keyframes spSpin { to { transform: rotate(360deg); } }
+    .amo-settings-row a { color: #6b7079; display: inline-flex; align-items: center; gap: 6px; }
+    .amo-num-fill { border: 0; background: #fff1e8; color: #c2410c; border-radius: 10px; }
+    /* настройки */
+    .settings-panel { border-radius: 20px; }
+    .settings-close { border-radius: 12px; background: #f3f2ef; }
+    .settings-group-title { color: #6b7079; text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+    .fabric-search-list, .rf-list { border: 0; border-radius: 14px; box-shadow: 0 12px 32px rgba(16,24,40,0.14); }
+    .rf-list { box-shadow: inset 0 0 0 1px rgba(22,24,29,0.08); }
+    .fabric-search-item.active, .fabric-search-item:hover, .rf-list .fabric-search-item.sel { background: #fff1e8; }
+    .fabric-search-item mark { color: #c2410c; }
+    .fabric-search-clear { display: none; align-items: center; justify-content: center; color: #8a8f98; }
+    .fabric-search.has-value .fabric-search-clear { display: flex; }
+    /* раздел комбинированного заказа */
+    .sp-embed body { background: #f5f4f1; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
+    @media print { body { font-family: Arial, sans-serif; } }
+    .total-cost-row { text-transform: none; font-weight: 800; }
+    .summary-row > span:first-child { color: #6b7079; }
+    .color-card { border: 0; border-radius: 14px; background: #f3f2ef; box-shadow: inset 0 0 0 1px rgba(22,24,29,0.06); color: #3f434b; }
+    .color-card.active { background: #fff1e8; box-shadow: inset 0 0 0 2px #ea580c; color: #c2410c; }
   </style>
 </head>
 <body>
 
   <div id="calculatorUI">
     <div class="tabs">
-      <a href="index.html#settings" class="home-btn" title="Все калькуляторы" aria-label="Все калькуляторы">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <a href="index.html#settings" class="home-btn" title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
       </a>
       <button type="button" class="tab-btn active" id="tabBtnOrder">Заказ-наряд</button>
       <button type="button" class="tab-btn" id="tabBtnTech">Тех. часть</button>
@@ -491,7 +584,7 @@
         <label>Коллекция ткани</label>
         <div class="fabric-search">
           <input type="text" id="fabricSearch" placeholder="Начните вводить название…" autocomplete="off" spellcheck="false">
-          <button type="button" id="fabricSearchClear" class="fabric-search-clear" title="Очистить" tabindex="-1">✕</button>
+          <button type="button" id="fabricSearchClear" class="fabric-search-clear" title="Очистить" tabindex="-1"><svg class="ui-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
           <div id="fabricSearchList" class="fabric-search-list"></div>
         </div>
         <select id="fabricSelect" style="display:none;"><option value="">-- Выберите коллекцию --</option></select>
@@ -522,7 +615,7 @@
       <div class="block-title">Помещения и Размеры</div>
       <div class="visual-hint" style="text-align:left;">Размеры в см.</div>
       <div id="roomsContainer"></div>
-      <button type="button" id="addRoomBtn" class="btn-add">+ Добавить комнату</button>
+      <button type="button" id="addRoomBtn" class="btn-add"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Добавить комнату</button>
     </div>
 
     <div class="app-block">
@@ -533,46 +626,46 @@
         <div class="summary-row"><span>Себестоимость ткани:</span><span class="summary-value" id="costFabricOnly">0 ₽</span></div>
         <div class="summary-row"><span>Фурнитура и работы:</span><span class="summary-value" id="costItemsOnly">0 ₽</span></div>
         <div id="widthError" class="error-msg">Внимание: Одно или несколько изделий шире рулона!</div>
-        <div class="total-cost-row"><span>ИТОГО СЕБЕСТОИМОСТЬ:</span><span id="costTotal">0 ₽</span></div>
+        <div class="total-cost-row"><span>Итого себестоимость</span><span id="costTotal">0 ₽</span></div>
       </div>
     </div>
 
     <div class="app-block">
       <div class="block-title">Стоимость для клиента</div>
       <label class="check-row"><input type="checkbox" id="noInstall" onchange="calculateTotals()"> Без монтажа (только изготовление)</label>
-      <div class="visual-hint" style="text-align:left; margin-bottom: 15px;">Отметьте цену, которая пойдет в PDF. 🤫 — маржа до общих расходов (аренда, зарплата и т. п.), для Р/С — после налога.</div>
+      <div class="visual-hint" style="text-align:left; margin-bottom: 15px;">Отметьте цену, которая пойдет в PDF. <svg class="ui-ic" width="15" height="15" style="vertical-align: -2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> — маржа до общих расходов (аренда, зарплата и т. п.), для Р/С — после налога.</div>
       <div class="summary-box">
         <div class="client-price-row">
           <input type="radio" name="selectedPrice" value="base" class="price-radio" checked onchange="saveState()">
           <div class="client-price-main"><span class="client-price-title">Базовая стоимость</span><span class="client-price-value" id="priceBase">0 ₽</span></div>
-          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginBase')" title="Показать маржу">🤫</button><span class="margin-value" id="marginBase">0 ₽</span></div>
+          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginBase')" title="Показать маржу"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="margin-value" id="marginBase">0 ₽</span></div>
         </div>
         <div class="client-price-row">
           <input type="radio" name="selectedPrice" value="discount7" class="price-radio" onchange="saveState()">
           <div class="client-price-main"><span class="client-price-title" id="titleDiscount7">Со скидкой 7%</span><span class="client-price-value" id="price7">0 ₽</span></div>
-          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin7')" title="Показать маржу">🤫</button><span class="margin-value" id="margin7">0 ₽</span></div>
+          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin7')" title="Показать маржу"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="margin-value" id="margin7">0 ₽</span></div>
         </div>
         <div class="client-price-row">
           <input type="radio" name="selectedPrice" value="discount12" class="price-radio" onchange="saveState()">
           <div class="client-price-main"><span class="client-price-title" id="titleDiscount12">Со скидкой 12%</span><span class="client-price-value" id="price12">0 ₽</span></div>
-          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin12')" title="Показать маржу">🤫</button><span class="margin-value" id="margin12">0 ₽</span></div>
+          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('margin12')" title="Показать маржу"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="margin-value" id="margin12">0 ₽</span></div>
         </div>
         <div class="client-price-row rs-row">
           <input type="radio" name="selectedPrice" value="b2b" class="price-radio" onchange="saveState()">
           <div class="client-price-main"><span class="client-price-title" style="color:#8e44ad; font-weight:bold;">Оплата по <span style="white-space:nowrap">Р/С</span> (ИП)</span><span class="client-price-value" id="priceB2B" style="color:#8e44ad;">0 ₽</span></div>
-          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginB2B')" title="Показать маржу">🤫</button><span class="margin-value" id="marginB2B" style="color:#8e44ad; background:#f4ecf7;">0 ₽</span></div>
+          <div class="client-margin-box"><button class="btn-margin" onclick="toggleMargin('marginB2B')" title="Показать маржу"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button><span class="margin-value" id="marginB2B" style="color:#8e44ad; background:#f4ecf7;">0 ₽</span></div>
         </div>
       </div>
     </div>
 
     <button id="savePdfBtn" type="button" style="display:none;"></button>
     <div class="pdf-btns">
-      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="kp">📄 КП для клиента</button>
-      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="order">🛠 Заказ-наряд</button>
+      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="kp"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>КП для клиента</button>
+      <button type="button" class="btn-action btn-pdf pdf-btn" data-mode="order"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1.2"/><path d="M9 12h6M9 16h4"/></svg>Заказ-наряд</button>
     </div><!-- /pdf-btns -->
-    <button type="button" id="amoBtn" class="btn-action btn-amo">📤 Добавить в amoCRM</button>
+    <button type="button" id="amoBtn" class="btn-action btn-amo"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>Добавить в amoCRM</button>
     <div class="amo-status" id="amoStatus"></div>
-    <div class="amo-settings-row"><a href="#" id="amoSettingsLink">⚙ Подключение amoCRM</a></div>
+    <div class="amo-settings-row"><a href="#" id="amoSettingsLink"><svg class="ui-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>Подключение amoCRM</a></div>
     </div>
 
     <div id="tabTech" style="display: none;">
@@ -616,8 +709,8 @@
         <div id="techComponents"></div>
       </div>
 
-      <button type="button" class="btn-action btn-labels btn-labels-tech labels-btn">🏷 Скачать наклейки на изделия (PDF)</button>
-      <div class="visual-hint" id="labelsStatus" style="margin:0 0 40px;">Файл для термопринтера: по наклейке на каждое изделие. Размер наклейки — в настройках ⚙</div>
+      <button type="button" class="btn-action btn-labels btn-labels-tech labels-btn"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Скачать наклейки на изделия (PDF)</button>
+      <div class="visual-hint" id="labelsStatus" style="margin:0 0 40px;">Файл для термопринтера: по наклейке на каждое изделие. Размер наклейки — в настройках</div>
     </div>
   </div>
 
@@ -985,7 +1078,7 @@
       if (!btn) return;
       const f = roomFabric(room);
       btn.classList.toggle('own', !!f);
-      btn.innerHTML = f ? `🧵 Ткань комнаты: <b>${esc(specText(makeSpec(f.name, f.width, f.color)))}</b>` : '🧵 Ткань: как в заказе <span style="color:#90949c">· нажмите, чтобы выбрать другую</span>';
+      btn.innerHTML = f ? `<svg class="ui-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -3px; margin-right: 4px;"><path d="M4 4h16v4H4z"/><path d="M6 8v12h12V8"/></svg>Ткань комнаты: <b>${esc(specText(makeSpec(f.name, f.width, f.color)))}</b>` : '<svg class=\'ui-ic\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2.2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' aria-hidden=\'true\' style=\'vertical-align: -3px; margin-right: 4px;\'><path d=\'M4 4h16v4H4z\'/><path d=\'M6 8v12h12V8\'/></svg>Ткань: как в заказе <span style="color:#90949c">· нажмите, чтобы выбрать другую</span>';
     }
 
     // Окно выбора ткани для комнаты
@@ -1355,12 +1448,12 @@
             <button type="button" class="btn-room-photo" onclick="pickRoomPhoto('${roomId}')" title="Добавить фото окна" aria-label="Добавить фото окна">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
-            <button type="button" class="btn-remove-room" onclick="removeRoom('${roomId}')" title="Удалить комнату">&times;</button>
+            <button type="button" class="btn-remove-room" onclick="removeRoom('${roomId}')" title="Удалить комнату"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
           </div>
           <button type="button" class="room-fabric-btn" onclick="openRoomFabric('${roomId}')"></button>
           <div class="room-photos"></div>
           <div class="room-items-container"></div>
-          <button type="button" class="btn-add-item" onclick="createItemInRoom('${roomId}')">+ Добавить изделие</button>
+          <button type="button" class="btn-add-item" onclick="createItemInRoom('${roomId}')"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Добавить изделие</button>
         </div>
       `;
       roomsContainer.insertAdjacentHTML('beforeend', roomHTML);
@@ -1387,7 +1480,7 @@
         <div class="item-row" id="${itemId}">
           <div class="item-header">
             <span class="item-title-text">Изделие</span>
-            <button type="button" class="btn-remove" onclick="removeItem('${roomId}', '${itemId}')">&times;</button>
+            <button type="button" class="btn-remove" onclick="removeItem('${roomId}', '${itemId}')" aria-label="Удалить"><svg class="ui-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
           </div>
           <div class="row">
             <div class="form-group col">
@@ -2058,7 +2151,7 @@
           if (readOnly && attempt < 3 && r.status === 404 && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('not worker');
           break;
         } catch (e) {
-          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`);
+          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «Подключение amoCRM»`);
           await new Promise(res => setTimeout(res, 1200 * attempt));
         }
       }
@@ -2101,7 +2194,7 @@
           const c = read();
           if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
           msg('Проверяю…', true);
-          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть ✓ Аккаунт amoCRM: ${d.account}`, true); }
+          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть. Аккаунт amoCRM: ${d.account}`, true); }
           catch (e) { msg('Нет связи: ' + e.message); }
         };
         $('[data-save]').onclick = () => {
@@ -2179,7 +2272,12 @@
     const amoBtn = document.getElementById('amoBtn');
     const amoStatus = document.getElementById('amoStatus');
     function amoSetStatus(html, kind) {
-      amoStatus.innerHTML = html;
+      // символ в начале (⏳ ✓ ⚠ ✕) → SVG-иконка и цвет сообщения
+      const m = String(html || '').match(/^(⏳|✓|✕|⚠)\s*/);
+      if (m) { html = html.slice(m[0].length); kind = kind || { '⏳': 'busy', '✓': 'ok', '✕': 'err', '⚠': 'warn' }[m[1]]; }
+      const P = { busy: '<path d="M21 12a9 9 0 1 1-6.2-8.56"/>', ok: '<path d="M5 12.5l4.5 4.5L19 7"/>', err: '<path d="M6 6l12 12M18 6L6 18"/>', warn: '<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/>' }[m ? kind : ''];
+      const ic = P ? `<svg class="ui-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px">${P}</svg>` : '';
+      amoStatus.innerHTML = html ? ic + '<span>' + html + '</span>' : '';
       amoStatus.className = 'amo-status' + (kind ? ' ' + kind : '');
     }
 
@@ -2644,7 +2742,7 @@
       } else if (noPrice.length) {
         if (!(SETTINGS.exchangeRate > 0)) {
           problem = 'Укажите курс в настройках.';
-          msg = 'Курс у.е. в настройках равен 0 — стоимость ткани не рассчитана. Откройте ⚙ и укажите курс.';
+          msg = 'Курс у.е. в настройках равен 0 — стоимость ткани не рассчитана. Откройте настройки и укажите курс.';
         } else {
           problem = 'Выберите цвет ткани.';
           msg = 'Выберите цвет ткани — у этой коллекции цена зависит от цвета, без него стоимость ткани не рассчитана.' +
@@ -2776,7 +2874,7 @@
             rowDiv.style.height = (row.maxHeight * 100 * pxPerCm) + 'px';
             const cutLabel = document.createElement('div');
             cutLabel.className = 'row-cut-length';
-            cutLabel.textContent = `✂ Рез: ${Number((row.maxHeight * 100).toFixed(2))} см`;
+            cutLabel.textContent = `Рез: ${Number((row.maxHeight * 100).toFixed(2))} см`;
             rowDiv.appendChild(cutLabel);
             row.items.forEach(item => {
               const itemDiv = document.createElement('div');
