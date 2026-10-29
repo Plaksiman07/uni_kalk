@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Комбинированный заказ — SunProtection</title>
+  <title>Новый заказ — SunProtection</title>
   <meta name="theme-color" content="#f5f4f1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -173,12 +173,12 @@
 </head>
 <body>
 <div class="nav" id="nav">
-  <a href="index.html#new"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Назад</a>
-  <span class="nav-title" id="navTitle">Комбинированный заказ</span>
+  <a href="index.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Назад</a>
+  <span class="nav-title" id="navTitle">Новый заказ</span>
   <button type="button" id="moreBtn" aria-label="Ещё"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
 </div>
 <div class="wrap">
-  <div class="large">Комбинированный заказ</div>
+  <div class="large" id="largeTitle">Новый заказ</div>
   <div class="large-sub" id="sub"></div>
 
   <div class="sec-h">Клиент</div>
@@ -324,6 +324,7 @@
   function refresh() { renumber(); render(); }
 
   // === Отрисовка ===
+  const esc0 = v => String(v || '');
   const pcs = p => (p.items || []).reduce((a, it) => a + (Number(it.qty) || 1), 0);   // изделий в штуках, с учётом количества
   const partsSum = () => ordered().map(id => st.sum[id]).filter(Boolean);
   const priceLabel = k => { const p = partsSum()[0], L = p ? p.labels : {}; return { base: 'Базовая стоимость', discount7: L.discount7 || 'Со скидкой 7%', discount12: L.discount12 || 'Со скидкой 12%', b2b: 'Оплата по Р/С (ИП)' }[k]; };
@@ -397,8 +398,9 @@
     CLIENT.forEach(id => { const el = $(id); if (document.activeElement !== el && el.value !== (st.client[id] || '')) el.value = st.client[id] || ''; });
     const sel = st.priceSel, ids = ordered(), c = st.client;
     const nItems = partsSum().reduce((a, p) => a + pcs(p), 0);
-    $('navTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Комбинированный заказ';
-    $('sub').textContent = ids.length ? `${c.orderNumber ? '№ ' + c.orderNumber + ' · ' : ''}${ids.length} ${plural(ids.length, 'вид', 'вида', 'видов')} изделий · ${nItems} ${plural(nItems, 'изделие', 'изделия', 'изделий')}` : 'Шторы, жалюзи и сетки — в одном заказе';
+    $('navTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Новый заказ';
+    $('largeTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Новый заказ';
+    $('sub').textContent = ids.length ? `${c.clientName ? esc0(c.clientName) + ' · ' : ''}${ids.length} ${plural(ids.length, 'вид', 'вида', 'видов')} изделий · ${nItems} ${plural(nItems, 'изделие', 'изделия', 'изделий')}` : 'Шторы, жалюзи и сетки — в одном заказе';
     // клиент
     const cOpen = ui.client === null ? !c.clientName : ui.client;
     $('clientBox').classList.toggle('open', cOpen);
@@ -483,15 +485,15 @@
     }
     if (tg) { const id = tg.dataset.toggle; ui.parts[id] = !tg.parentElement.classList.contains('open'); tg.parentElement.classList.toggle('open', ui.parts[id]); }
   });
-  function newOrder() {
-    if (!confirm('Начать новый комбинированный заказ? Текущий очистится (отправленная в amoCRM сделка останется).')) return;
+  function newOrder(force) {
+    if (force !== true && !confirm('Начать новый заказ? Текущий очистится (отправленная в amoCRM сделка останется).')) return;
     try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
     st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' }; save();
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
   }
   $('moreBtn').onclick = () => menu($('moreBtn'), [
-    { label: 'Новый комбинированный заказ', icon: IC.plus, bg: 'var(--red-soft)', fg: 'var(--red)', danger: true, act: newOrder },
+    { label: 'Начать новый заказ', icon: IC.plus, bg: 'var(--red-soft)', fg: 'var(--red)', danger: true, act: newOrder },
     { label: 'Текущие заказы', icon: IC.list, act: () => { location.href = 'orders.html'; } }
   ], { alignRight: true, width: 280 });
   window.addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 44), { passive: true });
@@ -523,7 +525,7 @@
     if (bad.length) throw new Error('исправьте разделы — ' + bad.join('; '));
     return ids;
   }
-  const fileName = (kind) => `${kind} SunProtection ${st.client.orderNumber ? '№ ' + st.client.orderNumber : 'без номера'} — комбинированный.pdf`.replace(/[\\/:*?"<>|]/g, '-');
+  const fileName = (kind) => `${kind} SunProtection ${st.client.orderNumber ? '№ ' + st.client.orderNumber : 'без номера'}.pdf`.replace(/[\\/:*?"<>|]/g, '-');
   function download(blob, name) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
@@ -555,7 +557,7 @@
   function orderHeadHtml() {
     const sel = st.priceSel, tot = total(sel), c = st.client, pre = Math.max(0, parseFloat(String(c.prepay || '').replace(',', '.')) || 0);
     const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0);
-    return shell(`<div class="print-section" style="font-family: Arial, sans-serif; color: #2c3e50;">${head('Заказ-наряд · комбинированный заказ', 'ВНУТРЕННИЙ')}${clientBox()}
+    return shell(`<div class="print-section" style="font-family: Arial, sans-serif; color: #2c3e50;">${head('Заказ-наряд', 'ВНУТРЕННИЙ')}${clientBox()}
       <div style="background: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin: 10px 0; font-size: 14px;">
         <strong>Стоимость для клиента (${esc(priceLabel(sel).toLowerCase())}):</strong> ${rub(tot)} &nbsp;·&nbsp; <strong>Предоплата:</strong> ${pre > 0 ? rub(pre) : 'без предоплаты'} &nbsp;·&nbsp; <strong>К доплате:</strong> <span style="color: #c0392b; font-weight: 800;">${rub(Math.max(0, tot - pre))}</span>
         ${c.orderNote ? `<div style="margin-top: 6px;"><strong>Доп. информация:</strong> ${esc(c.orderNote).replace(/\n/g, '<br>')}</div>` : ''}</div>
@@ -640,7 +642,8 @@
     const cols = [...new Set(ps.map(p => (p.fields || {})['Цвет']).filter(Boolean))]; if (cols.length === 1) fields['Цвет'] = cols[0];
     items.forEach((t, i) => { if (i < 7 || items.length <= 8) fields[`Изделие ${i + 1}`] = t; else if (i === 7) fields['Изделие 8'] = `+ ещё ${items.length - 7} поз. — см. PDF`; });
     const note = [
-      `Комбинированный заказ №${c.orderNumber || '—'}`,
+      `Заказ №${c.orderNumber || '—'}`,
+      `Изделия: ${ps.map(p => `${p.name} — ${pcs(p)} шт`).join('; ')}`,
       `Клиент: ${c.clientName || '—'}${c.clientPhone ? ', ' + c.clientPhone : ''}`, `Адрес: ${c.clientAddress || '—'}`, '',
       ...ps.flatMap(p => { const ls = lineSums(p, sel); return [`${p.name} — ${rub(p.prices[sel])}${p.noInstall ? ' (без монтажа)' : ''}`, ...(p.details || []).map(x => '  ' + x), ...p.items.map((it, i) => `  ${it.n}. ${it.room || '—'}: ${it.text} — ${rub(ls[i])}`), '']; }),
       `Итого для клиента (${priceLabel(sel)}): ${rub(tot)}`,
@@ -649,9 +652,9 @@
     ].join('\n');
     setStatus('⏳ Отправляю сделку…');
     const lead = await call(cfg, '/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', street(c.clientAddress) || c.clientName].filter(Boolean).join(' ') || 'Комбинированный заказ',
+      lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', street(c.clientAddress) || c.clientName].filter(Boolean).join(' ') || 'Новый заказ',
       price: tot, pipeline: st.pipeline || $('pipeline').value, status: 'Изготовление', contact: { name: c.clientName || '', phone: c.clientPhone || '' },
-      fields, note, tags: [...new Set(['Комбинированный', ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), `${ps.reduce((a, p) => a + pcs(p), 0)} шт`])] }) });
+      fields, note, tags: [...new Set([...(ps.length > 1 ? ['Комбинированный'] : []), ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), `${ps.reduce((a, p) => a + pcs(p), 0)} шт`])] }) });
     try { localStorage.setItem(leadKey, String(lead.lead_id)); if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
     const files = [['заказ-наряд', fileName('Заказ-наряд'), orderBlob], ['КП', fileName('КП'), kpBlob], ['наклейки', fileName('Наклейки'), labelsBlob]];
     const done = [], failed = [];
@@ -665,7 +668,8 @@
     setStatus(`${failed.length ? '⚠' : '✓'} ${lead.created ? `Сделка создана в «${esc(lead.pipeline_name || st.pipeline)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена'}: ${rub(tot)}, прикреплены: ${done.join(', ') || '—'}${failed.length ? '. Не прикрепилось: ' + failed.map(esc).join('; ') : ''} — ${link}`, failed.length ? 'warn' : 'ok');
   });
 
-  // старт: подгрузить разделы, чтобы сводка была свежей
+  // старт: ?new=1 — с главного «Начать новый»; иначе подгрузить разделы, чтобы сводка была свежей
+  if (new URLSearchParams(location.search).get('new') === '1') { newOrder(true); history.replaceState(null, '', location.pathname); }
   render();
   ordered().forEach(id => frameFor(id));
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

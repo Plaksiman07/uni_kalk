@@ -7,12 +7,12 @@ let ok = true; const chk = (n, c, x = '') => { console.log((c ? 'OK  ' : 'FAIL')
 const B = 'http://localhost:8765/';
 // главный экран
 await p.goto(B + 'index.html'); await p.evaluate(() => localStorage.clear()); await p.reload();
-chk('главный: «Новый заказ», группы скрыты', await p.isVisible('.big-btn') && !(await p.isVisible('#grp-sun')));
+chk('главный: «Новый заказ», калькуляторов нет', await p.isVisible('#newBtn') && !(await p.isVisible('a[href="uni.html"]')));
 await p.screenshot({ path: OUT + 'idx_home.png', fullPage: true });
-await p.click('.big-btn'); await p.waitForTimeout(150);
-chk('«Новый заказ»: группы и комбинированный', await p.isVisible('#grp-sun') && await p.isVisible('.combo-btn'));
-await p.screenshot({ path: OUT + 'idx_new.png', fullPage: true });
-await p.goBack(); await p.waitForTimeout(150); chk('назад — главный', await p.isVisible('.big-btn'));
+await p.click('a[href="#settings"]'); await p.waitForTimeout(150);
+chk('настройки: все 8 калькуляторов', (await p.$$eval('#viewSettings a.row', e => e.length)) === 8 && await p.isVisible('a[href="uni.html"]'));
+await p.screenshot({ path: OUT + 'idx_settings.png', fullPage: true });
+await p.goBack(); await p.waitForTimeout(150); chk('назад — главный', await p.isVisible('#newBtn'));
 // подготовка: обычный UNI со своим заказом (не должен пострадать)
 const ID = 'test1';
 await p.evaluate(([ID]) => {
@@ -66,4 +66,17 @@ const tot = +(await p.textContent('.row.total .money')).replace(/\D/g, '');
 chk('сумма сделки = итог', leads[0].price === tot, leads[0].price + ' vs ' + tot);
 chk('3 файла: заказ-наряд, КП, наклейки', files.length === 3, files.join(' | '));
 console.log(JSON.stringify(leads[0].fields), JSON.stringify(leads[0].tags)); console.log(leads[0].note.split('\n').slice(0, 12).join('\n'));
+// главный: черновик → шторка «продолжить / новый»
+await p.goto(B + 'index.html'); await p.waitForTimeout(200);
+chk('чип черновика', /888/.test(await p.textContent('#draftChip')) && await p.isVisible('#draftChip'), await p.textContent('#draftChip'));
+await p.screenshot({ path: OUT + 'idx_home_draft.png' });
+await p.click('#newBtn'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'idx_sheet.png' });
+chk('шторка: заказ № 888, 5 изделий', /888/.test(await p.textContent('#dTitle')) && /5 изделий/.test(await p.textContent('#dSub')), await p.textContent('#dSub') + ' ' + await p.textContent('#dSum'));
+await p.click('#dCont'); await p.waitForURL(/combo\.html$/); await p.waitForTimeout(800);
+chk('продолжить — заказ на месте', (await p.$$('.part')).length === 2 && /888/.test(await p.textContent('#navTitle')));
+await p.goto(B + 'index.html'); await p.click('#newBtn'); await p.waitForTimeout(400); await p.click('#dNew'); await p.waitForURL(/combo\.html/); await p.waitForTimeout(800);
+chk('новый — пустой заказ без вопросов', (await p.$$('.part')).length === 0 && (await p.textContent('#navTitle')) === 'Новый заказ' && !/new=1/.test(p.url()));
+await p.goto(B + 'index.html'); await p.waitForTimeout(200);
+await p.click('#newBtn'); await p.waitForTimeout(300);
+chk('пустой черновик — сразу в заказ', /combo\.html/.test(p.url()) || (await p.isVisible('#sheet.show')) === false);
 console.log('errors', errs, ok ? 'ALL OK' : 'HAS FAILS'); await b.close();
