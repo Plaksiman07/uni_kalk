@@ -57,7 +57,7 @@ for (const [idx, name] of [[0, 'kp'], [1, 'order'], [2, 'labels']]) {
 // amo
 const leads = [], files = [];
 await p.route('http://localhost:8790/**', route => { const u = route.request().url(); if (u.endsWith('/lead')) leads.push(JSON.parse(route.request().postData())); if (u.includes('/file')) files.push(decodeURIComponent(route.request().headers()['x-file-name'] || '')); route.continue(); });
-await p.click('#amoBtn'); await p.waitForFunction(() => /✓|⚠|✕/.test(document.getElementById('status').textContent) && !/⏳/.test(document.getElementById('status').textContent), null, { timeout: 90000 }); await p.screenshot({ path: OUT + 'combo3_sent.png' });
+await p.click('#amoBtn'); await p.waitForFunction(() => /\b(ok|warn|err)\b/.test(document.getElementById('status').className), null, { timeout: 90000 }); await p.screenshot({ path: OUT + 'combo3_sent.png' });
 console.log('amo:', await p.innerText('#status'));
 chk('одна сделка на весь заказ', leads.length === 1 && leads[0].pipeline === 'Солнцезащитные системы');
 const tot = +(await p.textContent('.row.total .money')).replace(/\D/g, '');

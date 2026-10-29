@@ -4,50 +4,54 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Комбинированный заказ — SunProtection</title>
-  <meta name="theme-color" content="#f2f2f7">
+  <meta name="theme-color" content="#f5f4f1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="icons/favicon-64.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <style>
     :root {
-      --bg: #f2f2f7; --card: #ffffff; --ink: #1c1c1e; --ink2: #3c3c43; --muted: #8e8e93; --sep: rgba(60,60,67,0.14);
-      --fill: #f2f2f7; --accent: #e8590c; --accent-soft: rgba(232,89,12,0.10); --green: #248a3d; --red: #d70015; --blue: #0a6cff; --violet: #8e44ad;
-      --r: 14px; --ease: cubic-bezier(.2,.8,.2,1);
+      --bg: #f5f4f1; --card: #ffffff; --ink: #16181d; --ink2: #3f434b; --muted: #8a8f98; --sep: rgba(22,24,29,0.08);
+      --fill: #f3f2ef; --accent: #ea580c; --accent-2: #f97316; --accent-ink: #c2410c; --accent-soft: #fff1e8; --green: #15803d; --green-soft: #ecfdf3; --red: #dc2626; --red-soft: #fef2f2;
+      --blue: #0b72e7; --blue-soft: #e8f3ff; --slate: #334155; --slate-soft: #eef1f5; --violet: #7c3aed; --violet-soft: #f3effd;
+      --r: 18px; --ease: cubic-bezier(.2,.8,.2,1); --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05);
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink);
+    body { font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-feature-settings: "tnum" 1, "cv11" 1; background: var(--bg); color: var(--ink);
       font-size: 16px; line-height: 1.35; -webkit-font-smoothing: antialiased; padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
     button { font-family: inherit; }
     .wrap { max-width: 600px; margin: 0 auto; padding: 0 16px; }
 
     /* навигация */
     .nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
-      background: rgba(242,242,247,0.94); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); transition: box-shadow .2s; }
+      background: rgba(245,244,241,0.92); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); transition: box-shadow .2s; }
     .nav.scrolled { box-shadow: 0 0.5px 0 var(--sep); }
     .nav a, .nav button { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-size: 17px; text-decoration: none; background: none; border: 0; padding: 8px; border-radius: 10px; cursor: pointer; }
     .nav .nav-title { position: absolute; left: 50%; transform: translateX(-50%); max-width: calc(100% - 210px); overflow: hidden; text-overflow: ellipsis; font-size: 17px; font-weight: 600; color: var(--ink); opacity: 0; transition: opacity .2s; white-space: nowrap; pointer-events: none; }
     .nav.scrolled .nav-title { opacity: 1; }
-    .large { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin: 2px 0 2px; }
+    .large { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 6px 0 6px; }
     .large-sub { color: var(--muted); font-size: 15px; margin-bottom: 18px; min-height: 20px; }
 
     /* сгруппированные списки */
-    .sec-h { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; margin: 22px 16px 7px; display: flex; justify-content: space-between; align-items: baseline; }
+    .sec-h { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 16px 7px; display: flex; justify-content: space-between; align-items: baseline; }
     .sec-h:first-of-type { margin-top: 4px; }
     .sec-f { font-size: 13px; color: var(--muted); margin: 7px 16px 0; line-height: 1.4; }
-    .group { background: var(--card); border-radius: var(--r); overflow: hidden; }
+    .group { background: var(--card); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
     .row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; position: relative; }
     .row + .row::before, .row + .part-body::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--sep); }
     .row.ind + .row::before { left: 58px; }
-    .row label, .row .lbl { flex: none; width: 112px; color: var(--ink); font-size: 16px; }
-    .row input, .row textarea { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; color: var(--ink); padding: 13px 0; outline: none; text-align: right; }
+    .row label, .row .lbl { flex: none; width: 112px; color: var(--ink2); font-size: 15px; font-weight: 500; }
+    .row input, .row textarea { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--ink); padding: 13px 0; outline: none; text-align: right; }
     .row textarea { text-align: left; resize: none; min-height: 48px; padding: 13px 0; field-sizing: content; }
-    .row input::placeholder, .row textarea::placeholder { color: #c7c7cc; }
+    .row input::placeholder, .row textarea::placeholder { color: #c3c6cc; font-weight: 500; }
     .row.tap { cursor: pointer; }
-    .row.tap:active { background: #e5e5ea; }
+    .row.tap:active { background: var(--fill); }
     .val { flex: 1; text-align: right; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chev { flex: none; color: #c4c4c6; transition: transform .25s var(--ease); }
     .chev.down { transform: rotate(90deg); }
@@ -63,96 +67,102 @@
     .open > .fold { grid-template-rows: 1fr; }
     .fold > div { overflow: hidden; }
     .client-sum { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; min-height: 64px; }
-    .avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ffb347, var(--accent)); color: #fff; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+    .avatar { flex: none; width: 44px; height: 44px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; }
     .cs-main { flex: 1; min-width: 0; }
-    .cs-name { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cs-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cs-sub { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 
     /* изделия */
-    .part { background: var(--card); border-radius: var(--r); overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .part { background: var(--card); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; box-shadow: var(--shadow); }
     .part-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 12px; cursor: pointer; min-height: 64px; }
-    .p-icon { flex: none; width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; }
-    .p-icon.sun { background: linear-gradient(135deg, #ffb347, #e8590c); }
-    .p-icon.mos { background: linear-gradient(135deg, #5ac8fa, #0a6cff); }
+    .p-icon { flex: none; width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+    .p-icon.sun { background: var(--accent-soft); color: var(--accent); }
+    .p-icon.mos { background: var(--blue-soft); color: var(--blue); }
     .p-main { flex: 1; min-width: 0; }
-    .p-name { font-size: 16px; font-weight: 600; line-height: 1.25; }
+    .p-name { font-size: 16px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; }
     .p-sub { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .p-sub.err { color: var(--red); white-space: normal; }
-    .p-sum { flex: none; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .p-sub.err { color: var(--red); white-space: normal; display: flex; gap: 5px; align-items: flex-start; }
+    .p-sub.err svg { flex: none; margin-top: 1px; }
+    .p-sum { flex: none; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .part-body { position: relative; }
     .it { display: flex; gap: 10px; padding: 10px 14px 10px 12px; position: relative; }
     .it::before { content: ''; position: absolute; top: 0; left: 64px; right: 0; border-top: 0.5px solid var(--sep); }
     .it-n { flex: none; width: 42px; text-align: center; }
-    .it-n span { display: inline-flex; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: var(--fill); color: var(--ink2); font-size: 13px; font-weight: 600; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+    .it-n span { display: inline-flex; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 9px; background: var(--fill); color: var(--ink2); font-size: 13px; font-weight: 700; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
     .it-main { flex: 1; min-width: 0; }
-    .it-room { font-size: 15px; font-weight: 600; }
+    .it-room { font-size: 15px; font-weight: 700; }
     .it-text { font-size: 14px; color: var(--muted); margin-top: 1px; }
     .it-sum { flex: none; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--ink2); padding-top: 1px; }
     .p-det { font-size: 13px; color: var(--muted); padding: 0 14px 10px 66px; line-height: 1.45; }
     .p-act { display: flex; border-top: 0.5px solid var(--sep); }
-    .p-act button { flex: 1; border: 0; background: none; padding: 14px; font-size: 16px; color: var(--accent); cursor: pointer; font-weight: 500; }
+    .p-act button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; background: none; padding: 14px; font-size: 15px; color: var(--accent-ink); cursor: pointer; font-weight: 700; }
     .p-act button + button { border-left: 0.5px solid var(--sep); }
     .p-act button.del { color: var(--red); flex: 0 0 34%; }
-    .p-act button:active { background: #f2f2f7; }
+    .p-act button:active { background: var(--fill); }
 
     .add-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: var(--card); color: var(--accent);
-      border-radius: var(--r); padding: 16px; font-size: 17px; font-weight: 600; cursor: pointer; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+      border-radius: var(--r); padding: 17px; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .15s; box-shadow: var(--shadow); }
+    .add-btn .plus { display: inline-flex; width: 26px; height: 26px; border-radius: 9px; background: var(--accent); color: #fff; align-items: center; justify-content: center; }
     .add-btn:active { transform: scale(0.98); }
     .empty { text-align: center; padding: 26px 20px 8px; color: var(--muted); font-size: 15px; line-height: 1.45; }
-    .empty .e-ic { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 18px; background: var(--card); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .empty .e-ic { width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 22px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; color: var(--accent); }
     .empty b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
 
     .money { font-variant-numeric: tabular-nums; }
     .row .money { flex: 1; text-align: right; }
-    .row.total .lbl, .row.total .money { font-weight: 700; font-size: 18px; }
-    .row.total .money { color: var(--accent); }
+    .row.total .lbl, .row.total .money { font-weight: 800; font-size: 19px; letter-spacing: -0.01em; color: var(--ink); }
+    .row.total .money { color: var(--ink); }
     .green { color: var(--green) !important; } .redc { color: var(--red) !important; }
 
     /* нижняя панель */
-    .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(249,249,249,0.88); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: rgba(255,255,255,0.9); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
       border-top: 0.5px solid var(--sep); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); transform: translateY(0); transition: transform .3s var(--ease); }
     .dock.hide { transform: translateY(110%); }
     .dock-in { max-width: 600px; margin: 0 auto; }
     .dock-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
     .dock-top span { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .dock-top b { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .dock-top b { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .dock-btns { display: flex; gap: 10px; }
-    .dbtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 13px; padding: 14px 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform .12s, opacity .2s; }
+    .dbtn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; padding: 15px 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .12s, opacity .2s; }
     .dbtn:active { transform: scale(0.97); }
     .dbtn:disabled { opacity: 0.4; }
-    .dbtn.sec { background: #e5e5ea; color: var(--ink); }
-    .dbtn.pri { background: var(--accent); color: #fff; }
-    .toast { font-size: 13px; line-height: 1.4; padding: 9px 12px; border-radius: 12px; background: #fff; margin-bottom: 8px; color: var(--ink2); box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    .dbtn.sec { background: var(--fill); color: var(--ink); box-shadow: inset 0 0 0 1px var(--sep); }
+    .dbtn.pri { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 6px 16px rgba(234,88,12,0.28); }
+    .toast { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; font-weight: 600; line-height: 1.45; padding: 10px 12px; border-radius: 14px; background: var(--fill); margin-bottom: 10px; color: var(--ink2); }
+    .toast .t-ic { flex: none; width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; background: #fff; }
+    .toast.busy .t-ic svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .toast:empty { display: none; }
-    .toast.ok { color: var(--green); } .toast.warn { color: #b25000; } .toast.err { color: var(--red); }
+    .toast.ok { background: var(--green-soft); color: var(--green); } .toast.warn { background: #fff7e6; color: #b45309; } .toast.err { background: var(--red-soft); color: var(--red); }
     .toast a { color: inherit; font-weight: 700; }
 
     /* выпадающее меню */
     .menu-bg { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,0.12); opacity: 0; transition: opacity .18s; }
     .menu-bg.on { opacity: 1; }
-    .menu { position: fixed; z-index: 91; min-width: 250px; max-width: calc(100vw - 24px); max-height: 70vh; overflow-y: auto; background: rgba(250,250,250,0.96); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    .menu { position: fixed; z-index: 91; min-width: 250px; max-width: calc(100vw - 24px); max-height: 70vh; overflow-y: auto; background: rgba(255,255,255,0.97); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
       border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(0,0,0,0.06); transform: scale(0.92); opacity: 0; transition: transform .2s var(--ease), opacity .15s; }
     .menu.on { transform: scale(1); opacity: 1; }
-    .m-h { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; padding: 10px 16px 4px; }
-    .m-i { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 11px 16px; font-size: 16px; color: var(--ink); cursor: pointer; position: relative; }
+    .m-h { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 16px 4px; }
+    .m-i { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 11px 16px; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; position: relative; }
     .m-i + .m-i::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--sep); }
     .m-i:active, .m-i:hover { background: rgba(0,0,0,0.05); }
     .m-i .m-l { flex: 1; min-width: 0; }
-    .m-i .m-s { display: block; font-size: 13px; color: var(--muted); margin-top: 1px; }
+    .m-i .m-s { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 1px; }
     .m-i .m-r { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .m-i .m-ic { flex: none; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .m-i .m-ic { flex: none; width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; }
     .m-i .m-ic svg { width: 18px; height: 18px; }
-    .m-i .m-ck { flex: none; width: 18px; color: var(--accent); font-weight: 700; }
+    .m-i .m-ck { flex: none; width: 20px; color: var(--accent); display: flex; }
     .m-i.danger { color: var(--red); }
     .m-sep { height: 8px; background: rgba(0,0,0,0.04); }
 
     /* редактор раздела */
     #sheet { position: fixed; left: -12000px; top: 0; width: 100vw; height: 100vh; height: 100dvh; background: var(--bg); z-index: 50; display: flex; flex-direction: column; transform: translateY(30px); opacity: 0; transition: transform .3s var(--ease), opacity .25s; }
     #sheet.open { left: 0; transform: none; opacity: 1; }
-    .sh-bar { flex: none; display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: rgba(249,249,249,0.94); border-bottom: 0.5px solid var(--sep); }
-    .sh-bar .p-icon { width: 32px; height: 32px; border-radius: 8px; }
-    .sh-bar b { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sh-bar button { border: 0; border-radius: 999px; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; padding: 9px 18px; cursor: pointer; }
+    .sh-bar { flex: none; display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; background: rgba(255,255,255,0.96); border-bottom: 0.5px solid var(--sep); }
+    .sh-bar .p-icon { width: 36px; height: 36px; border-radius: 11px; }
+    .sh-bar .p-icon svg { width: 20px; height: 20px; }
+    .sh-bar b { flex: 1; min-width: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sh-bar button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 12px; background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; font-size: 15px; font-weight: 700; padding: 10px 16px; cursor: pointer; }
     .sh-body { flex: 1; position: relative; }
     .sh-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; visibility: hidden; background: var(--bg); }
     .sh-body iframe.on { visibility: visible; }
@@ -187,7 +197,7 @@
 
   <div class="sec-h"><span>Изделия</span><span id="itemsCount"></span></div>
   <div id="parts"></div>
-  <button type="button" class="add-btn" id="addBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Добавить изделие<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button type="button" class="add-btn" id="addBtn"><span class="plus"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Добавить изделие<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
 
   <div id="priceArea">
     <div class="sec-h">Стоимость</div>
@@ -218,7 +228,7 @@
 </div></div>
 
 <div id="sheet" aria-hidden="true">
-  <div class="sh-bar"><span class="p-icon" id="shIcon"></span><b id="shTitle"></b><button type="button" id="shDone">Готово</button></div>
+  <div class="sh-bar"><span class="p-icon" id="shIcon"></span><b id="shTitle"></b><button type="button" id="shDone"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Готово</button></div>
   <div class="sh-body" id="shBody"></div>
 </div>
 <div id="printArea"></div>
@@ -333,6 +343,17 @@
     order: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9z"/><path d="M15 5h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3"/><path d="M9 12h6M9 16h6"/></svg>',
     labels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>'
   };
+  const IC = {
+    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+    alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
+    x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    spin: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>',
+    eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+    trash: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg>'
+  };
   const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
   const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? b : c;
 
@@ -349,7 +370,7 @@
     const bg = document.createElement('div'); bg.className = 'menu-bg';
     const m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role', 'menu');
     m.innerHTML = items.map((it, i) => it.h ? `<div class="m-h">${esc(it.h)}</div>` : it.sep ? '<div class="m-sep"></div>' :
-      `<button type="button" class="m-i${it.danger ? ' danger' : ''}" data-i="${i}" role="menuitem">${it.check !== undefined ? `<span class="m-ck">${it.check ? '✓' : ''}</span>` : ''}${it.icon ? `<span class="m-ic" style="background:${it.bg || 'var(--accent)'}">${it.icon}</span>` : ''}<span class="m-l">${esc(it.label)}${it.sub ? `<span class="m-s">${esc(it.sub)}</span>` : ''}</span>${it.right ? `<span class="m-r">${esc(it.right)}</span>` : ''}</button>`).join('');
+      `<button type="button" class="m-i${it.danger ? ' danger' : ''}" data-i="${i}" role="menuitem">${it.check !== undefined ? `<span class="m-ck">${it.check ? IC.check : ''}</span>` : ''}${it.icon ? `<span class="m-ic" style="background:${it.bg || 'var(--accent-soft)'}; color:${it.fg || 'var(--accent)'}">${it.icon}</span>` : ''}<span class="m-l">${esc(it.label)}${it.sub ? `<span class="m-s">${esc(it.sub)}</span>` : ''}</span>${it.right ? `<span class="m-r">${esc(it.right)}</span>` : ''}</button>`).join('');
     document.body.append(bg, m);
     const r = anchor.getBoundingClientRect(), mw = Math.min(Math.max(r.width, opts.width || 270), innerWidth - 24);
     m.style.width = mw + 'px';
@@ -390,11 +411,11 @@
       if (!p) return `<div class="part">${head('загрузка…', '', false)}</div>`;
       const ls = lineSums(p, sel);
       return `<div class="part${open ? ' open' : ''}">
-        ${head(p.problem ? '⚠ ' + esc(p.problem) : `${p.items.length} ${plural(p.items.length, 'изделие', 'изделия', 'изделий')}${(p.details || [])[0] ? ' · ' + esc(String(p.details[0]).replace(/^[^:]+:\s*/, '')) : ''}`, p.problem ? '—' : rub(p.prices[sel]), !!p.problem)}
+        ${head(p.problem ? IC.alert + '<span>' + esc(p.problem) + '</span>' : `${p.items.length} ${plural(p.items.length, 'изделие', 'изделия', 'изделий')}${(p.details || [])[0] ? ' · ' + esc(String(p.details[0]).replace(/^[^:]+:\s*/, '')) : ''}`, p.problem ? '—' : rub(p.prices[sel]), !!p.problem)}
         <div class="fold"><div>
           ${p.items.map((it, i) => `<div class="it"><div class="it-n"><span>${it.n}</span></div><div class="it-main"><div class="it-room">${esc(it.room || 'Без комнаты')}</div><div class="it-text">${esc(String(it.text).replace(/\s*\(Ш гот\.[^)]*\)/, ''))}</div></div><div class="it-sum money">${p.problem ? '' : rub(ls[i])}</div></div>`).join('')}
           ${(p.details || []).length || p.noInstall ? `<div class="p-det">${(p.details || []).map(esc).join(' · ')}${p.noInstall ? ' · без монтажа' : ''}</div>` : ''}
-          <div class="p-act"><button type="button" data-edit="${id}">Изменить</button><button type="button" class="del" data-del="${id}">Удалить</button></div>
+          <div class="p-act"><button type="button" data-edit="${id}">${IC.edit}Изменить</button><button type="button" class="del" data-del="${id}">${IC.trash}Удалить</button></div>
         </div></div></div>`;
     }).join('') : `<div class="empty"><div class="e-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 13v8M13 17h8"/></svg></div>
         <b>Пока нет изделий</b>Добавьте шторы, жалюзи или сетки — каждое изделие считается как в обычном калькуляторе, а заказ получится один.</div>`;
@@ -410,7 +431,7 @@
        <div class="row"><span class="lbl" style="width:auto;">К доплате</span><span class="money ${rest < 0 ? 'redc' : 'green'}">${rest >= 0 ? rub(rest) : '0 ₽ · переплата ' + rub(-rest)}</span></div>`;
     const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0);
     $('marginBox').classList.toggle('open', ui.margin);
-    $('marginRow').querySelector('.val').textContent = ui.margin || bad.length ? '' : '🤫';
+    $('marginRow').querySelector('.val').innerHTML = ui.margin || bad.length ? '' : `<span style="color:var(--muted); display:inline-flex; vertical-align:middle;">${IC.eye}</span>`;
     $('marginBody').innerHTML = partsSum().map(p => `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">${esc(CALC[p.id].name)}</span><span class="money" style="flex:none; color:var(--muted); font-size:15px;">${rub(p.cost)} → ${rub(p.prices[sel])}</span></div>`).join('') +
       `<div class="row"><span class="lbl" style="width:auto;">Себестоимость</span><span class="money">${rub(cost)}</span></div>
        <div class="row"><span class="lbl" style="width:auto;">Маржа</span><span class="money green">${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))}${tot > 0 ? ' · ' + Math.round(profit / tot * 100) + '%' : ''}</span></div>`;
@@ -443,7 +464,7 @@
   $('priceRow').onclick = () => menu($('priceRow'), PRICE_KEYS.map(k => ({ label: priceLabel(k), right: problems().length ? '' : rub(total(k)), check: k === st.priceSel, act: () => setPrice(k) })), { alignRight: true });
   $('pipeRow').onclick = () => menu($('pipeRow'), ['Солнцезащитные системы', 'Москитные сетки'].map(pp => ({ label: pp, check: pp === st.pipeline, act: () => { st.pipeline = pp; st.pipelineManual = true; save(); render(); } })), { alignRight: true });
   function addMenu() {
-    const it = c => ({ label: c.name, sub: st.parts.includes(c.id) ? 'уже в заказе — открыть' : '', icon: ICONS[c.id], bg: c.g === 'sun' ? 'linear-gradient(135deg,#ffb347,#e8590c)' : 'linear-gradient(135deg,#5ac8fa,#0a6cff)',
+    const it = c => ({ label: c.name, sub: st.parts.includes(c.id) ? 'уже в заказе — открыть' : '', icon: ICONS[c.id], bg: c.g === 'sun' ? 'var(--accent-soft)' : 'var(--blue-soft)', fg: c.g === 'sun' ? 'var(--accent)' : 'var(--blue)',
       act: () => { if (!st.parts.includes(c.id)) { st.parts.push(c.id); save(); } ui.parts[c.id] = true; openSheet(c.id); render(); } });
     menu($('addBtn'), [{ h: 'Солнцезащитные системы' }, ...CALCS.filter(c => c.g === 'sun').map(it), { h: 'Противомоскитные системы' }, ...CALCS.filter(c => c.g === 'mos').map(it)]);
   }
@@ -469,8 +490,8 @@
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
   }
   $('moreBtn').onclick = () => menu($('moreBtn'), [
-    { label: 'Новый комбинированный заказ', danger: true, act: newOrder },
-    { label: 'Текущие заказы', act: () => { location.href = 'orders.html'; } }
+    { label: 'Новый комбинированный заказ', icon: IC.plus, bg: 'var(--red-soft)', fg: 'var(--red)', danger: true, act: newOrder },
+    { label: 'Текущие заказы', icon: IC.list, act: () => { location.href = 'orders.html'; } }
   ], { alignRight: true, width: 280 });
   window.addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 44), { passive: true });
 
@@ -568,7 +589,12 @@
   }
   let toastTmr = null;
   function setStatus(html, kind) {
-    const t = $('status'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.innerHTML = html;
+    const t = $('status');
+    const m = String(html || '').match(/^(⏳|✓|✕|⚠)\s*/);
+    if (m) { html = html.slice(m[0].length); kind = kind || { '⏳': 'busy', '✓': 'ok', '✕': 'err', '⚠': 'warn' }[m[1]]; }
+    const ic = { busy: IC.spin, ok: IC.check, err: IC.x, warn: IC.alert }[kind];
+    t.className = 'toast' + (kind ? ' ' + kind : '');
+    t.innerHTML = html ? (ic ? `<span class="t-ic">${ic}</span>` : '') + `<span>${html}</span>` : '';
     clearTimeout(toastTmr); if (kind === 'ok') toastTmr = setTimeout(() => { t.innerHTML = ''; }, 9000);
   }
   async function run(btn, fn) {
@@ -577,8 +603,8 @@
   }
   $('docsBtn').onclick = () => menu($('docsBtn'), [
     { label: 'КП для клиента', sub: 'Одно на весь заказ', icon: DOC_IC.kp, act: () => run('docsBtn', async () => { await readyAll(); setStatus('⏳ Готовлю КП…'); download(await buildKp(), fileName('КП')); setStatus('✓ КП готово — файл скачан', 'ok'); }) },
-    { label: 'Заказ-наряд', sub: 'Для цеха: раскрой всех изделий', icon: DOC_IC.order, bg: '#34495e', act: () => run('docsBtn', async () => { setStatus('⏳ Готовлю заказ-наряд…'); download(await buildOrder(h => setStatus(h)), fileName('Заказ-наряд')); setStatus('✓ Заказ-наряд готов — файл скачан', 'ok'); }) },
-    { label: 'Наклейки', sub: 'Термопринтер, на каждое изделие', icon: DOC_IC.labels, bg: '#8e8e93', act: () => run('docsBtn', async () => { setStatus('⏳ Готовлю наклейки…'); download(await buildLabels(), fileName('Наклейки')); setStatus('✓ Наклейки готовы — файл скачан', 'ok'); }) }
+    { label: 'Заказ-наряд', sub: 'Для цеха: раскрой всех изделий', icon: DOC_IC.order, bg: 'var(--slate-soft)', fg: 'var(--slate)', act: () => run('docsBtn', async () => { setStatus('⏳ Готовлю заказ-наряд…'); download(await buildOrder(h => setStatus(h)), fileName('Заказ-наряд')); setStatus('✓ Заказ-наряд готов — файл скачан', 'ok'); }) },
+    { label: 'Наклейки', sub: 'Термопринтер, на каждое изделие', icon: DOC_IC.labels, bg: 'var(--violet-soft)', fg: 'var(--violet)', act: () => run('docsBtn', async () => { setStatus('⏳ Готовлю наклейки…'); download(await buildLabels(), fileName('Наклейки')); setStatus('✓ Наклейки готовы — файл скачан', 'ok'); }) }
   ], { width: 290 });
 
   // === amoCRM: одна сделка ===
