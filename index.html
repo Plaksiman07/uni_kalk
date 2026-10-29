@@ -119,6 +119,13 @@
     .crm-opt input { transform: scale(1.3); margin-top: 3px; accent-color: #2f6fd6; flex: none; }
     .crm-steps { margin: 10px 0 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.45; }
     .crm-steps b { color: var(--ink); }
+    .big-btn { margin: 0 0 14px; padding: 20px 16px; }
+    .big-btn .crm-name { font-size: 20px; }
+    .big-btn .crm-icon { width: 56px; height: 56px; }
+    .combo-btn { margin: 4px 0 14px; }
+    .view-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; color: #fff; font-size: 18px; font-weight: 800; }
+    .view-back { width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.14); color: #fff; display: flex; align-items: center; justify-content: center; }
+    #viewHome[hidden], #viewNew[hidden] { display: none; }
     footer { text-align: center; font-size: 12px; color: #90949c; margin-top: 26px; }
   </style>
 </head>
@@ -130,6 +137,47 @@
   </header>
 
   <main>
+    <div id="viewHome">
+    <a class="crm-btn big-btn" href="#new">
+      <span class="crm-icon" style="background: linear-gradient(135deg, #f6b13b, #d35400);"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="crm-body"><span class="crm-name">Новый заказ</span><span class="crm-desc">Калькуляторы и комбинированный заказ</span></span>
+      <svg class="crm-go" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+
+    <a class="crm-btn orders-btn" href="orders.html">
+      <span class="crm-icon" style="background: linear-gradient(135deg, #f6b13b, #d35400);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span>
+      <span class="crm-body"><span class="crm-name">Текущие заказы</span><span class="crm-desc">Изготовление · готов к установке · на установку</span></span>
+      <svg class="crm-go" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+
+    <div class="crm">
+      <a class="crm-btn" id="amoOpen" href="#" target="_blank" rel="noopener">
+        <span class="crm-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><path d="M8 13h3M8 16h6"/><path d="M15.5 13.5l1.2 1.2 2.3-2.4"/></svg></span>
+        <span class="crm-body"><span class="crm-name">amoCRM</span><span class="crm-desc" id="amoDesc">Сделки, воронки и заказы</span></span>
+        <svg class="crm-go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </a>
+      <form class="crm-set" id="amoSet" hidden>
+        <label for="amoAddr">Адрес вашей amoCRM</label>
+        <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="firma.amocrm.ru"><button type="submit">Сохранить</button></div>
+        <div class="crm-msg" id="amoMsg"></div>
+        <div class="crm-ios" id="amoIos" hidden>
+          <label class="crm-opt"><input type="checkbox" id="amoDirect"> Открывать приложение amoCRM напрямую (через «Команды»)</label>
+          <ol class="crm-steps">
+            <li>Откройте на iPhone приложение <b>«Команды»</b> → <b>+</b> (новая команда).</li>
+            <li>Добавьте действие <b>«Открыть приложение»</b> и выберите <b>amoCRM</b>.</li>
+            <li>Переименуйте команду: нажмите вверху на её название <b>«Открыть приложение ⌄»</b> → <b>«Переименовать»</b> → введите ровно <b>amoCRM</b>.</li>
+            <li>Включите галочку выше и нажмите «Сохранить».</li>
+          </ol>
+        </div>
+      </form>
+      <button type="button" class="crm-edit" id="amoEdit">изменить адрес amoCRM</button>
+    </div>
+
+    </div>
+
+    <div id="viewNew" hidden>
+    <div class="view-head"><a href="#" class="view-back" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a><span>Новый заказ</span></div>
+
     <section class="grp grp-sun" id="grp-sun">
       <button type="button" class="grp-head" aria-expanded="false" aria-controls="list-sun">
         <span class="grp-icon"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></span>
@@ -241,33 +289,12 @@
       </div></div>
     </section>
 
-    <a class="crm-btn orders-btn" href="orders.html">
-      <span class="crm-icon" style="background: linear-gradient(135deg, #f6b13b, #d35400);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span>
-      <span class="crm-body"><span class="crm-name">Текущие заказы</span><span class="crm-desc">Изготовление · готов к установке · на установку</span></span>
+    <a class="crm-btn combo-btn" href="combo.html">
+      <span class="crm-icon" style="background: #34495e;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 13v8M13 17h8"/></svg></span>
+      <span class="crm-body"><span class="crm-name">Комбинированный заказ</span><span class="crm-desc">Шторы, жалюзи и сетки в одном заказе: одно КП, один заказ-наряд, одна сделка</span></span>
       <svg class="crm-go" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
     </a>
 
-    <div class="crm">
-      <a class="crm-btn" id="amoOpen" href="#" target="_blank" rel="noopener">
-        <span class="crm-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><path d="M8 13h3M8 16h6"/><path d="M15.5 13.5l1.2 1.2 2.3-2.4"/></svg></span>
-        <span class="crm-body"><span class="crm-name">amoCRM</span><span class="crm-desc" id="amoDesc">Сделки, воронки и заказы</span></span>
-        <svg class="crm-go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
-      </a>
-      <form class="crm-set" id="amoSet" hidden>
-        <label for="amoAddr">Адрес вашей amoCRM</label>
-        <div class="crm-row"><input id="amoAddr" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="firma.amocrm.ru"><button type="submit">Сохранить</button></div>
-        <div class="crm-msg" id="amoMsg"></div>
-        <div class="crm-ios" id="amoIos" hidden>
-          <label class="crm-opt"><input type="checkbox" id="amoDirect"> Открывать приложение amoCRM напрямую (через «Команды»)</label>
-          <ol class="crm-steps">
-            <li>Откройте на iPhone приложение <b>«Команды»</b> → <b>+</b> (новая команда).</li>
-            <li>Добавьте действие <b>«Открыть приложение»</b> и выберите <b>amoCRM</b>.</li>
-            <li>Переименуйте команду: нажмите вверху на её название <b>«Открыть приложение ⌄»</b> → <b>«Переименовать»</b> → введите ровно <b>amoCRM</b>.</li>
-            <li>Включите галочку выше и нажмите «Сохранить».</li>
-          </ol>
-        </div>
-      </form>
-      <button type="button" class="crm-edit" id="amoEdit">изменить адрес amoCRM</button>
     </div>
 
     <div class="install" id="installBox">
@@ -276,7 +303,7 @@
       <button type="button" id="installBtn" style="display:none;">Установить на телефон</button>
     </div>
 
-    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.36</footer>
+    <footer>SunProtection · защита от солнца и насекомых<br>версия 2.37</footer>
   </main>
 
   <script>
@@ -343,6 +370,13 @@
         form.hidden = true; render();
       });
       render();
+    })();
+
+    // Экраны: главный и «Новый заказ» (#new)
+    (function () {
+      const route = () => { const n = location.hash === '#new'; document.getElementById('viewHome').hidden = n; document.getElementById('viewNew').hidden = !n; window.scrollTo(0, 0); };
+      document.querySelector('.view-back').addEventListener('click', e => { e.preventDefault(); if (history.length > 1 && location.hash === '#new') history.back(); else location.hash = ''; });
+      window.addEventListener('hashchange', route); route();
     })();
 
     // Подсказка «добавить на главный экран» (не показываем, если уже открыто как приложение)

@@ -1,6 +1,6 @@
 import os
 S = os.path.dirname(os.path.abspath(__file__)) + '/'
-client=open(S + 'amo-client.js').read()
+client=open(S + 'pdf-lib.js').read()+open(S + 'amo-client.js').read()+open(S + 'embed.js').read()
 CSS="""
     /* === amoCRM === */
     .btn-amo { background: #2f6fd6; border: 1px solid #2f6fd6; color: #ffffff; }
@@ -39,6 +39,21 @@ HOOK_NEW="""      if (window.__onPrintReady) {   // сборка PDF-файла 
         Promise.all(imgs).then(cb); return;
       }
       Promise.all(imgs).then(() => setTimeout(() => { window.print(); document.title = oldTitle; }, 150));"""
+EMBED_HEAD = """  <script>
+    (function () {
+      var m = location.search.match(/[?&]embed=([\\w-]+)/);
+      if (!m) return;
+      window.SP_EMBED = m[1];
+      document.documentElement.className += ' sp-embed';
+      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz)CalcState1|spExtra:.*)$/;
+      var key = function (k) { return re.test(k) ? k + '@combo:' + window.SP_EMBED : k; };
+      var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem;
+      P.getItem = function (k) { return g.call(this, key(k)); };
+      P.setItem = function (k, v) { return s.call(this, key(k), v); };
+      P.removeItem = function (k) { return r.call(this, key(k)); };
+    })();
+  </script>
+"""
 DEFS={
  'uni.html':"""
     const AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I', AMO_PIPELINE = 'Солнцезащитные системы';
@@ -137,6 +152,13 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     rep('    </div><!-- /pdf-btns -->\n', HTML)
     rep('    .pdf-btns { display: flex; gap: 10px; margin-bottom: 40px; }', '    .pdf-btns { display: flex; gap: 10px; margin-bottom: 10px; }')
     rep(HOOK_OLD, HOOK_NEW)
+    # режим раздела «Комбинированного заказа»: свои ключи хранения, чтобы не путать с обычной работой калькулятора
+    s = s.replace('<head>\n', '<head>\n' + EMBED_HEAD, 1)
+    s = s.replace('<a href="index.html" class="home-btn"', '<a href="index.html#new" class="home-btn"')
+    # сквозная нумерация изделий в комбинированном заказе
+    if "let n = 0;\n      const specCache" in s: rep("let n = 0;\n      const specCache", "let n = window.__numOffset || 0;\n      const specCache")
+    else: rep("items.push({ n: i + 1,", "items.push({ n: i + 1 + (window.__numOffset || 0),")
+    rep("return { blob: buildLabelsPdf(pages, W, H), count: pages.length, W, H, orderNoRaw };", "return { blob: buildLabelsPdf(pages, W, H), pages, count: pages.length, W, H, orderNoRaw };")
     rep('<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">', '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">')
     rep('  </style>\n</head>', CSS+open(S+'polish.css').read()+'  </style>\n</head>')
     rep('      <div class="form-group"><input type="text" id="clientAddress" placeholder="Адрес объекта" oninput="saveState()"></div>\n', EXTRA_FIELDS)

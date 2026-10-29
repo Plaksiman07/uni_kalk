@@ -41,6 +41,7 @@
     })();
     // Блок «Оплата и доп. информация» во внутреннем заказ-наряде (после данных клиента)
     window.spDecoratePrint = function (root) {
+      if (window.SP_EMBED) return;   // в комбинированном заказе оплата — общая, в его заказ-наряде
       const sec = root.querySelector('.print-section:not(.kp-part)');
       if (!sec) return;
       const info = [...sec.querySelectorAll('table')].find(t => /Адрес:/.test(t.textContent));

@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <script>
+    (function () {
+      var m = location.search.match(/[?&]embed=([\w-]+)/);
+      if (!m) return;
+      window.SP_EMBED = m[1];
+      document.documentElement.className += ' sp-embed';
+      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz)CalcState1|spExtra:.*)$/;
+      var key = function (k) { return re.test(k) ? k + '@combo:' + window.SP_EMBED : k; };
+      var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem;
+      P.getItem = function (k) { return g.call(this, key(k)); };
+      P.setItem = function (k, v) { return s.call(this, key(k), v); };
+      P.removeItem = function (k) { return r.call(this, key(k)); };
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Рулонные шторы зебра UNI I — SunProtection</title>
@@ -453,7 +467,7 @@
 
   <div id="calculatorUI">
     <div class="tabs">
-      <a href="index.html" class="home-btn" title="Все калькуляторы" aria-label="Все калькуляторы">
+      <a href="index.html#new" class="home-btn" title="Все калькуляторы" aria-label="Все калькуляторы">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </a>
       <button type="button" class="tab-btn active" id="tabBtnOrder">Заказ-наряд</button>
@@ -1612,7 +1626,7 @@
           pages.push(canvasToBits(cv));
         }
       });
-      return { blob: buildLabelsPdf(pages, W, H), count: pages.length, W, H, orderNoRaw };
+      return { blob: buildLabelsPdf(pages, W, H), pages, count: pages.length, W, H, orderNoRaw };
     }
 
     function printLabels() {
@@ -1701,6 +1715,7 @@
     })();
     // Блок «Оплата и доп. информация» во внутреннем заказ-наряде (после данных клиента)
     window.spDecoratePrint = function (root) {
+      if (window.SP_EMBED) return;   // в комбинированном заказе оплата — общая, в его заказ-наряде
       const sec = root.querySelector('.print-section:not(.kp-part)');
       if (!sec) return;
       const info = [...sec.querySelectorAll('table')].find(t => /Адрес:/.test(t.textContent));
@@ -1769,80 +1784,7 @@
         return r;
       };
     })();
-
-    // === amoCRM: «Добавить в amoCRM» ===
-    // Заказ уходит через посредника (Cloudflare Worker), который хранит токен amoCRM.
-    // Адрес посредника и ключ доступа вводятся один раз и общие для всех калькуляторов на устройстве.
-    const AMO_CFG_KEY = 'spAmoConfig';
-    const amoCfg = () => { try { return JSON.parse(localStorage.getItem(AMO_CFG_KEY) || '{}') || {}; } catch (e) { return {}; } };
-    const amoSaveCfg = c => { try { localStorage.setItem(AMO_CFG_KEY, JSON.stringify(c)); } catch (e) {} };
-    const amoBase = c => String(c.url || '').trim().replace(/\/+$/, '');
-
-    async function amoCall(cfg, path, init = {}) {
-      // запросы только на чтение повторяем до 3 раз (мобильная сеть/VPN иногда обрывают *.workers.dev); создание сделки — без повтора
-      const readOnly = /^\/(ping|last-number|orders)\b/.test(path);
-      let r;
-      for (let attempt = 1; ; attempt++) {
-        try {
-          r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } });
-          if (readOnly && attempt < 3 && r.status === 404 && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('not worker');
-          break;
-        } catch (e) {
-          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`);
-          await new Promise(res => setTimeout(res, 1200 * attempt));
-        }
-      }
-      let d = {};
-      try { d = await r.json(); } catch (e) {}
-      if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
-      return d;
-    }
-
-    // Окно настройки подключения
-    function amoConfigDialog() {
-      return new Promise(resolve => {
-        const cfg = amoCfg();
-        const ov = document.createElement('div');
-        ov.className = 'settings-overlay open';
-        ov.innerHTML = `
-          <div class="settings-panel" role="dialog" aria-label="Подключение amoCRM">
-            <div class="settings-panel-head">
-              <div class="block-title" style="margin-bottom:0;">Подключение amoCRM</div>
-              <button type="button" class="settings-close" data-x aria-label="Закрыть">&times;</button>
-            </div>
-            <div class="visual-hint" style="text-align:left; margin-top:12px;">Один раз на устройстве. Адрес посредника и ключ — из инструкции по настройке. Подключение общее для всех калькуляторов.</div>
-            <div class="form-group"><label>Адрес посредника</label><input type="text" data-url placeholder="https://….workers.dev" autocomplete="off" spellcheck="false"></div>
-            <div class="form-group"><label>Ключ доступа (APP_KEY)</label><input type="text" data-key placeholder="ключ" autocomplete="off" spellcheck="false"></div>
-            <div class="amo-cfg-msg" data-msg></div>
-            <div style="display:flex; gap:8px; margin-top:12px;">
-              <button type="button" class="btn-action btn-labels" data-test style="margin:0;">Проверить связь</button>
-              <button type="button" class="btn-action btn-amo" data-save style="margin:0;">Готово</button>
-            </div>
-          </div>`;
-        document.body.appendChild(ov);
-        const $ = s => ov.querySelector(s);
-        $('[data-url]').value = cfg.url || ''; $('[data-key]').value = cfg.key || '';
-        const read = () => ({ url: $('[data-url]').value.trim(), key: $('[data-key]').value.trim() });
-        const msg = (t, ok) => { const m = $('[data-msg]'); m.textContent = t; m.style.color = ok ? '#27ae60' : '#e74c3c'; };
-        const close = v => { ov.remove(); resolve(v); };
-        $('[data-x]').onclick = () => close(false);
-        ov.addEventListener('click', e => { if (e.target === ov) close(false); });
-        $('[data-test]').onclick = async () => {
-          const c = read();
-          if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
-          msg('Проверяю…', true);
-          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть ✓ Аккаунт amoCRM: ${d.account}`, true); }
-          catch (e) { msg('Нет связи: ' + e.message); }
-        };
-        $('[data-save]').onclick = () => {
-          const c = read();
-          if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
-          amoSaveCfg(c); close(true);
-        };
-      });
-    }
-
-    // PDF заказ-наряда как файл: тот же макет, что и при печати, превращённый в картинки по страницам A4
+    // === Сборка PDF из HTML (общая для калькуляторов и «Комбинированного заказа») ===
     function loadScriptOnce(src) {
       return new Promise((res, rej) => {
         if ([...document.scripts].some(s => s.src === src)) return res();
@@ -1948,7 +1890,7 @@
     }
     const dataUrlToBytes = du => { const b = atob(du.split(',')[1]); const u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
 
-    async function printAreaToPdfBlob(filter) {
+    async function printAreaToPages(filter) {
       const root = document.getElementById('printArea').firstElementChild;
       const host = document.createElement('div');
       host.className = 'pdf-capture';
@@ -1991,9 +1933,84 @@
         }
       } finally { host.remove(); }
       if (!pages.length) throw new Error('пустой заказ-наряд');
-      return buildJpegPdf(pages);
+      return pages;
+    }
+    async function printAreaToPdfBlob(filter) { return buildJpegPdf(await printAreaToPages(filter)); }
+
+
+    // === amoCRM: «Добавить в amoCRM» ===
+    // Заказ уходит через посредника (Cloudflare Worker), который хранит токен amoCRM.
+    // Адрес посредника и ключ доступа вводятся один раз и общие для всех калькуляторов на устройстве.
+    const AMO_CFG_KEY = 'spAmoConfig';
+    const amoCfg = () => { try { return JSON.parse(localStorage.getItem(AMO_CFG_KEY) || '{}') || {}; } catch (e) { return {}; } };
+    const amoSaveCfg = c => { try { localStorage.setItem(AMO_CFG_KEY, JSON.stringify(c)); } catch (e) {} };
+    const amoBase = c => String(c.url || '').trim().replace(/\/+$/, '');
+
+    async function amoCall(cfg, path, init = {}) {
+      // запросы только на чтение повторяем до 3 раз (мобильная сеть/VPN иногда обрывают *.workers.dev); создание сделки — без повтора
+      const readOnly = /^\/(ping|last-number|orders)\b/.test(path);
+      let r;
+      for (let attempt = 1; ; attempt++) {
+        try {
+          r = await fetch(amoBase(cfg) + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } });
+          if (readOnly && attempt < 3 && r.status === 404 && !/json/.test(r.headers.get('Content-Type') || '')) throw new Error('not worker');
+          break;
+        } catch (e) {
+          if (!readOnly || attempt >= 3) throw new Error(`нет связи с посредником (${amoBase(cfg).replace(/^https?:\/\//, '')}) — проверьте интернет, VPN или адрес в «⚙ Подключение amoCRM»`);
+          await new Promise(res => setTimeout(res, 1200 * attempt));
+        }
+      }
+      let d = {};
+      try { d = await r.json(); } catch (e) {}
+      if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
+      return d;
     }
 
+    // Окно настройки подключения
+    function amoConfigDialog() {
+      return new Promise(resolve => {
+        const cfg = amoCfg();
+        const ov = document.createElement('div');
+        ov.className = 'settings-overlay open';
+        ov.innerHTML = `
+          <div class="settings-panel" role="dialog" aria-label="Подключение amoCRM">
+            <div class="settings-panel-head">
+              <div class="block-title" style="margin-bottom:0;">Подключение amoCRM</div>
+              <button type="button" class="settings-close" data-x aria-label="Закрыть">&times;</button>
+            </div>
+            <div class="visual-hint" style="text-align:left; margin-top:12px;">Один раз на устройстве. Адрес посредника и ключ — из инструкции по настройке. Подключение общее для всех калькуляторов.</div>
+            <div class="form-group"><label>Адрес посредника</label><input type="text" data-url placeholder="https://….workers.dev" autocomplete="off" spellcheck="false"></div>
+            <div class="form-group"><label>Ключ доступа (APP_KEY)</label><input type="text" data-key placeholder="ключ" autocomplete="off" spellcheck="false"></div>
+            <div class="amo-cfg-msg" data-msg></div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button type="button" class="btn-action btn-labels" data-test style="margin:0;">Проверить связь</button>
+              <button type="button" class="btn-action btn-amo" data-save style="margin:0;">Готово</button>
+            </div>
+          </div>`;
+        document.body.appendChild(ov);
+        const $ = s => ov.querySelector(s);
+        $('[data-url]').value = cfg.url || ''; $('[data-key]').value = cfg.key || '';
+        const read = () => ({ url: $('[data-url]').value.trim(), key: $('[data-key]').value.trim() });
+        const msg = (t, ok) => { const m = $('[data-msg]'); m.textContent = t; m.style.color = ok ? '#27ae60' : '#e74c3c'; };
+        const close = v => { ov.remove(); resolve(v); };
+        $('[data-x]').onclick = () => close(false);
+        ov.addEventListener('click', e => { if (e.target === ov) close(false); });
+        $('[data-test]').onclick = async () => {
+          const c = read();
+          if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
+          msg('Проверяю…', true);
+          try { const d = await amoCall(c, '/ping', { method: 'POST' }); msg(`Связь есть ✓ Аккаунт amoCRM: ${d.account}`, true); }
+          catch (e) { msg('Нет связи: ' + e.message); }
+        };
+        $('[data-save]').onclick = () => {
+          const c = read();
+          if (!/^https:\/\//.test(c.url) || !c.key) { msg('Введите адрес (начинается с https://) и ключ.'); return; }
+          amoSaveCfg(c); close(true);
+        };
+      });
+    }
+
+    // PDF заказ-наряда как файл: тот же макет, что и при печати, превращённый в картинки по страницам A4
     const rubTxt = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
     function amoSelectedPrice() {
       const d = window.calcData, sel = document.querySelector('input[name="selectedPrice"]:checked').value;
@@ -2154,7 +2171,7 @@
     // === Номер заказа: подсказка «последний номер в amoCRM» и кнопка «подставить следующий» ===
     (function () {
       const inp = document.getElementById('orderNumber');
-      if (!inp) return;
+      if (!inp || window.SP_EMBED) return;
       const hint = document.createElement('div');
       hint.className = 'amo-num-hint';
       inp.insertAdjacentElement('afterend', hint);
@@ -2178,6 +2195,33 @@
         try { sessionStorage.setItem(KEY, JSON.stringify(cached)); } catch (e) {}
         show(cached.last);
       }).catch(() => {});   // старый посредник или нет сети — просто без подсказки
+    })();
+
+    // === Режим раздела «Комбинированного заказа» (страница открыта внутри него: ?embed=…) ===
+    // Свои данные клиента, цены, PDF и amoCRM прячутся — всё это общее и делается на странице комбинированного заказа.
+    (function () {
+      if (!window.SP_EMBED) return;
+      const hideBlock = el => { const b = el && (el.closest('.app-block') || el); if (b) b.style.display = 'none'; };
+      hideBlock(document.getElementById('orderNumber'));
+      hideBlock(document.querySelector('.client-price-row'));
+      ['.pdf-btns', '#amoBtn', '#amoStatus', '.amo-settings-row', '.home-btn', '.labels-btn', '#labelsStatus'].forEach(sel =>
+        document.querySelectorAll(sel).forEach(el => { el.style.display = 'none'; }));
+      // данные клиента и номер — от комбинированного заказа (для шапок заказ-наряда и наклеек)
+      window.spEmbedSetClient = function (c) {
+        ['orderNumber', 'clientName', 'clientPhone', 'clientAddress'].forEach(id => {
+          const el = document.getElementById(id), v = (c && c[id]) || '';
+          if (el && el.value !== v) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }
+        });
+        ['prepay', 'orderNote'].forEach(id => { const el = document.getElementById(id); if (el && el.value) { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); } });
+      };
+      window.spEmbedSetPrice = function (sel) {
+        const r = document.querySelector(`input[name="selectedPrice"][value="${sel}"]`);
+        if (r && !r.checked) { r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); }
+      };
+      // сообщать странице заказа об изменениях
+      const notify = () => { try { parent.postMessage({ type: 'sp-embed-change', id: window.SP_EMBED, calc: AMO_CALC_ID }, location.origin); } catch (e) {} };
+      const orig = calculateTotals;
+      calculateTotals = function () { const r = orig.apply(this, arguments); notify(); return r; };
     })();
 
     loadPhotos();
@@ -2431,7 +2475,7 @@
     function readOrder() {
       const items = [];
       const totals = { qty: 0, widthCm: 0, boxCm: 0, profileCm: 0, guidesCm: 0, chainCm: 0 };
-      let n = 0;
+      let n = window.__numOffset || 0;
       const specCache = new Map();
       roomsContainer.querySelectorAll('.item-row').forEach(row => {
         const w = parseFloat(row.querySelector('.item-width').value) || 0;

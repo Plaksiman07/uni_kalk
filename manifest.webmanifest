@@ -17,6 +17,7 @@
   ],
   "shortcuts": [
     { "name": "Текущие заказы", "short_name": "Заказы", "url": "./orders.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Комбинированный заказ", "short_name": "Комбинированный", "url": "./combo.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Рулонные шторы UNI I", "short_name": "UNI I", "url": "./uni.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Рулонные шторы UNI II", "short_name": "UNI II", "url": "./uni2.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Рулонные шторы Зебра UNI I", "short_name": "Зебра UNI I", "url": "./zebra.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
