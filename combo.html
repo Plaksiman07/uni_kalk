@@ -453,7 +453,7 @@
   function readPart(id) {
     const w = frames[id] && frames[id].win; if (!w || !w.calcData) return null;
     const d = w.calcData;
-    const items = (d.items || []).map(it => ({ n: it.n, room: it.room || '', text: w.amoItemText(it), field: w.amoItemField(it), w: it.lineWeight != null ? it.lineWeight : (it.lineCost || 0) }));
+    const items = (d.items || []).map(it => ({ n: it.n, qty: Math.max(1, parseInt(it.qty) || 1), room: it.room || '', text: w.amoItemText(it), field: w.amoItemField(it), w: it.lineWeight != null ? it.lineWeight : (it.lineCost || 0) }));
     return { id, name: CALC[id].name, pipeline: CALC[id].g === 'sun' ? 'Солнцезащитные системы' : 'Москитные сетки', problem: d.problem || '', items,
       prices: { base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B },
       labels: { discount7: w.discountLabel('discount7'), discount12: w.discountLabel('discount12') },
@@ -477,6 +477,7 @@
   function refresh() { renumber(); render(); }
 
   // === Отрисовка ===
+  const pcs = p => (p.items || []).reduce((a, it) => a + (Number(it.qty) || 1), 0);   // изделий в штуках, с учётом количества
   const partsSum = () => ordered().map(id => st.sum[id]).filter(Boolean);
   const priceLabel = k => { const p = partsSum()[0], L = p ? p.labels : {}; return { base: 'Базовая стоимость', discount7: L.discount7 || 'Со скидкой 7%', discount12: L.discount12 || 'Со скидкой 12%', b2b: 'Оплата по Р/С (ИП)' }[k]; };
   const total = k => partsSum().reduce((a, p) => a + (Number(p.prices[k]) || 0), 0);
@@ -548,7 +549,7 @@
   function render() {
     CLIENT.forEach(id => { const el = $(id); if (document.activeElement !== el && el.value !== (st.client[id] || '')) el.value = st.client[id] || ''; });
     const sel = st.priceSel, ids = ordered(), c = st.client;
-    const nItems = partsSum().reduce((a, p) => a + p.items.length, 0);
+    const nItems = partsSum().reduce((a, p) => a + pcs(p), 0);
     $('navTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Комбинированный заказ';
     $('sub').textContent = ids.length ? `${c.orderNumber ? '№ ' + c.orderNumber + ' · ' : ''}${ids.length} ${plural(ids.length, 'вид', 'вида', 'видов')} изделий · ${nItems} ${plural(nItems, 'изделие', 'изделия', 'изделий')}` : 'Шторы, жалюзи и сетки — в одном заказе';
     // клиент
@@ -564,7 +565,7 @@
       if (!p) return `<div class="part">${head('загрузка…', '', false)}</div>`;
       const ls = lineSums(p, sel);
       return `<div class="part${open ? ' open' : ''}">
-        ${head(p.problem ? IC.alert + '<span>' + esc(p.problem) + '</span>' : `${p.items.length} ${plural(p.items.length, 'изделие', 'изделия', 'изделий')}${(p.details || [])[0] ? ' · ' + esc(String(p.details[0]).replace(/^[^:]+:\s*/, '')) : ''}`, p.problem ? '—' : rub(p.prices[sel]), !!p.problem)}
+        ${head(p.problem ? IC.alert + '<span>' + esc(p.problem) + '</span>' : `${pcs(p)} ${plural(pcs(p), 'изделие', 'изделия', 'изделий')}${(p.details || [])[0] ? ' · ' + esc(String(p.details[0]).replace(/^[^:]+:\s*/, '')) : ''}`, p.problem ? '—' : rub(p.prices[sel]), !!p.problem)}
         <div class="fold"><div>
           ${p.items.map((it, i) => `<div class="it"><div class="it-n"><span>${it.n}</span></div><div class="it-main"><div class="it-room">${esc(it.room || 'Без комнаты')}</div><div class="it-text">${esc(String(it.text).replace(/\s*\(Ш гот\.[^)]*\)/, ''))}</div></div><div class="it-sum money">${p.problem ? '' : rub(ls[i])}</div></div>`).join('')}
           ${(p.details || []).length || p.noInstall ? `<div class="p-det">${(p.details || []).map(esc).join(' · ')}${p.noInstall ? ' · без монтажа' : ''}</div>` : ''}
@@ -803,7 +804,7 @@
     const lead = await call(cfg, '/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', street(c.clientAddress) || c.clientName].filter(Boolean).join(' ') || 'Комбинированный заказ',
       price: tot, pipeline: st.pipeline || $('pipeline').value, status: 'Изготовление', contact: { name: c.clientName || '', phone: c.clientPhone || '' },
-      fields, note, tags: [...new Set(['Комбинированный', ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t)))])] }) });
+      fields, note, tags: [...new Set(['Комбинированный', ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), `${ps.reduce((a, p) => a + pcs(p), 0)} шт`])] }) });
     try { localStorage.setItem(leadKey, String(lead.lead_id)); if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
     const files = [['заказ-наряд', fileName('Заказ-наряд'), orderBlob], ['КП', fileName('КП'), kpBlob], ['наклейки', fileName('Наклейки'), labelsBlob]];
     const done = [], failed = [];

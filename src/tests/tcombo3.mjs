@@ -57,8 +57,10 @@ for (const [idx, name] of [[0, 'kp'], [1, 'order'], [2, 'labels']]) {
 // amo
 const leads = [], files = [];
 await p.route('http://localhost:8790/**', route => { const u = route.request().url(); if (u.endsWith('/lead')) leads.push(JSON.parse(route.request().postData())); if (u.includes('/file')) files.push(decodeURIComponent(route.request().headers()['x-file-name'] || '')); route.continue(); });
+{ const sub = await p.textContent('#sub'), cnt = await p.textContent('#itemsCount'), heads = await p.$$eval('.p-sub', e => e.map(x => x.textContent)); console.log(sub, '|', cnt, '|', heads.join(' / ')); chk('счёт по штукам', /5 изделий/.test(sub) && /5 шт/.test(cnt) && /3 изделия/.test(heads[0])); }
 await p.click('#amoBtn'); await p.waitForFunction(() => /\b(ok|warn|err)\b/.test(document.getElementById('status').className), null, { timeout: 90000 }); await p.screenshot({ path: OUT + 'combo3_sent.png' });
 console.log('amo:', await p.innerText('#status'));
+chk('тег N шт по штукам', leads[0].tags.includes('5 шт'), JSON.stringify(leads[0].tags));
 chk('одна сделка на весь заказ', leads.length === 1 && leads[0].pipeline === 'Солнцезащитные системы');
 const tot = +(await p.textContent('.row.total .money')).replace(/\D/g, '');
 chk('сумма сделки = итог', leads[0].price === tot, leads[0].price + ' vs ' + tot);
