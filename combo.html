@@ -638,9 +638,17 @@
     }
     if (tg) { const id = tg.dataset.toggle; ui.parts[id] = !tg.parentElement.classList.contains('open'); tg.parentElement.classList.toggle('open', ui.parts[id]); }
   });
+  // фото окон разделов лежат в IndexedDB калькуляторов под ключом photos@combo:<id>
+  function dropPhotos(cid) {
+    ['uni', 'uni2', 'zebra', 'zebra2', 'mesh', 'plisse', 'vert', 'horiz'].forEach(n => {
+      try { const r = indexedDB.open(n + 'CalcPhotos', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
+        r.onsuccess = () => { try { r.result.transaction('kv', 'readwrite').objectStore('kv').delete('photos@combo:' + cid); } catch (e) {} r.result.close(); }; } catch (e) {}
+    });
+  }
   function newOrder(force) {
     if (force !== true && !confirm('Начать новый заказ? Текущий очистится (отправленная в amoCRM сделка останется).')) return;
     try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+    dropPhotos(st.id);
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
     st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' }; save();
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);

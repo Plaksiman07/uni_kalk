@@ -199,10 +199,10 @@
     </form>
 
     <div class="sec-h">О приложении</div>
-    <div class="group"><div class="ver"><span>Версия</span><span>2.41</span></div></div>
+    <div class="group"><div class="ver"><span>Версия</span><span>2.42</span></div></div>
   </div>
 
-  <footer id="foot">SunProtection · версия 2.41</footer>
+  <footer id="foot">SunProtection · версия 2.42</footer>
 </main>
 
 <div class="veil" id="veil"></div>
@@ -236,7 +236,9 @@
   (function () {
     let st = null; try { st = JSON.parse(localStorage.getItem('spCombo2') || 'null'); } catch (e) {}
     const c = (st && st.client) || {}, parts = (st && st.parts) || [];
-    const has = !!(st && (parts.length || c.clientName || c.orderNumber || c.clientPhone));
+    // черновик — только заказ, который ещё не отправлен в amoCRM
+    const sent = !!(st && st.id && ls('spComboLead2:' + st.id));
+    const has = !!(st && !sent && (parts.length || c.clientName || c.orderNumber || c.clientPhone));
     let pcs = 0, sum = 0;
     if (has) parts.forEach(id => { const s = st.sum && st.sum[id]; if (!s) return; (s.items || []).forEach(it => { pcs += Number(it.qty) || 1; }); sum += Number(s.prices && s.prices[st.priceSel || 'base']) || 0; });
     const title = c.orderNumber ? 'Заказ № ' + c.orderNumber : (c.clientName || 'Заказ без номера');

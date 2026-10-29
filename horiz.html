@@ -1407,13 +1407,13 @@
       Object.keys(roomPhotos).forEach(pk => { if (live.has(pk) && roomPhotos[pk].length) data[pk] = roomPhotos[pk]; });
       photoDb().then(db => {
         const tx = db.transaction('kv', 'readwrite');
-        tx.objectStore('kv').put(data, 'photos');
+        tx.objectStore('kv').put(data, (window.SP_EMBED ? 'photos@combo:' + window.SP_EMBED : 'photos'));
       }).catch(e => console.error(e));
     }
 
     function loadPhotos() {
       return photoDb().then(db => new Promise(resolve => {
-        const req = db.transaction('kv', 'readonly').objectStore('kv').get('photos');
+        const req = db.transaction('kv', 'readonly').objectStore('kv').get((window.SP_EMBED ? 'photos@combo:' + window.SP_EMBED : 'photos'));
         req.onsuccess = () => {
           const data = req.result || {};
           Object.keys(data).forEach(pk => { if (Array.isArray(data[pk])) roomPhotos[pk] = data[pk]; });

@@ -154,6 +154,10 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     rep(HOOK_OLD, HOOK_NEW)
     # режим раздела «Комбинированного заказа»: свои ключи хранения, чтобы не путать с обычной работой калькулятора
     s = s.replace('<head>\n', '<head>\n' + EMBED_HEAD, 1)
+    # фото окон: у раздела комбинированного заказа своя запись, чтобы обычный калькулятор её не стирал (и наоборот)
+    PK = "(window.SP_EMBED ? 'photos@combo:' + window.SP_EMBED : 'photos')"
+    rep("put(data, 'photos')", "put(data, " + PK + ")")
+    rep("get('photos')", "get(" + PK + ")")
     s = s.replace('<a href="index.html" class="home-btn"', '<a href="index.html#settings" class="home-btn"')
     # сквозная нумерация изделий в комбинированном заказе
     if "let n = 0;\n      const specCache" in s: rep("let n = 0;\n      const specCache", "let n = window.__numOffset || 0;\n      const specCache")

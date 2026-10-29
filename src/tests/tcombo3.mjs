@@ -68,6 +68,9 @@ chk('3 файла: заказ-наряд, КП, наклейки', files.length 
 console.log(JSON.stringify(leads[0].fields), JSON.stringify(leads[0].tags)); console.log(leads[0].note.split('\n').slice(0, 12).join('\n'));
 // главный: черновик → шторка «продолжить / новый»
 await p.goto(B + 'index.html'); await p.waitForTimeout(200);
+chk('отправленный в amo — не черновик', !(await p.isVisible('#draftChip')));
+await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('spCombo2')); localStorage.removeItem('spComboLead2:' + st.id); });   // как будто ещё не отправлен
+await p.reload(); await p.waitForTimeout(200);
 chk('чип черновика', /888/.test(await p.textContent('#draftChip')) && await p.isVisible('#draftChip'), await p.textContent('#draftChip'));
 await p.screenshot({ path: OUT + 'idx_home_draft.png' });
 await p.click('#newBtn'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'idx_sheet.png' });
