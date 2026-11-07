@@ -48,7 +48,9 @@ globalThis.fetch = async (url, opts = {}) => {
   if (url.includes('/api/v4/contacts?query=')) { return url.includes('9186913293') ? J({ _embedded: { contacts: [{ id: 555, custom_fields_values: [{ field_code: 'PHONE', values: [{ value: '+7 918 691-32-93' }] }] }] } }) : new Response(null, { status: 204 }); }
   if (url.endsWith('/api/v4/account?with=drive_url')) return J({ drive_url: 'https://drive-x.amocrm.ru' });
   if (url.endsWith('/api/v4/leads/complex')) { fs.writeFileSync(OUT + 'amo_lead.json', opts.body); return J([{ id: ++leadN }]); }
-  if (/notes$/.test(url)) { fs.writeFileSync(OUT + 'amo_note.json', opts.body); return J({}); }
+  if (/notes$/.test(url)) { if (!/attachment/.test(opts.body)) fs.writeFileSync(OUT + 'amo_note.json', opts.body); return J({}); }
+  if (/leads\/\d+\?with=contacts$/.test(url)) return J({ id: 1, _embedded: { tags: [{ name: 'Ручной тег' }, { name: '3 шт' }], contacts: [{ id: 701, is_main: true }] } });
+  if (/contacts\/\d+$/.test(url)) { fs.writeFileSync(OUT + 'amo_contact_patch.json', opts.body); return J({}); }
   if (/leads\/\d+$/.test(url)) { fs.writeFileSync(OUT + 'amo_patch.json', opts.body); return J({}); }
   if (url.endsWith('/v1.0/sessions')) { up = []; fs.writeFileSync(OUT + 'amo_session.json', opts.body); fs.appendFileSync(OUT + 'amo_files.log', opts.body + '\n'); return J({ upload_url: 'https://drive-x.amocrm.ru/upload/T0', max_part_size: 131072 }); }
   if (url.includes('/upload/T')) { up.push(Buffer.from(opts.body)); const total = JSON.parse(fs.readFileSync(OUT + 'amo_session.json')).file_size; const got = up.reduce((a, b) => a + b.length, 0);
@@ -56,7 +58,13 @@ globalThis.fetch = async (url, opts = {}) => {
   if (/files$/.test(url)) return J({});
   return J({ e: 'nomock' }, 404);
 };
-const env = { AMO_DOMAIN: 'test.amocrm.ru', AMO_TOKEN: 'T', APP_KEY: 'secret1', ALLOWED_ORIGINS: 'http://localhost:8765' };
+const kv = new Map();
+const SP_ORDERS = { async put(k, v) { kv.set(k, v); fs.writeFileSync(OUT + 'kv_' + k.replace(':', '_') + '.json', v); }, async get(k) { return kv.has(k) ? kv.get(k) : null; },
+  async list({ prefix }) { return { keys: [...kv.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }; } };
+// заказ 504 («Москитные сетки №1210») — как будто отправлен из калькулятора: его можно скорректировать
+kv.set('lead:504', JSON.stringify({ v: 1, combo: { id: 'ord504', client: { orderNumber: '1210', clientName: 'Кузнецов Олег', clientPhone: '89186913293', clientAddress: 'г. Краснодар, ул. Ставропольская 150, кв. 88' }, parts: ['mesh'], sum: {}, priceSel: 'base', pipeline: 'Москитные сетки', services: [] },
+  ls: { 'meshCalcState1@combo:ord504': JSON.stringify({ selectedPrice: 'base', meshType: 'antikoshka', meshColor: 'white', rooms: [{ name: 'Кухня', pk: 'k1', items: [{ w: '60', h: '120', qty: '1' }] }, { name: 'Детская', pk: 'k2', items: [{ w: '58', h: '118', qty: '2' }] }] }) }, photos: {} }));
+const env = { AMO_DOMAIN: 'test.amocrm.ru', AMO_TOKEN: 'T', APP_KEY: 'secret1', ALLOWED_ORIGINS: 'http://localhost:8765', SP_ORDERS };
 http.createServer(async (req, res) => {
   const chunks = []; for await (const c of req) chunks.push(c);
   const body = chunks.length ? Buffer.concat(chunks) : undefined;

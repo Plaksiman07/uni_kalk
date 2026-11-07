@@ -202,10 +202,10 @@
     </form>
 
     <div class="sec-h">О приложении</div>
-    <div class="group"><div class="ver"><span>Версия</span><span>2.43</span></div></div>
+    <div class="group"><div class="ver"><span>Версия</span><span>2.44</span></div></div>
   </div>
 
-  <footer id="foot">SunProtection · версия 2.43</footer>
+  <footer id="foot">SunProtection · версия 2.44</footer>
 </main>
 
 <div class="veil" id="veil"></div>
@@ -240,13 +240,17 @@
     let st = null; try { st = JSON.parse(localStorage.getItem('spCombo2') || 'null'); } catch (e) {}
     const c = (st && st.client) || {}, parts = (st && st.parts) || [];
     // черновик — только заказ, который ещё не отправлен в amoCRM
+    // или отправленный, но потом изменённый (корректировка) и ещё не отправленный повторно
     const sent = !!(st && st.id && ls('spComboLead2:' + st.id));
-    const has = !!(st && !sent && (parts.length || c.clientName || c.orderNumber || c.clientPhone));
+    const changed = !!(st && sent && st.sentSig && st.sig && st.sig !== st.sentSig);
+    const has = !!(st && (sent ? changed : (parts.length || (st.services || []).length || c.clientName || c.orderNumber || c.clientPhone)));
     let pcs = 0, sum = 0;
+    if (has) (st.services || []).forEach(x => { sum += parseFloat(String(x.price || '').replace(/\s/g, '').replace(',', '.')) || 0; });
     if (has) parts.forEach(id => { const s = st.sum && st.sum[id]; if (!s) return; (s.items || []).forEach(it => { pcs += Number(it.qty) || 1; }); sum += Number(s.prices && s.prices[st.priceSel || 'base']) || 0; });
     const title = c.orderNumber ? 'Заказ № ' + c.orderNumber : (c.clientName || 'Заказ без номера');
     const sub = [c.orderNumber ? c.clientName : '', pcs ? pcs + ' ' + plural(pcs, 'изделие', 'изделия', 'изделий') : 'изделий пока нет'].filter(Boolean).join(' · ');
-    if (has) { $('draftChip').hidden = false; $('draftChipText').textContent = 'Черновик: ' + [title, pcs ? pcs + ' шт' : ''].filter(Boolean).join(' · '); }
+    if (changed) { $('shTitle').textContent = 'Изменения не отправлены'; $('shTitle').nextElementSibling.textContent = 'Заказ скорректирован, но в amoCRM ещё старая версия. Продолжить корректировку или начать новый заказ?'; $('dCont').textContent = 'Продолжить корректировку'; }
+    if (has) { $('draftChip').hidden = false; $('draftChipText').textContent = (changed ? 'Не отправлено: ' : 'Черновик: ') + [title, pcs ? pcs + ' шт' : ''].filter(Boolean).join(' · '); }
     const open = () => { $('dTitle').textContent = title; $('dSub').textContent = sub; $('dSum').textContent = sum ? Math.round(sum).toLocaleString('ru-RU') + ' ₽' : '';
       $('veil').classList.add('show'); $('sheet').classList.add('show'); setTimeout(() => $('dCont').focus(), 50); };
     const close = () => { $('veil').classList.remove('show'); $('sheet').classList.remove('show'); };

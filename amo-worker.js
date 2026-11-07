@@ -13,6 +13,8 @@
  *   RESPONSIBLE_ID   — (необязательно) ID ответственного пользователя
  *
  * /orders — текущие заказы (только чтение): сделки этапов «Изготовление», «Готов к установке», «На установку».
+ * /state-save, /state-get — данные заказа из калькулятора (для корректировки из «Текущих заказов»).
+ *   Хранятся в Cloudflare KV (привязка SP_ORDERS, создаётся автоматически из wrangler.jsonc).
  *
  * Воронку и этап калькулятор передаёт по названию («Москитные сетки» / «Изготовление»),
  * поля сделки — по названию («Адрес», «Материал», «Цвет», «Изделие 1»…). Посредник сам находит их номера.
@@ -33,7 +35,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 
     // Версия посредника (без ключа, ничего не раскрывает) — чтобы проверить обновление
-    if (new URL(request.url).pathname === '/version') return json({ worker_version: 3 });
+    if (new URL(request.url).pathname === '/version') return json({ worker_version: 4 });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (!originOk) return json({ error: 'Запрос не с адреса калькулятора (ALLOWED_ORIGINS)' }, 403);
     if (request.method !== 'POST') return json({ error: 'Только POST' }, 405);
@@ -133,7 +135,7 @@ export default {
       // Проверка связи
       if (url.pathname === '/ping') {
         const acc = await amo('/api/v4/account');
-        return json({ ok: true, account: acc.name || domain, worker_version: 3 });
+        return json({ ok: true, account: acc.name || domain, worker_version: 4 });
       }
 
       // Создать сделку (или обновить существующую) + примечание
@@ -145,9 +147,36 @@ export default {
 
         const fieldsRes = await buildFields(d.fields);
         if (leadId) {
+          // корректировка: сумма, название, поля, теги (добавляются к уже стоящим), контакт
+          const cur = await amo(`/api/v4/leads/${leadId}?with=contacts`);
           const upd = { price };
+          if (d.title) upd.name = String(d.title).slice(0, 250);
           if (fieldsRes.values.length) upd.custom_fields_values = fieldsRes.values;
+          if (Array.isArray(d.tags) && d.tags.length) {
+            const have = ((cur._embedded && cur._embedded.tags) || []).map(t => t.name);
+            const autoQty = /^\d+ шт$/;   // старый тег «N шт» заменяется новым
+            const keep = have.filter(t => !(autoQty.test(t) && d.tags.some(x => autoQty.test(x))));
+            upd._embedded = { tags: [...new Set([...keep, ...d.tags.filter(Boolean).map(String)])].map(name => ({ name })) };
+          }
           await amo(`/api/v4/leads/${leadId}`, 'PATCH', upd);
+          const c = d.contact || {};
+          const main = ((cur._embedded && cur._embedded.contacts) || []).find(x => x.is_main) || ((cur._embedded && cur._embedded.contacts) || [])[0];
+          if (main && (c.name || c.phone)) {
+            const cu = {};
+            if (c.name) cu.name = String(c.name).slice(0, 250);
+            if (c.phone) cu.custom_fields_values = [{ field_code: 'PHONE', values: [{ value: String(c.phone), enum_code: 'WORK' }] }];
+            try { await amo(`/api/v4/contacts/${main.id}`, 'PATCH', cu); } catch (e) {}
+          } else if (!main && (c.name || c.phone)) {
+            const existing = await findContactByPhone(c.phone);
+            let cid = existing;
+            if (!cid) {
+              const contact = { first_name: String(c.name || 'Клиент').slice(0, 250) };
+              if (c.phone) contact.custom_fields_values = [{ field_code: 'PHONE', values: [{ value: String(c.phone), enum_code: 'WORK' }] }];
+              const cr = await amo('/api/v4/contacts', 'POST', [contact]);
+              cid = cr._embedded && cr._embedded.contacts && cr._embedded.contacts[0] ? cr._embedded.contacts[0].id : 0;
+            }
+            if (cid) try { await amo(`/api/v4/leads/${leadId}/link`, 'POST', [{ to_entity_id: cid, to_entity_type: 'contacts' }]); } catch (e) {}
+          }
         } else {
           const lead = { name: String(d.title || 'Заказ из калькулятора').slice(0, 250), price, _embedded: {} };
           const ps = await findStatus(d.pipeline, d.status);
@@ -175,7 +204,24 @@ export default {
         }
         const ps = d.__ps || {};
         return json({ ok: true, lead_id: leadId, created, contact_existing: !!d.__contactExisting, missing_fields: fieldsRes.missing, url: `${base}/leads/detail/${leadId}`,
-          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 2 });
+          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 4 });
+      }
+
+      // Данные заказа калькулятора — для корректировки из «Текущих заказов» (Cloudflare KV)
+      if (url.pathname === '/state-save' || url.pathname === '/state-get') {
+        if (!env.SP_ORDERS) return json({ error: 'В посреднике не подключено хранилище заказов (KV «SP_ORDERS»)', no_store: true }, 501);
+        const d = await request.json().catch(() => ({}));
+        const leadId = Number(d.lead_id) || 0;
+        if (!leadId) return json({ error: 'Не указан lead_id' }, 400);
+        if (url.pathname === '/state-save') {
+          const text = JSON.stringify(d.state || null);
+          if (text.length > 24 * 1024 * 1024) return json({ error: 'Слишком большой заказ (фото) — сохранено не будет' }, 413);
+          await env.SP_ORDERS.put('lead:' + leadId, text, { metadata: { at: Date.now(), size: text.length } });
+          return json({ ok: true, size: text.length });
+        }
+        const text = await env.SP_ORDERS.get('lead:' + leadId);
+        if (!text) return json({ error: 'Для этой сделки нет данных калькулятора — она отправлена до появления корректировки или из отдельного калькулятора', missing: true }, 404);
+        return json({ ok: true, state: JSON.parse(text) });
       }
 
       // Загрузить файл (тело запроса — сам файл) и прикрепить к сделке
@@ -238,7 +284,7 @@ export default {
           const fresh = Math.max(l.created_at || 0, l.closed_at || 0);
           if (!best || fresh > best.fresh) best = { number: n, lead_id: l.id, name: l.name, fresh, by: (l.closed_at || 0) > (l.created_at || 0) ? 'closed' : 'created' };
         }
-        return json({ ok: true, last: best, worker_version: 3 });
+        return json({ ok: true, last: best, worker_version: 4 });
       }
 
       // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
@@ -304,6 +350,11 @@ export default {
             if (!o[k] || n.created_at > o[k].at) o[k] = { text: t.slice(0, 6000), at: n.created_at };
           }
         }
+        // какие сделки можно скорректировать (есть данные калькулятора)
+        const editable = new Set();
+        if (env.SP_ORDERS) {
+          try { let cursor; do { const r = await env.SP_ORDERS.list({ prefix: 'lead:', cursor }); r.keys.forEach(k => editable.add(Number(k.name.slice(5)))); cursor = r.list_complete ? null : r.cursor; } while (cursor); } catch (e) {}
+        }
         for (const l of leads) {
           const so = stIndex[l.pipeline_id + ':' + l.status_id];
           if (!so) continue;
@@ -314,10 +365,10 @@ export default {
             id: l.id, name: l.name || '', price: l.price || 0, created_at: l.created_at, updated_at: l.updated_at,
             tags: ((l._embedded && l._embedded.tags) || []).map(t => t.name), fields, contact: cs[0] || null,
             note: notes[l.id] && notes[l.id].calc ? notes[l.id].calc.text : '',
-            lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`
+            lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`, editable: editable.has(l.id)
           });
         }
-        return json({ ok: true, base, updated: Date.now(), pipelines: out, worker_version: 3 });
+        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 4 });
       }
 
       return json({ error: 'Неизвестный адрес' }, 404);

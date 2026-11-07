@@ -107,6 +107,29 @@
       border-radius: var(--r); padding: 17px; font-size: 16px; font-weight: 700; cursor: pointer; transition: transform .15s; box-shadow: var(--shadow); }
     .add-btn .plus { display: inline-flex; width: 26px; height: 26px; border-radius: 9px; background: var(--accent); color: #fff; align-items: center; justify-content: center; }
     .add-btn:active { transform: scale(0.98); }
+    /* доп. услуги */
+    .svc { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
+    .svc-h { display: flex; align-items: center; gap: 12px; padding: 14px 14px 10px; }
+    .svc-h b { flex: 1; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+    .svc-h .money { font-size: 16px; font-weight: 700; }
+    .sv { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--sep); }
+    .sv .p-icon { width: 36px; height: 36px; border-radius: 12px; }
+    .sv .p-icon svg { width: 18px; height: 18px; }
+    .sv-main { flex: 1; min-width: 0; }
+    .sv-name { font-size: 15px; font-weight: 700; }
+    .sv-note { display: block; width: 100%; border: 0; background: none; padding: 2px 0; font: inherit; font-size: 13px; font-weight: 500; color: var(--ink2); outline: none; }
+    .sv-note::placeholder { color: #a3a8b0; }
+    .sv-price { flex: none; display: flex; align-items: center; gap: 4px; background: var(--fill); border-radius: 12px; padding: 0 10px; box-shadow: inset 0 0 0 1px var(--sep); }
+    .sv-price:focus-within { box-shadow: inset 0 0 0 2px var(--accent); background: #fff; }
+    .sv-price input { width: 72px; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); padding: 10px 0; text-align: right; outline: none; }
+    .sv-price span { color: var(--muted); font-weight: 700; }
+    .sv-price.bad { box-shadow: inset 0 0 0 2px var(--red); background: var(--red-soft); }
+    .sv-del { flex: none; width: 36px; height: 36px; border: 0; border-radius: 11px; background: none; color: #a3a8b0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .sv-del:active { background: var(--red-soft); color: var(--red); }
+    .p-icon.svc-ic { background: var(--green-soft); color: var(--green); }
+    [hidden] { display: none !important; }
+    .edit-banner { display: flex; gap: 10px; align-items: center; background: var(--blue-soft); color: var(--blue); border-radius: 14px; padding: 11px 13px; font-size: 13px; font-weight: 700; line-height: 1.4; margin: 4px 0 14px; }
+    .edit-banner svg { flex: none; }
     .empty { text-align: center; padding: 26px 20px 8px; color: var(--muted); font-size: 15px; line-height: 1.45; }
     .empty .e-ic { width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 22px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; color: var(--accent); }
     .empty b { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
@@ -184,6 +207,7 @@
 <div class="wrap">
   <div class="large" id="largeTitle">Новый заказ</div>
   <div class="large-sub" id="sub"></div>
+  <div class="edit-banner" id="editBanner" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span></span></div>
 
   <div class="sec-h">Клиент</div>
   <div class="group" id="clientBox">
@@ -201,7 +225,8 @@
 
   <div class="sec-h"><span>Изделия</span><span id="itemsCount"></span></div>
   <div id="parts"></div>
-  <button type="button" class="add-btn" id="addBtn"><span class="plus"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Добавить изделие<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+  <div id="services"></div>
+  <button type="button" class="add-btn" id="addBtn"><span class="plus"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Добавить изделие или услугу<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
 
   <div id="priceArea">
     <div class="sec-h">Стоимость</div>
@@ -249,6 +274,15 @@
   const CALC = Object.fromEntries(CALCS.map(c => [c.id, c]));
   const PRICE_KEYS = ['base', 'discount7', 'discount12', 'b2b'];
   const CLIENT = ['orderNumber', 'clientName', 'clientPhone', 'clientAddress', 'prepay', 'orderNote'];
+  // доп. услуги: сумма вписывается вручную и идёт в КП, итог и сделку (скидки на неё не действуют)
+  const SERVICES = [
+    { id: 'far', name: 'Дальний заказ', hint: 'дорога, топливо, время', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h2l1-5h9l2 5h4"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M6 12l1.5-4h7L16 12"/></svg>' },
+    { id: 'fit', name: 'Установка фурнитуры', hint: 'карнизы, крепления, ручки', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>' },
+    { id: 'repair', name: 'Ремонт / регулировка', hint: 'механизмы, цепи, натяжение', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>' },
+    { id: 'dismantle', name: 'Демонтаж', hint: 'снятие старых изделий', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/></svg>' }
+  ];
+  const SVC = Object.fromEntries(SERVICES.map(x => [x.id, x]));
+  const num = v => Math.max(0, parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')) || 0);
   const $ = id => document.getElementById(id);
   const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const rub = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
@@ -256,7 +290,14 @@
   // состояние заказа
   let st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })();
   if (!st || !st.id) st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' };
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+  if (!Array.isArray(st.services)) st.services = [];
+  // «отпечаток» заказа: по нему главный экран понимает, есть ли не отправленные в amoCRM изменения
+  const sig = () => JSON.stringify([st.client, st.services, st.priceSel, [...st.parts].sort(), Object.keys(st.sum).sort().map(k => st.sum[k] && [st.sum[k].prices, (st.sum[k].items || []).map(i => i.text + '|' + i.qty + '|' + i.room)])]);
+  const save = () => {
+    if (st.fresh && st.parts.every(id => st.sum[id])) { st.fresh = false; st.sentSig = sig(); }   // заказ открыт из «Текущих заказов» и досчитан
+    st.sig = sig();
+    try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
+  };
   const ordered = () => CALCS.map(c => c.id).filter(id => st.parts.includes(id));
 
   // === Разделы: калькуляторы в режиме раздела (iframe) ===
@@ -332,14 +373,15 @@
   const pcs = p => (p.items || []).reduce((a, it) => a + (Number(it.qty) || 1), 0);   // изделий в штуках, с учётом количества
   const partsSum = () => ordered().map(id => st.sum[id]).filter(Boolean);
   const priceLabel = k => { const p = partsSum()[0], L = p ? p.labels : {}; return { base: 'Базовая стоимость', discount7: L.discount7 || 'Со скидкой 7%', discount12: L.discount12 || 'Со скидкой 12%', b2b: 'Оплата по Р/С (ИП)' }[k]; };
-  const total = k => partsSum().reduce((a, p) => a + (Number(p.prices[k]) || 0), 0);
+  const svcSum = () => st.services.reduce((a, x) => a + num(x.price), 0);
+  const total = k => partsSum().reduce((a, p) => a + (Number(p.prices[k]) || 0), 0) + svcSum();
   function lineSums(p, k) {   // как в КП калькуляторов: остаток округления — в самую дорогую строку
     const price = Number(p.prices[k]) || 0, ws = p.items.map(i => i.w || 0), sum = ws.reduce((a, b) => a + b, 0);
     const out = ws.map(w => sum > 0 ? Math.round(price * w / sum) : Math.round(price / Math.max(1, ws.length)));
     if (out.length) { let mi = 0; out.forEach((v, i) => { if (v > out[mi]) mi = i; }); out[mi] += Math.round(price) - out.reduce((a, b) => a + b, 0); }
     return out;
   }
-  const problems = () => ordered().map(id => st.sum[id] && st.sum[id].problem ? `${CALC[id].name}: ${st.sum[id].problem}` : (!st.sum[id] ? `${CALC[id].name}: раздел ещё загружается` : '')).filter(Boolean);
+  const problems = () => st.services.filter(x => !num(x.price)).map(x => `${SVC[x.type].name}: укажите стоимость`).concat(ordered().map(id => st.sum[id] && st.sum[id].problem ? `${CALC[id].name}: ${st.sum[id].problem}` : (!st.sum[id] ? `${CALC[id].name}: раздел ещё загружается` : ''))).filter(Boolean);
   let showMargin = false;
 
   // === Интерфейс ===
@@ -402,7 +444,7 @@
     CLIENT.forEach(id => { const el = $(id); if (document.activeElement !== el && el.value !== (st.client[id] || '')) el.value = st.client[id] || ''; });
     const sel = st.priceSel, ids = ordered(), c = st.client;
     const nItems = partsSum().reduce((a, p) => a + pcs(p), 0);
-    $('navTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Новый заказ';
+    $('navTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : (st.editLead ? 'Корректировка' : 'Новый заказ');
     $('largeTitle').textContent = c.orderNumber ? 'Заказ № ' + c.orderNumber : 'Новый заказ';
     $('sub').textContent = ids.length ? `${c.clientName ? esc0(c.clientName) + ' · ' : ''}${ids.length} ${plural(ids.length, 'вид', 'вида', 'видов')} изделий · ${nItems} ${plural(nItems, 'изделие', 'изделия', 'изделий')}` : 'Шторы, жалюзи и сетки — в одном заказе';
     // клиент
@@ -414,7 +456,7 @@
     $('itemsCount').textContent = nItems ? `${nItems} шт.` : '';
     $('parts').innerHTML = ids.length ? ids.map(id => {
       const p = st.sum[id], C = CALC[id], open = ui.parts[id] !== undefined ? ui.parts[id] : false;
-      const head = (sub, sum, err) => `<div class="part-head" data-toggle="${id}"><span class="p-icon ${C.g}">${ICONS[id] || ''}</span><div class="p-main"><div class="p-name">${esc(C.name)}</div><div class="p-sub${err ? ' err' : ''}">${sub}</div></div><span class="p-sum money">${sum}</span>${CHEV}</div>`;
+      const head = (sub, sum, err) => `<div class="part-head" data-toggle="${id}"><span class="p-icon ${C.g}">${ICONS[id] || ''}</span><div class="p-main"><div class="p-name">${esc(C.name).replace(/ (UNI) (I+)$/, ' $1&nbsp;$2')}</div><div class="p-sub${err ? ' err' : ''}">${sub}</div></div><span class="p-sum money">${sum}</span>${CHEV}</div>`;
       if (!p) return `<div class="part">${head('загрузка…', '', false)}</div>`;
       const ls = lineSums(p, sel);
       return `<div class="part${open ? ' open' : ''}">
@@ -426,9 +468,13 @@
         </div></div></div>`;
     }).join('') : `<div class="empty"><div class="e-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M17 13v8M13 17h8"/></svg></div>
         <b>Пока нет изделий</b>Добавьте шторы, жалюзи или сетки — каждое изделие считается как в обычном калькуляторе, а заказ получится один.</div>`;
-    $('addBtn').style.marginTop = ids.length ? '4px' : '14px';
+    if (st.services.length && !ids.length) $('parts').innerHTML = '';
+    renderServices();
+    $('addBtn').style.marginTop = ids.length || st.services.length ? '4px' : '14px';
+    $('editBanner').hidden = !st.editLead;
+    if (st.editLead) $('editBanner').querySelector('span').textContent = `Корректировка сделки №${st.editLead} в amoCRM. После изменений нажмите «В amoCRM» — сделка обновится.`;
     // стоимость
-    const has = ids.length > 0, bad = problems();
+    const has = ids.length > 0 || st.services.length > 0, bad = problems();
     $('priceArea').style.display = has ? '' : 'none';
     const tot = total(sel), pre = Math.max(0, parseFloat(String(c.prepay || '').replace(',', '.')) || 0), rest = tot - pre;
     $('priceVal').textContent = priceLabel(sel);
@@ -436,10 +482,11 @@
       `<div class="row total"><span class="lbl">Итого</span><span class="money">${rub(tot)}</span></div>
        <div class="row"><span class="lbl">Предоплата</span><span class="money" style="color:var(--muted)">${pre > 0 ? rub(pre) : 'нет'}</span></div>
        <div class="row"><span class="lbl" style="width:auto;">К доплате</span><span class="money ${rest < 0 ? 'redc' : 'green'}">${rest >= 0 ? rub(rest) : '0 ₽ · переплата ' + rub(-rest)}</span></div>`;
-    const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0);
+    const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0) + svcSum();
     $('marginBox').classList.toggle('open', ui.margin);
     $('marginRow').querySelector('.val').innerHTML = ui.margin || bad.length ? '' : `<span style="color:var(--muted); display:inline-flex; vertical-align:middle;">${IC.eye}</span>`;
     $('marginBody').innerHTML = partsSum().map(p => `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">${esc(CALC[p.id].name)}</span><span class="money" style="flex:none; color:var(--muted); font-size:15px;">${rub(p.cost)} → ${rub(p.prices[sel])}</span></div>`).join('') +
+      (st.services.length ? `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">Доп. услуги</span><span class="money" style="flex:none; color:var(--muted); font-size:15px;">${rub(svcSum())}</span></div>` : '') +
       `<div class="row"><span class="lbl" style="width:auto;">Себестоимость</span><span class="money">${rub(cost)}</span></div>
        <div class="row"><span class="lbl" style="width:auto;">Маржа</span><span class="money green">${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))}${tot > 0 ? ' · ' + Math.round(profit / tot * 100) + '%' : ''}</span></div>`;
     // воронка: по умолчанию — где больше сумма
@@ -453,6 +500,37 @@
     $('dockLbl').textContent = bad.length ? 'Есть ошибки в изделиях' : `Итого · ${priceLabel(sel).toLowerCase()}`;
     $('dockSum').textContent = bad.length ? '—' : rub(tot);
     $('docsBtn').disabled = $('amoBtn').disabled = !has || !!bad.length;
+  }
+
+  function renderServices() {
+    const box = $('services');
+    if (!st.services.length) { box.innerHTML = ''; return; }
+    const keep = document.activeElement && box.contains(document.activeElement) ? [document.activeElement.dataset.i, document.activeElement.className] : null;
+    box.innerHTML = `<div class="svc"><div class="svc-h"><span class="p-icon svc-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4l-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z"/></svg></span><b>Доп. услуги</b><span class="money">${rub(svcSum())}</span></div>
+      ${st.services.map((x, i) => `<div class="sv"><span class="p-icon svc-ic">${SVC[x.type].icon}</span>
+        <div class="sv-main"><div class="sv-name">${esc(SVC[x.type].name)}</div><input class="sv-note" data-i="${i}" value="${esc(x.note || '')}" placeholder="${esc(SVC[x.type].hint)}" aria-label="Комментарий"></div>
+        <label class="sv-price${num(x.price) ? '' : ' bad'}"><input class="sv-pr" data-i="${i}" inputmode="decimal" value="${esc(x.price || '')}" placeholder="0" aria-label="Стоимость, ₽"><span>₽</span></label>
+        <button type="button" class="sv-del" data-sdel="${i}" aria-label="Убрать услугу">${IC.x}</button></div>`).join('')}</div>`;
+    if (keep) { const el = box.querySelector(`.${keep[1].split(' ')[0]}[data-i="${keep[0]}"]`); if (el) { el.focus(); const v = el.value; el.setSelectionRange && el.setSelectionRange(v.length, v.length); } }
+  }
+  $('services').addEventListener('input', e => {
+    const el = e.target, i = Number(el.dataset.i); if (!st.services[i]) return;
+    if (el.classList.contains('sv-pr')) st.services[i].price = el.value.replace(/[^\d.,\s]/g, '');
+    if (el.classList.contains('sv-note')) st.services[i].note = el.value;
+    save(); clearTimeout(svTmr); svTmr = setTimeout(render, el.classList.contains('sv-pr') ? 0 : 300);
+  });
+  let svTmr = null;
+  $('services').addEventListener('click', e => {
+    const b = e.target.closest('[data-sdel]'); if (!b) return;
+    const x = st.services[Number(b.dataset.sdel)];
+    if (num(x.price) && !confirm(`Убрать «${SVC[x.type].name}» из заказа?`)) return;
+    st.services.splice(Number(b.dataset.sdel), 1); save(); render();
+  });
+  function addService(type) {
+    let i = st.services.findIndex(x => x.type === type);
+    if (i < 0) { st.services.push({ type, price: '', note: '' }); i = st.services.length - 1; save(); }
+    render();
+    setTimeout(() => { const el = document.querySelector(`.sv-pr[data-i="${i}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); } }, 60);
   }
 
   // === События ===
@@ -473,7 +551,8 @@
   function addMenu() {
     const it = c => ({ label: c.name, sub: st.parts.includes(c.id) ? 'уже в заказе — открыть' : '', icon: ICONS[c.id], bg: c.g === 'sun' ? 'var(--accent-soft)' : 'var(--blue-soft)', fg: c.g === 'sun' ? 'var(--accent)' : 'var(--blue)',
       act: () => { if (!st.parts.includes(c.id)) { st.parts.push(c.id); save(); } ui.parts[c.id] = true; openSheet(c.id); render(); } });
-    menu($('addBtn'), [{ h: 'Солнцезащитные системы' }, ...CALCS.filter(c => c.g === 'sun').map(it), { h: 'Противомоскитные системы' }, ...CALCS.filter(c => c.g === 'mos').map(it)]);
+    const sv = x => ({ label: x.name, sub: st.services.some(y => y.type === x.id) ? 'уже в заказе — к сумме' : x.hint, icon: x.icon, bg: 'var(--green-soft)', fg: 'var(--green)', act: () => addService(x.id) });
+    menu($('addBtn'), [{ h: 'Солнцезащитные системы' }, ...CALCS.filter(c => c.g === 'sun').map(it), { h: 'Противомоскитные системы' }, ...CALCS.filter(c => c.g === 'mos').map(it), { h: 'Доп. услуги' }, ...SERVICES.map(sv)]);
   }
   $('addBtn').onclick = addMenu;
   $('parts').addEventListener('click', e => {
@@ -501,7 +580,7 @@
     try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     dropPhotos(st.id);
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
-    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' }; save();
+    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [] }; save();
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
   }
   $('moreBtn').onclick = () => menu($('moreBtn'), [
@@ -551,6 +630,14 @@
   const clientBox = () => { const c = st.client; return `<div style="font-size: 14px; line-height: 1.6;"><strong>Заказ №:</strong> ${esc(c.orderNumber || '—')}<br>
       <strong>Клиент:</strong> ${esc(c.clientName || '—')}${c.clientPhone ? ', ' + esc(c.clientPhone) : ''}<br>${c.clientAddress ? `<strong>Адрес:</strong> ${esc(c.clientAddress)}<br>` : ''}</div>`; };
   const td = 'padding: 6px 8px; border: 1px solid #bdc3c7;';
+  function svcTable(title) {
+    if (!st.services.length) return '';
+    return `<div style="margin-top: 14px; break-inside: avoid;">
+        <div style="font-size: 15px; font-weight: 800; border-bottom: 2px solid #d35400; padding-bottom: 4px; margin-bottom: 6px;">${title}</div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;"><thead><tr style="background: #ecf0f1;"><th style="${td} width: 30px;">№</th><th style="${td} text-align: left;">Услуга</th><th style="${td} width: 95px;">Сумма</th></tr></thead>
+        <tbody>${st.services.map((x, i) => `<tr><td style="${td} text-align: center;">${i + 1}</td><td style="${td}"><strong>${esc(SVC[x.type].name)}</strong>${x.note ? ' — ' + esc(x.note) : ''}</td><td style="${td} text-align: right; white-space: nowrap; font-weight: bold;">${rub(num(x.price))}</td></tr>`).join('')}
+        ${st.services.length > 1 ? `<tr><td colspan="2" style="${td} text-align: right; color: #7f8c8d;">Итого услуги</td><td style="${td} text-align: right; white-space: nowrap; font-weight: bold;">${rub(svcSum())}</td></tr>` : ''}</tbody></table></div>`;
+  }
   function kpHtml() {
     const sel = st.priceSel, tot = total(sel), pre = Math.max(0, parseFloat(String(st.client.prepay || '').replace(',', '.')) || 0);
     const secs = partsSum().map(p => { const ls = lineSums(p, sel); return `<div style="margin-top: 14px; break-inside: avoid;">
@@ -558,7 +645,7 @@
         <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 6px;">${(p.details || []).map(esc).join(' · ')}${p.noInstall ? ' · монтаж не входит' : ' · монтаж включён'}</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 13px;"><thead><tr style="background: #ecf0f1;"><th style="${td} width: 30px;">№</th><th style="${td} text-align: left;">Помещение</th><th style="${td} text-align: left;">Изделие</th><th style="${td} width: 95px;">Сумма</th></tr></thead>
         <tbody>${p.items.map((it, i) => `<tr><td style="${td} text-align: center;">${it.n}</td><td style="${td} font-weight: bold;">${esc(it.room || '—')}</td><td style="${td}">${esc(String(it.text).replace(/\s*\(Ш гот\.[^)]*\)/, ''))}</td><td style="${td} text-align: right; white-space: nowrap; font-weight: bold;">${rub(ls[i])}</td></tr>`).join('')}
-        <tr><td colspan="3" style="${td} text-align: right; color: #7f8c8d;">Итого по разделу</td><td style="${td} text-align: right; white-space: nowrap; font-weight: bold;">${rub(p.prices[sel])}</td></tr></tbody></table></div>`; }).join('');
+        <tr><td colspan="3" style="${td} text-align: right; color: #7f8c8d;">Итого по разделу</td><td style="${td} text-align: right; white-space: nowrap; font-weight: bold;">${rub(p.prices[sel])}</td></tr></tbody></table></div>`; }).join('') + svcTable('Дополнительные услуги');
     return shell(`<div class="print-section kp-part" style="font-family: Arial, sans-serif; color: #2c3e50;">${head('Коммерческое предложение')}${clientBox()}
       <p style="font-size: 14px; line-height: 1.5; margin: 10px 0 0;">Мы рады предложить вам изготовление и установку солнцезащитных и противомоскитных систем по вашим индивидуальным размерам.</p>${secs}
       <div style="margin-top: 16px; break-inside: avoid; border-top: 2px solid #ecf0f1; padding-top: 10px;">
@@ -568,7 +655,7 @@
   }
   function orderHeadHtml() {
     const sel = st.priceSel, tot = total(sel), c = st.client, pre = Math.max(0, parseFloat(String(c.prepay || '').replace(',', '.')) || 0);
-    const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0);
+    const cost = partsSum().reduce((a, p) => a + (p.cost || 0), 0), profit = partsSum().reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0) + svcSum();
     return shell(`<div class="print-section" style="font-family: Arial, sans-serif; color: #2c3e50;">${head('Заказ-наряд', 'ВНУТРЕННИЙ')}${clientBox()}
       <div style="background: #fef9e7; border-left: 4px solid #f39c12; padding: 10px; margin: 10px 0; font-size: 14px;">
         <strong>Стоимость для клиента (${esc(priceLabel(sel).toLowerCase())}):</strong> ${rub(tot)} &nbsp;·&nbsp; <strong>Предоплата:</strong> ${pre > 0 ? rub(pre) : 'без предоплаты'} &nbsp;·&nbsp; <strong>К доплате:</strong> <span style="color: #c0392b; font-weight: 800;">${rub(Math.max(0, tot - pre))}</span>
@@ -576,9 +663,11 @@
       <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin: 14px 0 6px;">Состав заказа</div>
       <table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #ecf0f1;"><th style="${td}">№</th><th style="${td} text-align: left;">Изделие</th><th style="${td} text-align: left;">Помещение</th><th style="${td} text-align: left;">Размеры и параметры</th></tr></thead>
       <tbody>${partsSum().flatMap(p => p.items.map(it => `<tr><td style="${td} text-align: center; font-weight: bold;">${it.n}</td><td style="${td}">${esc(p.name)}</td><td style="${td} font-weight: bold;">${esc(it.room || '—')}</td><td style="${td}">${esc(it.text)}</td></tr>`)).join('')}</tbody></table>
+      ${svcTable('Доп. услуги (выполнить на установке)')}
       <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; margin: 14px 0 6px;">Экономика заказа</div>
       <table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #ecf0f1;"><th style="${td} text-align: left;">Раздел</th><th style="${td}">Себестоимость</th><th style="${td}">Для клиента</th><th style="${td}">Маржа</th></tr></thead>
       <tbody>${partsSum().map(p => `<tr><td style="${td}">${esc(p.name)}${p.noInstall ? ' (без монтажа)' : ''}</td><td style="${td} text-align: right;">${rub(p.cost)}</td><td style="${td} text-align: right;">${rub(p.prices[sel])}</td><td style="${td} text-align: right;">${rub(p.profitOf[sel])}</td></tr>`).join('')}
+      ${st.services.length ? `<tr><td style="${td}">Доп. услуги</td><td style="${td} text-align: right;">—</td><td style="${td} text-align: right;">${rub(svcSum())}</td><td style="${td} text-align: right;">${rub(svcSum())}</td></tr>` : ''}
       <tr style="font-weight: bold;"><td style="${td}">Итого</td><td style="${td} text-align: right;">${rub(cost)}</td><td style="${td} text-align: right;">${rub(tot)}</td><td style="${td} text-align: right;">${rub(profit)} · ${tot > 0 ? Math.round(profit / tot * 100) : 0}%</td></tr></tbody></table>
       <div style="font-size: 11px; color: #7f8c8d; margin-top: 10px;">Дальше — заказ-наряды по разделам: спецификация, раскрой ткани и металла, комплектующие. Номера изделий сквозные.</div></div>`);
   }
@@ -641,7 +730,7 @@
     if (!c.orderNumber && !confirm('Номер заказа не указан. Всё равно отправить?')) return;
     const leadKey = `spComboLead2:${st.id}`;
     let leadId = 0; try { leadId = Number(localStorage.getItem(leadKey)) || 0; } catch (e) {}
-    if (leadId && !confirm(`Этот заказ уже отправлен в сделку №${leadId}. ОК — обновить её (сумма, примечание, файлы).`)) return;
+    if (leadId && !confirm(st.editLead ? `Обновить сделку №${leadId} в amoCRM: сумма, клиент, поля, примечание и новые файлы?` : `Этот заказ уже отправлен в сделку №${leadId}. ОК — обновить её (сумма, примечание, файлы).`)) return;
     setStatus('⏳ Готовлю документы: КП, заказ-наряд, наклейки…');
     const orderBlob = await buildOrder(h => setStatus(h));
     const kpBlob = await buildKp();
@@ -655,9 +744,11 @@
     items.forEach((t, i) => { if (i < 7 || items.length <= 8) fields[`Изделие ${i + 1}`] = t; else if (i === 7) fields['Изделие 8'] = `+ ещё ${items.length - 7} поз. — см. PDF`; });
     const note = [
       `Заказ №${c.orderNumber || '—'}`,
-      `Изделия: ${ps.map(p => `${p.name} — ${pcs(p)} шт`).join('; ')}`,
+      `Изделия: ${ps.map(p => `${p.name} — ${pcs(p)} шт`).join('; ') || 'нет'}${st.services.length ? '; услуги: ' + st.services.map(x => SVC[x.type].name).join(', ') : ''}`,
       `Клиент: ${c.clientName || '—'}${c.clientPhone ? ', ' + c.clientPhone : ''}`, `Адрес: ${c.clientAddress || '—'}`, '',
+      ...(leadId ? ['ЗАКАЗ СКОРРЕКТИРОВАН ' + new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }), ''] : []),
       ...ps.flatMap(p => { const ls = lineSums(p, sel); return [`${p.name} — ${rub(p.prices[sel])}${p.noInstall ? ' (без монтажа)' : ''}`, ...(p.details || []).map(x => '  ' + x), ...p.items.map((it, i) => `  ${it.n}. ${it.room || '—'}: ${it.text} — ${rub(ls[i])}`), '']; }),
+      ...(st.services.length ? ['Доп. услуги — ' + rub(svcSum()), ...st.services.map(x => `  ${SVC[x.type].name}${x.note ? ' (' + x.note + ')' : ''} — ${rub(num(x.price))}`), ''] : []),
       `Итого для клиента (${priceLabel(sel)}): ${rub(tot)}`,
       `Предоплата: ${pre > 0 ? rub(pre) : 'без предоплаты'}`, `К доплате после установки: ${rub(Math.max(0, tot - pre))}`,
       ...(c.orderNote ? ['', 'Доп. информация:', c.orderNote] : []), '', 'КП, заказ-наряд с раскроем и наклейки — в файлах сделки.'
@@ -666,7 +757,7 @@
     const lead = await call(cfg, '/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
       lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', street(c.clientAddress) || c.clientName].filter(Boolean).join(' ') || 'Новый заказ',
       price: tot, pipeline: st.pipeline || $('pipeline').value, status: 'Изготовление', contact: { name: c.clientName || '', phone: c.clientPhone || '' },
-      fields, note, tags: [...new Set([...(ps.length > 1 ? ['Комбинированный'] : []), ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), `${ps.reduce((a, p) => a + pcs(p), 0)} шт`])] }) });
+      fields, note, tags: [...new Set([...(ps.length > 1 ? ['Комбинированный'] : []), ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), ...(ps.length ? [`${ps.reduce((a, p) => a + pcs(p), 0)} шт`] : []), ...st.services.map(x => SVC[x.type].name)])] }) });
     try { localStorage.setItem(leadKey, String(lead.lead_id)); if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
     const files = [['заказ-наряд', fileName('Заказ-наряд'), orderBlob], ['КП', fileName('КП'), kpBlob], ['наклейки', fileName('Наклейки'), labelsBlob]];
     const done = [], failed = [];
@@ -676,9 +767,29 @@
       let err = ''; for (let a = 1; a <= 2; a++) { try { await call(cfg, `/file?lead_id=${lead.lead_id}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(name) }, body: blob }); err = ''; break; } catch (e) { err = e.message; } }
       (err ? failed : done).push(err ? `${label} — ${err}` : label);
     }
+    // данные заказа — посреднику, чтобы потом скорректировать его из «Текущих заказов» (с любого телефона)
+    setStatus('⏳ Сохраняю данные заказа для корректировки…');
+    let stateNote = '';
+    try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState() }) }); }
+    catch (e) { stateNote = /хранилище/.test(e.message) ? '' : ' Данные для корректировки не сохранились: ' + esc(e.message) + '.'; }
+    st.editLead = lead.lead_id; st.sentSig = sig(); save();
     const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
-    setStatus(`${failed.length ? '⚠' : '✓'} ${lead.created ? `Сделка создана в «${esc(lead.pipeline_name || st.pipeline)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена'}: ${rub(tot)}, прикреплены: ${done.join(', ') || '—'}${failed.length ? '. Не прикрепилось: ' + failed.map(esc).join('; ') : ''} — ${link}`, failed.length ? 'warn' : 'ok');
+    setStatus(`${failed.length ? '⚠' : '✓'} ${lead.created ? `Сделка создана в «${esc(lead.pipeline_name || st.pipeline)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена'}: ${rub(tot)}, прикреплены: ${done.join(', ') || '—'}${failed.length ? '. Не прикрепилось: ' + failed.map(esc).join('; ') : ''}${stateNote ? '.' + stateNote : ''} — ${link}`, failed.length || stateNote ? 'warn' : 'ok');
   });
+
+  // все данные заказа: состояние, разделы калькуляторов, фото
+  function idbGet(db, key) {
+    return new Promise(res => { try { const r = indexedDB.open(db, 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => { try { const q = r.result.transaction('kv').objectStore('kv').get(key); q.onsuccess = () => { res(q.result || null); r.result.close(); }; q.onerror = () => { res(null); r.result.close(); }; } catch (e) { res(null); } };
+      r.onerror = () => res(null); } catch (e) { res(null); } });
+  }
+  async function gatherState() {
+    const ls = {}; try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => { ls[k] = localStorage.getItem(k); }); } catch (e) {}
+    const photos = {};
+    for (const id of ordered()) { const v = await idbGet(id + 'CalcPhotos', 'photos@combo:' + st.id); if (v) photos[id] = v; }
+    const combo = JSON.parse(JSON.stringify(st)); delete combo.sig; delete combo.sentSig; delete combo.fresh;
+    return { v: 1, saved: Date.now(), combo, ls, photos };
+  }
 
   // старт: ?new=1 — с главного «Начать новый»; иначе подгрузить разделы, чтобы сводка была свежей
   if (new URLSearchParams(location.search).get('new') === '1') { newOrder(true); history.replaceState(null, '', location.pathname); }

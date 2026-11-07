@@ -6,5 +6,7 @@
   "main": "amo-worker.js",
   "compatibility_date": "2025-01-01",
   "workers_dev": true,
-  "keep_vars": true
+  "keep_vars": true,
+  // хранилище данных заказов (для корректировки из «Текущих заказов»); Cloudflare создаст его сам при выкладке
+  "kv_namespaces": [{ "binding": "SP_ORDERS" }]
 }
