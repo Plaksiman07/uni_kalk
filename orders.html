@@ -369,17 +369,37 @@
   }
 
   const docCache = {};
+  // копии документов на этом телефоне (сохраняются при отправке заказа)
+  function idbDocs(op, key, val) {
+    return new Promise(res => { try { const r = indexedDB.open('spDocs', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => { try { const tx = r.result.transaction('kv', op === 'get' || op === 'list' ? 'readonly' : 'readwrite'), os = tx.objectStore('kv');
+        if (op === 'del') { os.delete(key); tx.oncomplete = () => { r.result.close(); res(true); }; return; }
+        if (op === 'put') { os.put(val, key); tx.oncomplete = () => { r.result.close(); res(true); }; return; }
+        if (op === 'list') { const out = []; const c = os.openCursor(); c.onsuccess = () => { const cur = c.result; if (cur) { if (String(cur.key).startsWith(key)) out.push([cur.key, cur.value]); cur.continue(); } else { r.result.close(); res(out); } }; c.onerror = () => res([]); return; }
+        const q = os.get(key); q.onsuccess = () => { r.result.close(); res(q.result || null); }; q.onerror = () => res(null); } catch (e) { res(op === 'list' ? [] : null); } };
+      r.onerror = () => res(op === 'list' ? [] : null); } catch (e) { res(op === 'list' ? [] : null); } });
+  }
+  const KIND_ORDER = { kp: 0, order: 1, labels: 2 };
   const docKind = n => /^КП/i.test(n) ? ['КП для клиента', 'var(--soft)', 'var(--accent)'] : /наряд/i.test(n) ? ['Заказ-наряд', 'var(--slate-soft)', 'var(--slate)'] : /наклейк/i.test(n) ? ['Наклейки', '#f3effd', '#7c3aed'] : ['Файл', 'var(--fill)', 'var(--muted)'];
   async function docsSheet(id) {
     const f = findLead(id); if (!f) return;
     openSheet(`<h2>Документы</h2><div class="bs-sub">${esc(leadTitle(f.l))}</div><div class="grp" id="docList"><div class="loading">${I.spin}Загружаю список из amoCRM…</div></div><button type="button" class="cancel">Закрыть</button>`);
     try {
-      const r = await api('/docs', { lead_id: id });
-      const files = r.files || [];
+      let r, files;
+      try { r = await api('/docs', { lead_id: id }); files = r.files || []; }
+      catch (err) {   // нет связи — показать копии, сохранённые на этом телефоне
+        const local = await idbDocs('list', id + ':');
+        if (!local.length) throw err;
+        files = local.map(([k, v]) => ({ uuid: 'app:' + k.split(':')[1], kind: k.split(':')[1], name: v.name, size: v.size, created_at: v.at, source: 'app' })).sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9));
+        r = { source: 'app', offline: true };
+      }
+      $('bsBody').querySelector('.bs-sub').insertAdjacentHTML('beforeend', r.source === 'app' ? (r.offline ? ' · копии на этом телефоне (нет связи)' : ' · хранятся в приложении') : ' · из amoCRM');
       $('docList').innerHTML = files.length ? files.map(x => { const k = docKind(x.name); const d = x.created_at ? new Date(x.created_at * 1000).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
         return `<button type="button" class="opt" data-doc="${esc(x.uuid)}" data-name="${esc(x.name)}"><span class="tile" style="background:${k[1]}; color:${k[2]}">${I.docs}</span>
           <span class="o-b"><span class="o-t">${esc(x.name)}</span><span class="o-s">${[d, x.size ? Math.max(1, Math.round(x.size / 1024)) + ' КБ' : ''].filter(Boolean).join(' · ')}</span></span>${I.chev.replace('M6 9l6 6 6-6', 'M9 6l6 6-6 6')}</button>`; }).join('')
         : '<div class="err" style="color:var(--muted)">В сделке нет файлов. Они появляются после отправки заказа из калькулятора.</div>';
+      // если на сервере версия новее (заказ скорректировали с другого телефона) — копия на этом телефоне устарела
+      for (const x of files.filter(f => f.source === 'app' && !r.offline)) { const v = await idbDocs('get', id + ':' + x.kind); if (v && (v.size !== x.size || (v.at || 0) < (x.created_at || 0) - 120)) await idbDocs('del', id + ':' + x.kind); delete docCache[id + ':' + x.uuid]; }
       $('docList').onclick = e => { const b = e.target.closest('[data-doc]'); if (b) { closeSheet(); openDoc(id, b.dataset.doc, b.dataset.name); } };
     } catch (err) { $('docList').innerHTML = `<div class="err">Не удалось получить файлы: ${esc(err.message)}</div>`; }
   }
@@ -398,7 +418,14 @@
     $('vTitle').textContent = name; $('viewer').classList.add('show'); curDoc = null;
     $('vBody').innerHTML = `<div class="v-msg">${I.spin.replace('<svg', '<svg style="animation: spin 0.9s linear infinite; vertical-align: -3px; margin-right: 6px;"')}Загружаю «${esc(name)}»…</div>`;
     try {
-      const got = docCache[uuid] || (docCache[uuid] = await api('/doc', { lead_id: leadId, uuid }, true));
+      const ck = leadId + ':' + uuid;
+      let got = docCache[ck];
+      if (!got && uuid.startsWith('app:')) { const v = await idbDocs('get', leadId + ':' + uuid.slice(4)); if (v && v.blob) got = { blob: v.blob, name: v.name, local: true, at: v.at }; }
+      if (!got) {
+        got = await api('/doc', { lead_id: leadId, uuid }, true);
+        if (uuid.startsWith('app:') && got.blob) idbDocs('put', leadId + ':' + uuid.slice(4), { name: got.name || name, blob: got.blob, size: got.blob.size, at: Math.floor(Date.now() / 1000) });
+      }
+      docCache[ck] = got;
       if (!got.blob) throw new Error('посредник не вернул файл');
       curDoc = { blob: got.blob, name: got.name || name };
       if (!/pdf/i.test(got.blob.type) && !/\.pdf$/i.test(name)) { $('vBody').innerHTML = '<div class="v-msg">Это не PDF — нажмите «Сохранить», чтобы открыть файл.</div>'; return; }

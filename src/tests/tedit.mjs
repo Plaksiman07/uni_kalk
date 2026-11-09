@@ -42,6 +42,14 @@ chk('примечание: услуги', /Доп. услуги — 2 100 ₽/.t
 const kvFile = fs.readdirSync(OUT).filter(f => /^kv_lead_\d+\.json$/.test(f)).map(f => [f, fs.statSync(OUT + f).mtimeMs]).sort((a, c) => c[1] - a[1])[0][0];
 const kv = rd(kvFile);
 chk('данные заказа у посредника', kv.combo.services.length === 2 && Object.keys(kv.ls).some(k => k.startsWith('uniCalcState12@combo:')), kvFile);
+const LID = Number(kvFile.match(/(\d+)/)[1]);
+const api = (path, body) => p.evaluate(async ([path, body]) => { const r = await fetch('http://localhost:8790' + path, { method: 'POST', headers: { 'X-App-Key': 'secret1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (/json/.test(r.headers.get('Content-Type'))) return r.json(); const ab = await r.arrayBuffer(); return { bytes: ab.byteLength, head: new TextDecoder().decode(ab.slice(0, 4)) }; }, [path, body]);
+const dl = await api('/docs', { lead_id: LID });
+chk('документы в приложении (KV): КП, заказ-наряд, наклейки', dl.source === 'app' && dl.files.map(f => f.kind).join() === 'kp,order,labels', JSON.stringify(dl.files.map(f => f.name)));
+const one = await api('/doc', { lead_id: LID, uuid: 'app:kp' });
+chk('КП отдаётся из приложения', one.head === '%PDF' && one.bytes > 1000, one.bytes + ' байт');
+chk('копии на телефоне (IndexedDB)', await p.evaluate(LID => new Promise(res => { const r = indexedDB.open('spDocs', 1); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').getAllKeys(); q.onsuccess = () => res(q.result.filter(k => String(k).startsWith(LID + ':')).length); }; }), LID) === 3);
 await p.goto(B + 'index.html'); chk('после отправки — не черновик', !(await p.isVisible('#draftChip')));
 // «Текущие заказы» → «Изменить» у заказа 504
 await p.goto(B + 'orders.html'); await p.waitForSelector('[data-edit="504"]', { timeout: 15000 });

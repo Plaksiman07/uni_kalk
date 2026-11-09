@@ -912,7 +912,17 @@
       price: tot, pipeline: st.pipeline || $('pipeline').value, status: 'Изготовление', contact: { name: c.clientName || '', phone: c.clientPhone || '' },
       fields, note, tags: [...new Set([...(ps.length > 1 ? ['Комбинированный'] : []), ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), ...(ps.length ? [`${ps.reduce((a, p) => a + pcs(p), 0)} шт`] : []), ...st.services.map(x => SVC[x.type].name)])] }) });
     try { localStorage.setItem(leadKey, String(lead.lead_id)); if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}
-    const files = [['заказ-наряд', fileName('Заказ-наряд'), orderBlob], ['КП', fileName('КП'), kpBlob], ['наклейки', fileName('Наклейки'), labelsBlob]];
+    const files = [['заказ-наряд', fileName('Заказ-наряд'), orderBlob, 'order'], ['КП', fileName('КП'), kpBlob, 'kp'], ['наклейки', fileName('Наклейки'), labelsBlob, 'labels']];
+    // 1) копии PDF в приложении: на этом телефоне (сразу) и у посредника (для «Текущих заказов» на любом телефоне)
+    setStatus('⏳ Сохраняю документы в приложении…');
+    let appDocs = 0, appErr = '';
+    for (const [label, name, blob, kind] of files) {
+      if (!blob) continue;
+      await idbPutDoc(`${lead.lead_id}:${kind}`, { name, blob, size: blob.size, at: Math.floor(Date.now() / 1000) });
+      try { await call(cfg, `/doc-save?lead_id=${lead.lead_id}&kind=${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-File-Name': encodeURIComponent(name) }, body: blob }); appDocs++; }
+      catch (e) { if (!/хранилище/.test(e.message)) appErr = e.message; }
+    }
+    // 2) резерв в amoCRM
     const done = [], failed = [];
     for (const [label, name, blob] of files) {
       if (!blob) { failed.push(label + ' (не собрались)'); continue; }
@@ -927,8 +937,15 @@
     catch (e) { stateNote = /хранилище/.test(e.message) ? '' : ' Данные для корректировки не сохранились: ' + esc(e.message) + '.'; }
     st.editLead = lead.lead_id; st.sentSig = sig(); save();
     const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
-    setStatus(`${failed.length ? '⚠' : '✓'} ${lead.created ? `Сделка создана в «${esc(lead.pipeline_name || st.pipeline)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена'}: ${rub(tot)}, прикреплены: ${done.join(', ') || '—'}${failed.length ? '. Не прикрепилось: ' + failed.map(esc).join('; ') : ''}${stateNote ? '.' + stateNote : ''} — ${link}`, failed.length || stateNote ? 'warn' : 'ok');
+    setStatus(`${failed.length ? '⚠' : '✓'} ${lead.created ? `Сделка создана в «${esc(lead.pipeline_name || st.pipeline)}» → «${esc(lead.status_name || 'Изготовление')}»` : 'Сделка обновлена'}: ${rub(tot)}. ${appDocs ? `Документы в «Текущих заказах»: ${appDocs} шт. ` : ''}В amoCRM прикреплены: ${done.join(', ') || '—'}${failed.length ? '. Не прикрепилось: ' + failed.map(esc).join('; ') : ''}${appErr ? '. Копии в приложении не сохранились: ' + esc(appErr) : ''}${stateNote ? '.' + stateNote : ''} — ${link}`, failed.length || stateNote || appErr ? 'warn' : 'ok');
   });
+
+  // копии документов на этом телефоне (IndexedDB «spDocs»: <сделка>:<kp|order|labels>)
+  function idbPutDoc(key, val) {
+    return new Promise(res => { try { const r = indexedDB.open('spDocs', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => { try { const tx = r.result.transaction('kv', 'readwrite'); tx.objectStore('kv').put(val, key); tx.oncomplete = () => { r.result.close(); res(true); }; tx.onerror = () => { r.result.close(); res(false); }; } catch (e) { res(false); } };
+      r.onerror = () => res(false); } catch (e) { res(false); } });
+  }
 
   // все данные заказа: состояние, разделы калькуляторов, фото
   function idbGet(db, key) {

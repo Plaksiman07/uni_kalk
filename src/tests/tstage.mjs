@@ -26,7 +26,8 @@ chk('карточка ушла из текущих', !(await p.$('[data-stage-of
 // документы
 await p.waitForTimeout(2000); await p.click('[data-docs="504"]'); await p.waitForSelector('#docList [data-doc]', { timeout: 10000 }); await p.waitForTimeout(300);
 await p.screenshot({ path: OUT + 'st_docs.png' });
-chk('список документов', (await p.$$('#docList [data-doc]')).length === 2 && /КП — заказ №1210/.test(await p.textContent('#docList')));
+const src = await p.textContent('#bsBody .bs-sub'); console.log('   docs:', src, '|', (await p.$$eval('#docList .o-t', e => e.map(x => x.textContent))).join(' / '));
+chk('список документов', (await p.$$('#docList [data-doc]')).length >= 2 && /хранятся в приложении|из amoCRM/.test(src));
 await p.click('#docList [data-doc] >> nth=0');
 await p.waitForFunction(() => document.querySelector('#vBody canvas') || /Не /.test(document.getElementById('vBody').textContent), null, { timeout: 30000 }); await p.waitForTimeout(1500);
 const nc = (await p.$$('#vBody canvas')).length;

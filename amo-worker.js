@@ -16,6 +16,8 @@
  * /state-save, /state-get — данные заказа из калькулятора (для корректировки из «Текущих заказов»).
  * /move — сменить этап сделки («Изготовление», «Готов к установке», «На установку») или закрыть «Успешно реализовано».
  * /docs, /doc — список файлов сделки и сам файл (PDF КП, заказ-наряда, наклеек) — открыть в приложении.
+ * /doc-save — копия PDF в хранилище приложения (KV) при отправке заказа: «Документы» открываются оттуда,
+ *   amoCRM — резерв (из него берутся файлы только старых сделок).
  *   Хранятся в Cloudflare KV (привязка SP_ORDERS, создаётся автоматически из wrangler.jsonc).
  *
  * Воронку и этап калькулятор передаёт по названию («Москитные сетки» / «Изготовление»),
@@ -38,7 +40,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 
     // Версия посредника (без ключа, ничего не раскрывает) — чтобы проверить обновление
-    if (new URL(request.url).pathname === '/version') return json({ worker_version: 5 });
+    if (new URL(request.url).pathname === '/version') return json({ worker_version: 6 });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (!originOk) return json({ error: 'Запрос не с адреса калькулятора (ALLOWED_ORIGINS)' }, 403);
     if (request.method !== 'POST') return json({ error: 'Только POST' }, 405);
@@ -138,7 +140,7 @@ export default {
       // Проверка связи
       if (url.pathname === '/ping') {
         const acc = await amo('/api/v4/account');
-        return json({ ok: true, account: acc.name || domain, worker_version: 5 });
+        return json({ ok: true, account: acc.name || domain, worker_version: 6 });
       }
 
       // Создать сделку (или обновить существующую) + примечание
@@ -207,7 +209,7 @@ export default {
         }
         const ps = d.__ps || {};
         return json({ ok: true, lead_id: leadId, created, contact_existing: !!d.__contactExisting, missing_fields: fieldsRes.missing, url: `${base}/leads/detail/${leadId}`,
-          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 5 });
+          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 6 });
       }
 
       // Сменить этап сделки / закрыть «Успешно реализовано»
@@ -226,11 +228,41 @@ export default {
         return json({ ok: true, lead_id: leadId, status_id: st.id, status_name: st.name, won: st.id === 142 });
       }
 
-      // Файлы сделки: список (/docs) и содержимое (/doc) — через файловое хранилище amoCRM
+      // Копия PDF в приложении (KV): doc:<сделка>:<kp|order|labels> — новая версия заменяет старую
+      if (url.pathname === '/doc-save') {
+        if (!env.SP_ORDERS) return json({ error: 'В посреднике не подключено хранилище заказов (KV «SP_ORDERS»)', no_store: true }, 501);
+        const leadId = Number(url.searchParams.get('lead_id')) || 0, kind = String(url.searchParams.get('kind') || '');
+        if (!leadId || !/^[a-z]{2,12}$/.test(kind)) return json({ error: 'Не указаны сделка или вид документа' }, 400);
+        let name = 'zakaz.pdf'; try { name = decodeURIComponent(request.headers.get('X-File-Name') || name); } catch (e) {}
+        const bytes = await request.arrayBuffer();
+        if (!bytes.byteLength) return json({ error: 'Пустой файл' }, 400);
+        if (bytes.byteLength > 24 * 1024 * 1024) return json({ error: 'Файл больше 24 МБ' }, 413);
+        await env.SP_ORDERS.put(`doc:${leadId}:${kind}`, bytes, { expirationTtl: 400 * 86400,
+          metadata: { name: name.slice(0, 200), size: bytes.byteLength, at: Math.floor(Date.now() / 1000), type: request.headers.get('Content-Type') || 'application/pdf' } });
+        return json({ ok: true, size: bytes.byteLength });
+      }
+
+      // Файлы сделки: список (/docs) и содержимое (/doc) — сначала копии приложения, для старых сделок — файлы amoCRM
       if (url.pathname === '/docs' || url.pathname === '/doc') {
         const d = await request.json().catch(() => ({}));
         const leadId = Number(d.lead_id) || 0;
         if (!leadId) return json({ error: 'Не указан lead_id' }, 400);
+        const ORDER = { kp: 0, order: 1, labels: 2 };
+        if (url.pathname === '/docs' && env.SP_ORDERS) {
+          const r = await env.SP_ORDERS.list({ prefix: `doc:${leadId}:` });
+          const files = r.keys.map(k => { const kind = k.name.split(':')[2], m = k.metadata || {};
+            return { uuid: 'app:' + kind, kind, name: m.name || 'файл.pdf', size: Number(m.size) || 0, type: m.type || 'application/pdf', created_at: Number(m.at) || 0, source: 'app' }; })
+            .sort((a, b) => (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9));
+          if (files.length) return json({ ok: true, source: 'app', files });
+        }
+        if (url.pathname === '/doc' && /^app:[a-z]{2,12}$/.test(String(d.uuid || ''))) {
+          if (!env.SP_ORDERS) return json({ error: 'Хранилище приложения не подключено' }, 501);
+          const r = await env.SP_ORDERS.getWithMetadata(`doc:${leadId}:${String(d.uuid).slice(4)}`, { type: 'stream' });
+          if (!r || !r.value) return json({ error: 'Копия документа в приложении не найдена' }, 404);
+          const m = r.metadata || {}, name = m.name || 'file.pdf';
+          return new Response(r.value, { status: 200, headers: { ...cors, 'Content-Type': m.type || 'application/pdf',
+            'X-File-Name': encodeURIComponent(name), 'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store' } });
+        }
         const acc = await amo('/api/v4/account?with=drive_url');
         if (!acc.drive_url) throw new Error('amoCRM не вернул адрес файлового хранилища (drive_url)');
         const version = async uuid => {
@@ -246,7 +278,7 @@ export default {
               return { uuid, name: x.name || 'файл', size: Number(x.size) || 0, type: (x.metadata && (x.metadata.mime_type || x.metadata.content_type)) || '', ext: (x.metadata && x.metadata.extension) || '', created_at: Number(x.created_at) || 0 };
             } catch (e) { return null; }
           }))).filter(Boolean).sort((a, b) => b.created_at - a.created_at);
-          return json({ ok: true, files });
+          return json({ ok: true, source: 'amo', files });
         }
         const uuid = String(d.uuid || '');
         if (!/^[0-9a-f-]{8,64}$/i.test(uuid)) return json({ error: 'Неверный файл' }, 400);
@@ -338,7 +370,7 @@ export default {
           const fresh = Math.max(l.created_at || 0, l.closed_at || 0);
           if (!best || fresh > best.fresh) best = { number: n, lead_id: l.id, name: l.name, fresh, by: (l.closed_at || 0) > (l.created_at || 0) ? 'closed' : 'created' };
         }
-        return json({ ok: true, last: best, worker_version: 5 });
+        return json({ ok: true, last: best, worker_version: 6 });
       }
 
       // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
@@ -422,7 +454,7 @@ export default {
             lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`, editable: editable.has(l.id)
           });
         }
-        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 5 });
+        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 6 });
       }
 
       return json({ error: 'Неизвестный адрес' }, 404);

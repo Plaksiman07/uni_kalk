@@ -64,8 +64,11 @@ globalThis.fetch = async (url, opts = {}) => {
   return J({ e: 'nomock' }, 404);
 };
 const kv = new Map();
-const SP_ORDERS = { async put(k, v) { kv.set(k, v); fs.writeFileSync(OUT + 'kv_' + k.replace(':', '_') + '.json', v); }, async get(k) { return kv.has(k) ? kv.get(k) : null; },
-  async list({ prefix }) { return { keys: [...kv.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name })), list_complete: true }; } };
+const kvMeta = new Map();
+const SP_ORDERS = { async put(k, v, o) { kv.set(k, v); kvMeta.set(k, (o && o.metadata) || null); if (typeof v === 'string') fs.writeFileSync(OUT + 'kv_' + k.replace(':', '_') + '.json', v); },
+  async get(k) { return kv.has(k) ? kv.get(k) : null; },
+  async getWithMetadata(k) { return kv.has(k) ? { value: new Uint8Array(kv.get(k)), metadata: kvMeta.get(k) } : { value: null, metadata: null }; },
+  async list({ prefix }) { return { keys: [...kv.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name, metadata: kvMeta.get(name) })), list_complete: true }; } };
 // заказ 504 («Москитные сетки №1210») — как будто отправлен из калькулятора: его можно скорректировать
 kv.set('lead:504', JSON.stringify({ v: 1, combo: { id: 'ord504', client: { orderNumber: '1210', clientName: 'Кузнецов Олег', clientPhone: '89186913293', clientAddress: 'г. Краснодар, ул. Ставропольская 150, кв. 88' }, parts: ['mesh'], sum: {}, priceSel: 'base', pipeline: 'Москитные сетки', services: [] },
   ls: { 'meshCalcState1@combo:ord504': JSON.stringify({ selectedPrice: 'base', meshType: 'antikoshka', meshColor: 'white', rooms: [{ name: 'Кухня', pk: 'k1', items: [{ w: '60', h: '120', qty: '1' }] }, { name: 'Детская', pk: 'k2', items: [{ w: '58', h: '118', qty: '2' }] }] }) }, photos: {} }));
