@@ -10,7 +10,7 @@ globalThis.fetch = async (url, opts = {}) => {
   log.push((opts.method || 'GET') + ' ' + url);
   if (url.endsWith('/api/v4/account')) return J({ name: 'Тестовый аккаунт' });
   if (url.endsWith('/api/v4/leads/pipelines')) return J({ _embedded: { pipelines: [
-    { id: 1987228, name: 'Москитные сетки', _embedded: { statuses: [{ id: 11, name: 'Изготовление' }, { id: 12, name: 'Готов к установке' }, { id: 13, name: 'На установку' }] } },
+    { id: 1987228, name: 'Москитные сетки', _embedded: { statuses: [{ id: 11, name: 'Изготовление' }, { id: 12, name: 'Готов к установке' }, { id: 13, name: 'На установку' }, { id: 142, name: 'Успешно реализовано' }] } },
     { id: 9662970, name: 'Солнцезащитные системы', _embedded: { statuses: [{ id: 21, name: 'Изготовление' }, { id: 22, name: 'Готов к установке' }] } },
     { id: 5550001, name: 'Cетки  плиcсе ', _embedded: { statuses: [{ id: 40, name: 'Неразобранное', type: 1, sort: 10 }, { id: 41, name: 'Первичный контакт', type: 0, sort: 20 }, { id: 142, name: 'Успешно', type: 0, sort: 10000 }] } },
     { id: 10087634, name: 'Замеры', _embedded: { statuses: [{ id: 31, name: 'Новый' }] } } ] } });
@@ -49,6 +49,11 @@ globalThis.fetch = async (url, opts = {}) => {
   if (url.endsWith('/api/v4/account?with=drive_url')) return J({ drive_url: 'https://drive-x.amocrm.ru' });
   if (url.endsWith('/api/v4/leads/complex')) { fs.writeFileSync(OUT + 'amo_lead.json', opts.body); return J([{ id: ++leadN }]); }
   if (/notes$/.test(url)) { if (!/attachment/.test(opts.body)) fs.writeFileSync(OUT + 'amo_note.json', opts.body); return J({}); }
+  if (/leads\/\d+\/files\?limit=50$/.test(url)) return J({ _embedded: { files: [{ file_uuid: 'aaaa1111-0000-0000-0000-000000000001' }, { file_uuid: 'aaaa1111-0000-0000-0000-000000000002' }] } });
+  if (/\/v1\.0\/files\/[0-9a-f-]+\/versions$/.test(url)) { const n = url.match(/(\d)\/versions$/)[1];
+    return J({ _embedded: { versions: [{ uuid: 'v' + n, is_main: true, name: n === '1' ? 'КП — заказ №1210.pdf' : 'Заказ-наряд — заказ №1210.pdf', size: 52000, created_at: 1700000000 + Number(n), metadata: { extension: 'pdf', mime_type: 'application/pdf' }, _links: { download: { href: 'https://drive-x.amocrm.ru/download/' + n } } }] } }); }
+  if (url.includes('/download/')) { const f = OUT + 'photo_order.pdf'; return new Response(fs.existsSync(f) ? fs.readFileSync(f) : Buffer.from('%PDF-1.4\n%%EOF'), { status: 200, headers: { 'Content-Type': 'application/pdf' } }); }
+  if (/leads\/\d+$/.test(url) && (!opts.method || opts.method === 'GET')) { const id = +url.match(/(\d+)$/)[1]; return J({ id, pipeline_id: id === 504 || id === 505 ? 1987228 : 9662970, status_id: id === 504 ? 11 : 21 }); }
   if (/leads\/\d+\?with=contacts$/.test(url)) return J({ id: 1, _embedded: { tags: [{ name: 'Ручной тег' }, { name: '3 шт' }], contacts: [{ id: 701, is_main: true }] } });
   if (/contacts\/\d+$/.test(url)) { fs.writeFileSync(OUT + 'amo_contact_patch.json', opts.body); return J({}); }
   if (/leads\/\d+$/.test(url)) { fs.writeFileSync(OUT + 'amo_patch.json', opts.body); return J({}); }
