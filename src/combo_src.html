@@ -51,6 +51,11 @@
     .row label, .row .lbl { flex: none; width: 112px; color: var(--ink2); font-size: 15px; font-weight: 500; }
     .row input, .row textarea { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--ink); padding: 13px 0; outline: none; text-align: right; text-overflow: ellipsis; }
     .row input:focus { text-align: left; }
+    .row.trio { gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+    .row.trio .mini { flex: 1; min-width: 0; width: auto; display: flex; flex-direction: column; gap: 2px; background: var(--fill); border-radius: 12px; padding: 7px 10px; box-shadow: inset 0 0 0 1px var(--sep); }
+    .row.trio .mini:focus-within { box-shadow: inset 0 0 0 2px var(--accent); background: #fff; }
+    .row.trio .mini span { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .row.trio .mini input { padding: 0; text-align: left; font-size: 16px; width: 100%; }
     .row textarea { text-align: left; resize: none; min-height: 48px; padding: 13px 0; field-sizing: content; }
     .row input::placeholder, .row textarea::placeholder { color: #c3c6cc; font-weight: 500; }
     .row.tap { cursor: pointer; }
@@ -217,7 +222,14 @@
       <div class="num-hint" id="numHint"></div>
       <div class="row"><label for="clientName">Имя</label><input id="clientName" type="text" placeholder="Клиент" autocomplete="off"></div>
       <div class="row"><label for="clientPhone">Телефон</label><input id="clientPhone" type="tel" placeholder="+7 …" autocomplete="off"></div>
-      <div class="row"><label for="clientAddress">Адрес</label><input id="clientAddress" type="text" placeholder="Улица, дом, квартира" autocomplete="off"></div>
+      <div class="row"><label for="addrCity">Город</label><input id="addrCity" type="text" placeholder="Краснодар" autocomplete="off"></div>
+      <div class="row"><label for="addrStreet">Улица</label><input id="addrStreet" type="text" placeholder="ул. Ставропольская" autocomplete="off"></div>
+      <div class="row"><label for="addrHouse">Дом, корпус</label><input id="addrHouse" type="text" placeholder="150 к2 или 12/1" autocomplete="off"></div>
+      <div class="row trio">
+        <label class="mini" for="addrEntr"><span>Подъезд</span><input id="addrEntr" type="text" inputmode="numeric" placeholder="—" autocomplete="off"></label>
+        <label class="mini" for="addrFloor"><span>Этаж</span><input id="addrFloor" type="text" inputmode="numeric" placeholder="—" autocomplete="off"></label>
+        <label class="mini" for="addrFlat"><span>Кв. / офис</span><input id="addrFlat" type="text" inputmode="numeric" placeholder="—" autocomplete="off"></label>
+      </div>
       <div class="row"><label for="prepay">Предоплата</label><input id="prepay" type="number" inputmode="decimal" min="0" placeholder="0 ₽"></div>
       <div class="row"><label for="orderNote">Заметка</label><textarea id="orderNote" rows="1" placeholder="Например: установка через неделю"></textarea></div>
     </div></div>
@@ -273,7 +285,23 @@
   ];
   const CALC = Object.fromEntries(CALCS.map(c => [c.id, c]));
   const PRICE_KEYS = ['base', 'discount7', 'discount12', 'b2b'];
-  const CLIENT = ['orderNumber', 'clientName', 'clientPhone', 'clientAddress', 'prepay', 'orderNote'];
+  // адрес — бланком: город, улица, дом/корпус, подъезд, этаж, квартира. Полная строка (clientAddress) собирается сама —
+  // она идёт в документы и в amoCRM; навигатору в «Текущих заказах» уходят только город, улица, дом и подъезд.
+  const ADDR = ['addrCity', 'addrStreet', 'addrHouse', 'addrEntr', 'addrFloor', 'addrFlat'];
+  const CLIENT = ['orderNumber', 'clientName', 'clientPhone', ...ADDR, 'prepay', 'orderNote'];
+  function composeAddr(c) {
+    const t = v => String(v || '').trim();
+    const city = t(c.addrCity), street = t(c.addrStreet), house = t(c.addrHouse);
+    return [city ? (/^(г\.|город|ст\.|ст-ца|станица|пос|п\.|пгт|х\.|хутор|с\.|село|аул|снт|мкр)/i.test(city) ? city : 'г. ' + city) : '',
+      street, house ? (/^(д\.|дом)/i.test(house) ? house : 'д. ' + house) : '',
+      t(c.addrEntr) ? 'под. ' + t(c.addrEntr) : '', t(c.addrFloor) ? 'эт. ' + t(c.addrFloor) : '', t(c.addrFlat) ? 'кв. ' + t(c.addrFlat) : ''].filter(Boolean).join(', ');
+  }
+  function addrInit(c) {   // старый заказ с адресом одной строкой — строка уходит в «Улицу», город не подставляется
+    if (c.addrCity === undefined && c.addrStreet === undefined) {
+      if (c.clientAddress) { c.addrCity = ''; c.addrStreet = c.clientAddress; } else c.addrCity = 'Краснодар';
+    }
+    c.clientAddress = composeAddr(c);
+  }
   // доп. услуги: сумма вписывается вручную и идёт в КП, итог и сделку (скидки на неё не действуют)
   const SERVICES = [
     { id: 'far', name: 'Дальний заказ', hint: 'дорога, топливо, время', icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h2l1-5h9l2 5h4"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M6 12l1.5-4h7L16 12"/></svg>' },
@@ -291,6 +319,7 @@
   let st = (() => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } })();
   if (!st || !st.id) st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' };
   if (!Array.isArray(st.services)) st.services = [];
+  st.client = st.client || {};
   // «отпечаток» заказа: по нему главный экран понимает, есть ли не отправленные в amoCRM изменения
   const sig = () => JSON.stringify([st.client, st.services, st.priceSel, [...st.parts].sort(), Object.keys(st.sum).sort().map(k => st.sum[k] && [st.sum[k].prices, (st.sum[k].items || []).map(i => i.text + '|' + i.qty + '|' + i.room)])]);
   const save = () => {
@@ -298,6 +327,11 @@
     st.sig = sig();
     try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {}
   };
+  { // адрес бланком (переход со старой строки): отправленный заказ не должен стать «изменённым» из-за этого
+    const wasSent = !!(st.sentSig && st.sig === st.sentSig);
+    addrInit(st.client);
+    if (wasSent) st.sentSig = st.sig = sig();
+  }
   const ordered = () => CALCS.map(c => c.id).filter(id => st.parts.includes(id));
 
   // === Разделы: калькуляторы в режиме раздела (iframe) ===
@@ -536,7 +570,7 @@
   // === События ===
   let cTmr = null;
   CLIENT.forEach(id => $(id).addEventListener('input', () => {
-    st.client[id] = $(id).value; save(); render();
+    st.client[id] = $(id).value; if (ADDR.includes(id)) st.client.clientAddress = composeAddr(st.client); save(); render();
     clearTimeout(cTmr); cTmr = setTimeout(() => Object.values(frames).forEach(r => { try { r.win && r.win.spEmbedSetClient(st.client); } catch (e) {} }), 400);
   }));
   $('clientSum').onclick = () => { ui.client = !$('clientBox').classList.contains('open'); render(); if (ui.client) setTimeout(() => $(st.client.orderNumber ? 'clientName' : 'orderNumber').focus(), 280); };
@@ -580,7 +614,7 @@
     try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     dropPhotos(st.id);
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
-    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [] }; save();
+    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [] }; addrInit(st.client); save();
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
   }
   $('moreBtn').onclick = () => menu($('moreBtn'), [
@@ -755,7 +789,7 @@
     ].join('\n');
     setStatus('⏳ Отправляю сделку…');
     const lead = await call(cfg, '/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-      lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', street(c.clientAddress) || c.clientName].filter(Boolean).join(' ') || 'Новый заказ',
+      lead_id: leadId || undefined, title: [c.orderNumber ? '№ ' + c.orderNumber : '', (c.addrCity !== '' && c.addrStreet ? [c.addrStreet.replace(/^(ул\.?|улица|пр-т\.?|проспект|пер\.?|переулок|бул\.?|бульвар|ш\.?|шоссе)\s+/i, ''), c.addrHouse].filter(Boolean).join(' ') : street(c.clientAddress)) || c.clientName].filter(Boolean).join(' ') || 'Новый заказ',
       price: tot, pipeline: st.pipeline || $('pipeline').value, status: 'Изготовление', contact: { name: c.clientName || '', phone: c.clientPhone || '' },
       fields, note, tags: [...new Set([...(ps.length > 1 ? ['Комбинированный'] : []), ...ps.flatMap(p => (p.tags || []).filter(t => !/^\d+ шт$/.test(t))), ...(ps.length ? [`${ps.reduce((a, p) => a + pcs(p), 0)} шт`] : []), ...st.services.map(x => SVC[x.type].name)])] }) });
     try { localStorage.setItem(leadKey, String(lead.lead_id)); if (lead.url) localStorage.setItem('spAmoBase', new URL(lead.url).origin); } catch (e) {}

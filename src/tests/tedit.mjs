@@ -16,6 +16,14 @@ await p.evaluate(() => {
 });
 await p.goto(B + 'combo.html'); await p.waitForFunction(() => document.querySelectorAll('.part .it').length === 1, null, { timeout: 20000 }); await p.waitForTimeout(600);
 const base = +(await p.textContent('#dockSum')).replace(/\D/g, '');
+// адрес бланком: старая строка ушла в «Улицу»; заполняем заново
+await p.click('#clientSum'); await p.waitForTimeout(350);
+chk('старый адрес — в поле «Улица», город пуст', (await p.inputValue('#addrStreet')) === 'ст. Дальняя, ул. Лесная 5' && (await p.inputValue('#addrCity')) === '');
+await p.fill('#addrCity', 'Краснодар'); await p.fill('#addrStreet', 'ул. Ставропольская'); await p.fill('#addrHouse', '150 к2');
+await p.fill('#addrEntr', '3'); await p.fill('#addrFloor', '6'); await p.fill('#addrFlat', '88'); await p.waitForTimeout(300);
+await p.screenshot({ path: OUT + 'addr_form.png' });
+chk('адрес собран', /Ставропольская, д\. 150 к2, под\. 3, эт\. 6, кв\. 88/.test(await p.textContent('#clientSum')), await p.textContent('#clientSum'));
+await p.click('#clientSum'); await p.waitForTimeout(300);
 // доп. услуга через «Добавить изделие или услугу»
 await p.click('#addBtn'); await p.waitForTimeout(300); await p.screenshot({ path: OUT + 'svc_menu.png' });
 await p.click('.menu .m-i:has-text("Дальний заказ")'); await p.waitForTimeout(300);
@@ -37,6 +45,8 @@ await p.click('#amoBtn'); await p.waitForFunction(() => /\b(ok|warn|err)\b/.test
 console.log('  ', await p.innerText('#status'));
 const lead = rd('amo_lead.json')[0], note = rd('amo_note.json')[0].params.text.replace(/\s/g, ' ');
 chk('сделка: цена с услугами', lead.price === base + 2100, String(lead.price));
+chk('сделка: название «№ 900 Ставропольская 150 к2»', lead.name === '№ 900 Ставропольская 150 к2', lead.name);
+chk('поле «Адрес» полностью', /^г\. Краснодар, ул\. Ставропольская, д\. 150 к2, под\. 3, эт\. 6, кв\. 88$/.test(JSON.stringify(lead.custom_fields_values || []).match(/г\. Краснодар[^"]*/)?.[0] || ''), JSON.stringify(lead.custom_fields_values || '').slice(0, 160));
 chk('сделка: теги услуг', lead._embedded.tags.some(t => t.name === 'Дальний заказ') && lead._embedded.tags.some(t => t.name === 'Демонтаж'));
 chk('примечание: услуги', /Доп. услуги — 2 100 ₽/.test(note) && /Дальний заказ \(Динская, 40 км\) — 600 ₽/.test(note));
 const kvFile = fs.readdirSync(OUT).filter(f => /^kv_lead_\d+\.json$/.test(f)).map(f => [f, fs.statSync(OUT + f).mtimeMs]).sort((a, c) => c[1] - a[1])[0][0];

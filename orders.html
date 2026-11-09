@@ -96,6 +96,7 @@
     .bs h2 { margin: 0 4px 2px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
     .bs .bs-sub { margin: 0 4px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
     .bs .grp { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 12px; }
+    a.opt { text-decoration: none; }
     .opt { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 12px 14px; min-height: 58px; font: inherit; color: var(--ink); cursor: pointer; position: relative; }
     .opt + .opt::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: var(--sep); }
     .opt:active { background: var(--fill); }
@@ -230,7 +231,7 @@
       <div class="c-top"><div class="c-title">${esc(l.name || 'Сделка ' + l.id)}</div><div class="c-price">${l.price ? rub(l.price) : ''}</div></div>
       ${c.name ? `<div class="c-row">${I.user}<span>${esc(c.name)}</span></div>` : ''}
       ${c.phone ? `<div class="c-row">${I.phone}<a href="tel:${esc(phoneDigits)}">${esc(c.phone)}</a></div>` : ''}
-      ${addr ? `<div class="c-row">${I.pin}<a href="https://yandex.ru/maps/?text=${encodeURIComponent(addr)}" target="_blank" rel="noopener">${esc(addr)}</a></div>` : ''}
+      ${addr ? `<div class="c-row">${I.pin}<a href="#" data-nav="${esc(addr)}">${esc(addr)}</a></div>` : ''}
       ${mat ? `<div class="c-row">${I.box}<span>${esc(mat)}</span></div>` : ''}
       ${items.length ? `<div class="c-items">${items.map(([n, v]) => `<div><b>${esc(n)}.</b><span>${esc(v)}</span></div>`).join('')}</div>` : ''}
       ${pay ? `<div class="c-pay">Предоплата: ${esc(pay.pre || '—')} · к доплате: <b>${esc(pay.rest || '—')}</b></div>` : ''}
@@ -366,6 +367,27 @@
         setTimeout(load, 1500);
       } catch (err) { closeSheet(); toast('Этап не изменён: ' + err.message, true); }
     };
+  }
+
+  // Адрес для навигатора: город, улица, дом, подъезд. Квартира, этаж, офис убираются; нет города — подставляется Краснодар.
+  function navAddr(a) {
+    let parts = String(a || '').replace(/\s+/g, ' ').split(/[,;]/).map(x => x.trim()).filter(Boolean);
+    const junk = /^(кв|квартира|оф|офис|пом|помещение|эт|этаж|домофон|код)(?![а-яё])|^\d+\s*-?(й\s*)?(эт|этаж)(?![а-яё])/i;   // \b не работает с кириллицей
+    parts = parts.map(x => x.replace(/\s+(кв|квартира|оф|офис|эт|этаж)(?![а-яё])\.?\s*\d+.*$/i, '')).filter(x => x && !junk.test(x));
+    const hasCity = parts.some(x => /^(г\.?|город|ст\.|ст-ца|станица|пос\.?|посёлок|поселок|пгт|х\.|хутор|с\.|село|аул|снт)\s|краснодар|республика|край|область|адыгея/i.test(x));
+    if (!hasCity) parts.unshift('Краснодар');
+    return parts.join(', ');
+  }
+  function navSheet(addr) {
+    const q = navAddr(addr), e = encodeURIComponent(q);
+    openSheet(`<h2>Маршрут</h2><div class="bs-sub">${esc(addr)}</div>
+      <div class="grp">
+        <a class="opt" href="yandexnavi://map_search?text=${e}"><span class="tile" style="background:#fff1e8;color:#ea580c">${I.pin}</span><span class="o-b"><span class="o-t">Яндекс Навигатор</span><span class="o-s">${esc(q)}</span></span></a>
+        <a class="opt" href="https://yandex.ru/maps/?rtext=~${e}&rtt=auto" target="_blank" rel="noopener"><span class="tile" style="background:var(--blue-soft);color:var(--blue)">${I.ext}</span><span class="o-b"><span class="o-t">Яндекс Карты — маршрут</span><span class="o-s">если Навигатор не установлен</span></span></a>
+        <button type="button" class="opt" id="navCopy"><span class="tile" style="background:var(--slate-soft);color:var(--slate)">${I.docs}</span><span class="o-b"><span class="o-t">Скопировать адрес</span><span class="o-s">для такси или другой карты</span></span></button>
+      </div><button type="button" class="cancel">Отмена</button>`);
+    $('navCopy').onclick = async () => { try { await navigator.clipboard.writeText(q); toast('Адрес скопирован'); } catch (err) { toast(q); } closeSheet(); };
+    $('bsBody').querySelectorAll('a.opt').forEach(a => a.addEventListener('click', () => setTimeout(closeSheet, 300)));
   }
 
   const docCache = {};
@@ -520,6 +542,8 @@
     if (ed) { editOrder(Number(ed.dataset.edit), ed); return; }
     const more = e.target.closest('.btn-more');
     if (more) { const n = more.closest('.card').querySelector('.note'); n.classList.toggle('open'); more.textContent = n.classList.contains('open') ? 'Свернуть' : 'Подробнее'; return; }
+    const nv = e.target.closest('[data-nav]');
+    if (nv) { e.preventDefault(); navSheet(nv.dataset.nav); return; }
     const sb = e.target.closest('[data-stage-of]');
     if (sb) { stageSheet(Number(sb.dataset.stageOf)); return; }
     const db = e.target.closest('[data-docs]');
