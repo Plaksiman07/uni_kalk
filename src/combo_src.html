@@ -677,7 +677,7 @@
     let cfg = {}; try { cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}') || {}; } catch (e) {}
     if (!cfg.url || !cfg.key) return;
     try {
-      const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/last-number', { method: 'POST', headers: { 'X-App-Key': cfg.key } });
+      const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + '/last-number', { method: 'POST', headers: { 'X-App-Key': cfg.key } });
       const d = await r.json(); const last = d && d.last; if (!last || !last.number) return;
       const show = () => {
         const inp = $('orderNumber'), h = $('numHint');
@@ -801,7 +801,7 @@
     return p.replace(/^(г\.?|город|ул\.?|улица|пр-т\.?|пр\.?|проспект|пер\.?|переулок|бул\.?|бульвар|ш\.?|шоссе|мкр\.?|д\.?)\s+/i, '').replace(/\s*\d.*$/, '').trim();
   }
   async function call(cfg, path, init) {
-    let r; for (let a = 1; ; a++) { try { r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } }); break; } catch (e) { if (a >= 2 || path === '/lead') throw new Error('нет связи с посредником amoCRM — проверьте интернет или VPN'); await sleep(1200); } }
+    let r; for (let a = 1; ; a++) { try { r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + path, { ...init, headers: { 'X-App-Key': cfg.key, ...(init.headers || {}) } }); break; } catch (e) { if (a >= 2 || path === '/lead') throw new Error('нет связи с посредником amoCRM — проверьте интернет или VPN'); await sleep(1200); } }
     let d = {}; try { d = await r.json(); } catch (e) {}
     if (!r.ok || d.error) throw new Error(d.error || `посредник ответил ${r.status}`);
     return d;

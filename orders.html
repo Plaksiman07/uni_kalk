@@ -285,7 +285,7 @@
       let d = null, lastErr = null;
       for (let attempt = 1; attempt <= 3 && !d; attempt++) {
         try {
-          const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/orders', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}', cache: 'no-store' });
+          const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + '/orders', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}', cache: 'no-store' });
           let j = null; try { j = await r.json(); } catch (e) {}
           if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — обновите его в Cloudflare.'), { final: true });
           if (j && j.error && r.status !== 502) throw Object.assign(new Error(j.error), { final: true });   // ключ, адрес калькулятора — повтор не поможет
@@ -314,7 +314,7 @@
     let last;
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
+        const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
         if (blob && r.ok && !/json/.test(r.headers.get('Content-Type') || '')) return { blob: await r.blob(), name: decodeURIComponent(r.headers.get('X-File-Name') || '') };
         let j = null; try { j = await r.json(); } catch (e) {}
         if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — он обновится сам через пару минут после выкладки.'), { final: true });
@@ -496,7 +496,7 @@
     }
     const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Загружаю…';
     try {
-      const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + '/state-get', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: leadId }), cache: 'no-store' });
+      const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + '/state-get', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: leadId }), cache: 'no-store' });
       let j = null; try { j = await r.json(); } catch (e) {}
       if (!r.ok || !j || !j.state) throw new Error(j && j.error ? j.error : `посредник ответил ${r.status}`);
       const S = j.state, combo = S.combo || {};

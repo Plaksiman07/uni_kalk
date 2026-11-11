@@ -2037,7 +2037,7 @@
     const AMO_CFG_KEY = 'spAmoConfig';
     const amoCfg = () => { try { return JSON.parse(localStorage.getItem(AMO_CFG_KEY) || '{}') || {}; } catch (e) { return {}; } };
     const amoSaveCfg = c => { try { localStorage.setItem(AMO_CFG_KEY, JSON.stringify(c)); } catch (e) {} };
-    const amoBase = c => String(c.url || '').trim().replace(/\/+$/, '');
+    const amoBase = c => String(c.url || '').trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '');
 
     async function amoCall(cfg, path, init = {}) {
       // запросы только на чтение повторяем до 3 раз (мобильная сеть/VPN иногда обрывают *.workers.dev); создание сделки — без повтора
@@ -2083,7 +2083,7 @@
         document.body.appendChild(ov);
         const $ = s => ov.querySelector(s);
         $('[data-url]').value = cfg.url || ''; $('[data-key]').value = cfg.key || '';
-        const read = () => ({ url: $('[data-url]').value.trim(), key: $('[data-key]').value.trim() });
+        const read = () => { const u = $('[data-url]').value.trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1'); $('[data-url]').value = u; return { url: u, key: $('[data-key]').value.trim() }; };
         const msg = (t, ok) => { const m = $('[data-msg]'); m.textContent = t; m.style.color = ok ? '#27ae60' : '#e74c3c'; };
         const close = v => { ov.remove(); resolve(v); };
         $('[data-x]').onclick = () => close(false);

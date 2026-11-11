@@ -293,7 +293,7 @@
     let last;
     for (let i = 1; i <= 3; i++) {
       try {
-        const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
+        const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
         let j = null; try { j = await r.json(); } catch (e) {}
         if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — он обновится сам через пару минут.'), { final: true });
         if (!r.ok || !j || j.error) throw Object.assign(new Error(j && j.error ? j.error : `посредник ответил ${r.status}`), { final: !!(j && j.error) });
