@@ -553,12 +553,21 @@
   }
   // деньги заказа: чистая прибыль → зарплатная касса; остаток (сумма − прибыль) пополам: расходы на изготовление и касса.
   // Из расходов на изготовление — работа: «сами» → в нашу зарплату, иначе — зарплата мастерам.
+  // «Финансы» считаются только от цены для клиента (калькулятор не меняется): доп. услуги — в зарплату,
+  // остальное — доли (по умолчанию по ⅓, меняются в «Финансах»): себестоимость / касса / зарплатная касса;
+  // работа из доли себестоимости: сами → в зарплату, иначе — мастерам.
+  function finShares() {
+    let ops = []; try { ops = (JSON.parse(localStorage.getItem('spFinCache')) || {}).ops || []; } catch (e) {}
+    const c = ops.filter(o => o.type === 'cfg').sort((a, b) => b.d - a.d)[0], v = c ? String(c.n).split(',').map(Number) : [];
+    return v.length === 3 && Math.abs(v[0] + v[1] + v[2] - 100) < 0.01 ? { c: v[0], k: v[1], z: v[2] } : { c: 100 / 3, k: 100 / 3, z: 100 / 3 };
+  }
   function finOf(sel) {
-    const ps = partsSum(), G = total(sel);
-    const P = ps.reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0) + svcSum();
-    const R = Math.max(0, G - P), lm = ps.reduce((a, p) => a + ((p.labor && p.labor.make) || 0), 0), li = ps.reduce((a, p) => a + ((p.labor && p.labor.install) || 0), 0);
+    const ps = partsSum(), G = total(sel), sh = finShares(), svc = svcSum(), base = Math.max(0, G - svc);
+    const cost = base * sh.c / 100, kassa = base * sh.k / 100, zpPart = base * sh.z / 100;
+    const lm0 = ps.reduce((a, p) => a + ((p.labor && p.labor.make) || 0), 0), li0 = ps.reduce((a, p) => a + ((p.labor && p.labor.install) || 0), 0);
+    const q = lm0 + li0 > cost && lm0 + li0 > 0 ? cost / (lm0 + li0) : 1, lm = lm0 * q, li = li0 * q;
     const own = (st.ownMake ? lm : 0) + (st.ownInstall ? li : 0), masters = (st.ownMake ? 0 : lm) + (st.ownInstall ? 0 : li);
-    return { G, P, R, kassa: R / 2, spend: R / 2, lm, li, own, masters, material: R / 2 - lm - li, zpOur: P + own };
+    return { G, P: Math.max(0, G - partsSum().reduce((a, p) => a + (p.cost || 0), 0)), svc, cost, kassa, zpPart, lm: lm0, li: li0, own, masters, material: cost - lm - li, zpOur: zpPart + svc + own };
   }
   function readPart(id) {
     const w = frames[id] && frames[id].win; if (!w || !w.calcData) return null;
@@ -713,7 +722,7 @@
        <div class="row"><span class="lbl" style="width:auto;">Маржа</span><span class="money green">${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))}${tot > 0 ? ' · ' + Math.round(profit / tot * 100) + '%' : ''}</span></div>` +
       (() => { const f = finOf(sel), r = (l, v, c) => `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">${l}</span><span class="money" style="flex:none; font-size:15px;${c ? ' color:' + c + ';' : ''}">${rub(v)}</span></div>`;
         return `<div class="row" style="min-height:36px;"><span class="lbl" style="width:auto; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);">Куда пойдут деньги</span></div>` +
-          r('Зарплата — нам', f.zpOur, 'var(--green)') + (f.masters ? r('Зарплата мастерам', f.masters) : '') + r('В кассу', f.kassa, 'var(--blue)') + r('Материал и расходы', Math.max(0, f.material), 'var(--muted)'); })();
+          r('Зарплатная касса', f.zpOur, 'var(--green)') + (f.masters ? r('Зарплата мастерам', f.masters) : '') + r('Касса — новый материал', f.kassa, 'var(--blue)') + r('Себестоимость — потрачено', Math.max(0, f.material), 'var(--muted)'); })();
     // воронка: по умолчанию — где больше сумма
     if (!st.pipelineManual && has && ids.every(id => st.sum[id])) {
       const by = {}; partsSum().forEach(p => { by[p.pipeline] = (by[p.pipeline] || 0) + (Number(p.prices.base) || 0); });
@@ -1008,7 +1017,7 @@
     setStatus('⏳ Сохраняю данные заказа для корректировки…');
     let stateNote = '';
     const fin = finOf(sel);
-    const finRec = { t: [c.orderNumber ? '№ ' + c.orderNumber : '', c.clientName].filter(Boolean).join(' · ').slice(0, 80), g: Math.round(fin.G), p: Math.round(fin.P), lm: Math.round(fin.lm), li: Math.round(fin.li), om: st.ownMake ? 1 : 0, oi: st.ownInstall ? 1 : 0, at: Math.floor(Date.now() / 1000) };
+    const finRec = { t: [c.orderNumber ? '№ ' + c.orderNumber : '', c.clientName].filter(Boolean).join(' · ').slice(0, 80), g: Math.round(fin.G), p: Math.round(fin.P), sv: Math.round(fin.svc), lm: Math.round(fin.lm), li: Math.round(fin.li), om: st.ownMake ? 1 : 0, oi: st.ownInstall ? 1 : 0, at: Math.floor(Date.now() / 1000) };
     try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState(), fin: finRec }) }); }
     catch (e) { stateNote = /хранилище/.test(e.message) ? '' : ' Данные для корректировки не сохранились: ' + esc(e.message) + '.'; }
     st.editLead = lead.lead_id; st.sentSig = sig(); save();

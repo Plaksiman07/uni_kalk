@@ -149,7 +149,7 @@
   </div>
   <div class="sec-h"><span>Заказы за период</span><span id="perLbl"></span></div>
   <div class="group" id="stats"></div>
-  <div class="foot-note">Заказ попадает сюда, когда он «Успешно реализован». Чистая прибыль — в зарплату; остаток пополам: материал и расходы на изготовление / касса. Работа — нам, если собирали и ставили сами, иначе мастерам.</div>
+  <div class="foot-note">Заказ попадает сюда, когда он «Успешно реализован». Цена для клиента делится долями: себестоимость (потрачено) / касса на новый материал / зарплатная касса. Доп. услуги и своя работа (сборка, установка) — в зарплату, работа мастеров — им. Доли меняются в «•••».</div>
 
   <div class="sec-h"><span>Операции</span><span id="opsCount"></span></div>
   <div id="ops"></div>
@@ -192,14 +192,25 @@
     zp_fix:    { name: 'Корректировка зарплатной кассы', box: 'zp', sign: 1, icon: IC.fix, bg: 'var(--green-soft)', fg: 'var(--green)' }
   };
 
-  // Деньги заказа. С данными калькулятора — точно; для старых сделок — оценка (наценка ×2: прибыль = половина суммы, работа не известна).
-  function split(o) {
-    const G = o.price || 0, f = o.fin;
-    const P = f ? f.p + (G - f.g) : G / 2;              // сумму меняли в amoCRM — разница идёт в прибыль
-    const R = Math.max(0, G - P), lm = f ? f.lm : 0, li = f ? f.li : 0;
-    const own = f ? (f.om ? lm : 0) + (f.oi ? li : 0) : 0, masters = f ? (f.om ? 0 : lm) + (f.oi ? 0 : li) : 0;
-    return { G, P, R, kassa: R / 2, spend: R / 2, labor: lm + li, own, masters, zp: P + own, material: R / 2 - lm - li, est: !f };
+  // Деньги заказа — только от цены для клиента (калькулятор считает отдельно и не меняется):
+  //   доп. услуги — сразу в зарплатную кассу; остальное делится долями (по умолчанию по ⅓):
+  //   себестоимость (потрачено) / касса (на новый материал) / зарплатная касса.
+  //   Из доли себестоимости работа: собирали/ставили сами → в зарплату, иначе — мастерам.
+  function shares() {
+    const c = ((data && data.ops) || []).filter(o => o.type === 'cfg').sort((a, b) => b.d - a.d)[0];
+    const v = c ? String(c.n).split(',').map(Number) : [];
+    return v.length === 3 && Math.abs(v[0] + v[1] + v[2] - 100) < 0.01 ? { c: v[0], k: v[1], z: v[2] } : { c: 100 / 3, k: 100 / 3, z: 100 / 3 };
   }
+  function split(o, sh = shares()) {
+    const G = o.price || 0, f = o.fin;
+    const svc = f ? Math.min(G, f.sv || 0) : 0, base = Math.max(0, G - svc);
+    const cost = base * sh.c / 100, kassa = base * sh.k / 100, zpPart = base * sh.z / 100;
+    let lm = f ? f.lm : 0, li = f ? f.li : 0;
+    if (lm + li > cost && lm + li > 0) { const q = cost / (lm + li); lm *= q; li *= q; }   // работа не больше доли себестоимости
+    const own = f ? (f.om ? lm : 0) + (f.oi ? li : 0) : 0, masters = f ? (f.om ? 0 : lm) + (f.oi ? 0 : li) : 0;
+    return { G, svc, base, cost, kassa, zpPart, own, masters, labor: lm + li, material: cost - lm - li, zp: zpPart + svc + own, est: !f };
+  }
+  const pctTxt = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + '%';
   function startTs() {   // учёт касс — с этой даты (по умолчанию начало текущего месяца)
     const s = ((data && data.ops) || []).filter(o => o.type === 'start').sort((a, b) => b.d - a.d)[0];
     if (s) return s.a;
@@ -227,20 +238,22 @@
       ${bal.master || ops.some(o => o.type === 'master') ? `<div class="b-card wide"><span class="b-ic" style="background:var(--slate-soft);color:var(--slate)">${IC.master}</span><span class="b-txt"><span class="b-top" style="display:block">Мастерам к выплате</span><span class="b-sub">сборка и установка</span></span><b class="b-sum${bal.master < 0 ? ' neg' : ''}">${sgn(bal.master)}</b></div>` : ''}`;
     // период
     const [a, b, lbl] = periodRange(ui.period);
-    const po = orders.filter(o => o.closed_at >= a && o.closed_at < b), sum = { G: 0, P: 0, kassa: 0, spend: 0, zp: 0, masters: 0, own: 0, est: 0 };
-    po.forEach(o => { const s = split(o); sum.G += s.G; sum.P += s.P; sum.kassa += s.kassa; sum.spend += s.spend; sum.zp += s.zp; sum.masters += s.masters; sum.own += s.own; if (s.est) sum.est++; });
+    const sh = shares();
+    const po = orders.filter(o => o.closed_at >= a && o.closed_at < b), sum = { G: 0, kassa: 0, material: 0, zp: 0, zpPart: 0, svc: 0, masters: 0, own: 0, est: 0 };
+    po.forEach(o => { const s = split(o, sh); sum.G += s.G; sum.kassa += s.kassa; sum.material += s.material; sum.zp += s.zp; sum.zpPart += s.zpPart; sum.svc += s.svc; sum.masters += s.masters; sum.own += s.own; if (s.est) sum.est++; });
     const pe = ops.filter(o => o.d >= a && o.d < b && o.type === 'expense').reduce((x, o) => x + o.a, 0);
     $('perLbl').textContent = lbl;
     const pct = v => sum.G > 0 ? Math.max(0, v / sum.G * 100) : 0;
     const line = (c, l, sub, v, cls) => `<div class="line"><span class="dot" style="background:${c}"></span><span class="l">${l}${sub ? `<small>${sub}</small>` : ''}</span><span class="v${cls ? ' ' + cls : ''}">${v}</span></div>`;
-    $('stats').innerHTML = `<div class="kpi"><div><b>${po.length}</b><span>${plural(po.length, 'заказ', 'заказа', 'заказов')}</span></div><div><b>${rub(sum.G)}</b><span>грязными</span></div><div><b class="plus">${rub(sum.P)}</b><span>чистыми</span></div></div>
-      ${sum.G ? `<div style="padding-top:12px"><div class="bar"><i style="width:${pct(sum.zp)}%;background:var(--green)"></i><i style="width:${pct(sum.masters)}%;background:var(--slate)"></i><i style="width:${pct(sum.kassa)}%;background:var(--blue)"></i><i style="width:${pct(sum.spend - sum.own - sum.masters)}%;background:#c9c6bf"></i></div></div>` : ''}
-      ${line('var(--green)', 'Зарплата — нам', `чистая прибыль ${rub(sum.P)}${sum.own ? ` + наша работа ${rub(sum.own)}` : ''}`, rub(sum.zp))}
+    const zpSub = [`${pctTxt(sh.z)} от заказов ${rub(sum.zpPart)}`, sum.own ? `наша работа ${rub(sum.own)}` : '', sum.svc ? `доп. услуги ${rub(sum.svc)}` : ''].filter(Boolean).join(' + ');
+    $('stats').innerHTML = `<div class="kpi"><div><b>${po.length}</b><span>${plural(po.length, 'заказ', 'заказа', 'заказов')}</span></div><div><b>${rub(sum.G)}</b><span>грязными</span></div><div><b class="plus">${rub(sum.zp)}</b><span>в зарплату</span></div></div>
+      ${sum.G ? `<div style="padding-top:12px"><div class="bar"><i style="width:${pct(sum.zp)}%;background:var(--green)"></i><i style="width:${pct(sum.masters)}%;background:var(--slate)"></i><i style="width:${pct(sum.kassa)}%;background:var(--blue)"></i><i style="width:${pct(sum.material)}%;background:#c9c6bf"></i></div></div>` : ''}
+      ${line('var(--green)', 'Зарплатная касса', zpSub, rub(sum.zp))}
       ${sum.masters ? line('var(--slate)', 'Зарплата мастерам', 'сборка и установка', rub(sum.masters)) : ''}
-      ${line('var(--blue)', 'В кассу', 'половина остатка', rub(sum.kassa))}
-      ${line('#c9c6bf', 'Материал и расходы на изготовление', 'вторая половина остатка' + (pe ? ` · из кассы потрачено ${rub(pe)}` : ''), rub(Math.max(0, sum.spend - sum.own - sum.masters)))}
+      ${line('var(--blue)', 'Касса — на новый материал', `${pctTxt(sh.k)} от заказов` + (pe ? ` · расходов за период ${rub(pe)}` : ''), rub(sum.kassa))}
+      ${line('#c9c6bf', 'Себестоимость — потрачено', `${pctTxt(sh.c)} от заказов${sum.own || sum.masters ? ', без работы' : ''}`, rub(sum.material))}
       ${po.length ? line('transparent', 'Средний чек', '', rub(sum.G / po.length)) : ''}
-      ${sum.est ? `<div class="line"><span class="l" style="font-size:12.5px; color:#b45309">${sum.est} ${plural(sum.est, 'заказ отправлен', 'заказа отправлены', 'заказов отправлены')} не из калькулятора или до версии 2.49 — по ним оценка: прибыль = половина суммы.</span></div>` : ''}`;
+      ${sum.est ? `<div class="line"><span class="l" style="font-size:12.5px; color:#b45309">${sum.est} ${plural(sum.est, 'заказ', 'заказа', 'заказов')} не из калькулятора 2.49+ — работа и доп. услуги по ним не известны, делится вся сумма.</span></div>` : ''}`;
     // операции за период
     const items = [...po.map(o => ({ k: 'o', t: o.closed_at, o })), ...ops.filter(o => o.d >= a && o.d < b).map(o => ({ k: 'm', t: o.d, o }))].sort((x, y) => y.t - x.t);
     $('opsCount').textContent = items.length ? items.length + ' шт' : '';
@@ -250,7 +263,7 @@
       const d = dayOf(it.t);
       if (d !== lastDay) { html += (lastDay ? '</div>' : '') + `<div class="day">${esc(d)}</div><div class="group">`; lastDay = d; }
       if (it.k === 'o') { const s = split(it.o);
-        html += `<button type="button" class="op" data-order="${it.o.id}"><span class="tile" style="background:var(--soft);color:var(--accent)">${IC.order}</span><span class="o-b"><span class="o-t">${esc(it.o.name || 'Сделка ' + it.o.id)}${s.est ? '<span class="est">оценка</span>' : ''}</span><span class="o-s">чистыми ${rub(s.P)} · в кассу ${rub(s.kassa)}</span></span><span class="o-v plus">+${rub(s.G)}</span></button>`;
+        html += `<button type="button" class="op" data-order="${it.o.id}"><span class="tile" style="background:var(--soft);color:var(--accent)">${IC.order}</span><span class="o-b"><span class="o-t">${esc(it.o.name || 'Сделка ' + it.o.id)}</span><span class="o-s">в зарплату ${rub(s.zp)} · в кассу ${rub(s.kassa)}</span></span><span class="o-v plus">+${rub(s.G)}</span></button>`;
       } else { const t = OPT[it.o.type];
         html += `<button type="button" class="op" data-op="${esc(it.o.id)}"><span class="tile" style="background:${t.bg};color:${t.fg}">${t.icon}</span><span class="o-b"><span class="o-t">${esc(it.o.n || t.name)}</span><span class="o-s">${esc(t.name)}</span></span><span class="o-v${t.sign * it.o.a > 0 ? ' plus' : ''}">${t.sign * it.o.a > 0 ? '+' : '−'}${rub(Math.abs(it.o.a))}</span></button>`;
       }
@@ -325,6 +338,27 @@
     };
     draw();
   }
+  function sharesSheet() {
+    const s = shares(), r = v => Math.round(v * 10) / 10;
+    openSheet(`<h2>Доли от заказа</h2><div class="bs-sub">Цена для клиента (без доп. услуг) делится на три части. Сумма — 100%.</div>
+      <div class="grp">
+        <div class="fld"><label for="shC">Себестоимость</label><input id="shC" inputmode="decimal" value="${r(s.c)}"></div>
+        <div class="fld"><label for="shK">Касса</label><input id="shK" inputmode="decimal" value="${r(s.k)}"></div>
+        <div class="fld"><label for="shZ">Зарплата</label><input id="shZ" inputmode="decimal" value="${r(s.z)}"></div>
+      </div><div class="foot-note" id="shSum" style="margin:-4px 4px 10px"></div>
+      <div class="chips"><button type="button" class="chip" data-v="33.3,33.3,33.4">По ⅓</button><button type="button" class="chip" data-v="40,30,30">40 / 30 / 30</button><button type="button" class="chip" data-v="45,30,25">45 / 30 / 25</button></div>
+      <button type="button" class="sbtn pri" id="shSave">Сохранить</button><button type="button" class="sbtn ghost" id="shCancel">Отмена</button>`);
+    const val = () => ['shC', 'shK', 'shZ'].map(id => parseFloat(String($(id).value).replace(',', '.')) || 0);
+    const chk = () => { const v = val(), t = r(v[0] + v[1] + v[2]); $('shSum').textContent = `Сумма: ${t}%` + (Math.abs(t - 100) < 0.01 ? '' : ' — должно быть 100%'); $('shSave').disabled = Math.abs(t - 100) >= 0.01; };
+    ['shC', 'shK', 'shZ'].forEach(id => $(id).addEventListener('input', chk)); chk();
+    $('bsBody').querySelectorAll('[data-v]').forEach(b => b.onclick = () => { const v = b.dataset.v.split(','); ['shC', 'shK', 'shZ'].forEach((id, i) => { $(id).value = v[i]; }); chk(); });
+    $('shCancel').onclick = closeSheet;
+    $('shSave').onclick = async () => {
+      const v = val();
+      try { const res = await api('/fin-op', { op: { type: 'cfg', amount: 1, note: v.join(','), date: Math.floor(Date.now() / 1000) } }); data.ops = [...(data.ops || []), { id: res.id, ...res.op }]; ls.set(CACHE_KEY, data); closeSheet(); render(); toast('Доли сохранены'); }
+      catch (e) { toast('Не сохранено: ' + e.message, true); }
+    };
+  }
   function startSheet() {
     const d = new Date(startTs() * 1000), v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     openSheet(`<h2>Начало учёта касс</h2><div class="bs-sub">Заказы и операции раньше этой даты не входят в остатки касс (статистика по периодам видна всегда).</div>
@@ -344,21 +378,24 @@
       ${[['expense', 'Расход из кассы', 'материал, бензин, аренда…'], ['salary', 'Выплата зарплаты', 'из зарплатной кассы'], ['master', 'Выплата мастерам', 'за сборку и установку'], ['in', 'Пополнение', 'положить деньги в кассу'], ['fix', 'Корректировка', 'начальный остаток или исправление']].map(([k, t, s]) => {
         const o = OPT[{ in: 'kassa_in', fix: 'kassa_fix' }[k] || k];
         return `<button type="button" class="opt" data-k="${k}"><span class="tile" style="background:${o.bg};color:${o.fg}">${o.icon}</span><span><span class="o-t">${t}</span><span class="o-s">${s}</span></span></button>`; }).join('')}
+      <button type="button" class="opt" data-k="shares"><span class="tile" style="background:var(--violet-soft);color:var(--violet)">${SVG('<path d="M12 3v9l7 4"/><circle cx="12" cy="12" r="9"/>')}</span><span><span class="o-t">Доли от заказа</span><span class="o-s">${(s => `${pctTxt(s.c)} себестоимость · ${pctTxt(s.k)} касса · ${pctTxt(s.z)} зарплата`)(shares())}</span></span></button>
       <button type="button" class="opt" data-k="start"><span class="tile" style="background:var(--fill);color:var(--ink2)">${IC.cal}</span><span><span class="o-t">Начало учёта касс</span><span class="o-s">с ${new Date(startTs() * 1000).toLocaleDateString('ru-RU')}</span></span></button>
       </div><button type="button" class="sbtn ghost" id="mCancel">Отмена</button>`);
     $('mCancel').onclick = closeSheet;
-    $('bsBody').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'start' ? startSheet() : opSheet(b.dataset.k));
+    $('bsBody').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'start' ? startSheet() : b.dataset.k === 'shares' ? sharesSheet() : opSheet(b.dataset.k));
   };
   $('ops').addEventListener('click', e => {
     const ob = e.target.closest('[data-order]');
     if (ob) { const o = (data.orders || []).find(x => x.id === Number(ob.dataset.order)); if (!o) return; const s = split(o);
       const row = (l, v, c) => `<div class="line"><span class="l">${l}</span><span class="v"${c ? ` style="color:${c}"` : ''}>${v}</span></div>`;
-      openSheet(`<h2>${esc(o.name || 'Сделка ' + o.id)}</h2><div class="bs-sub">${esc(o.pipeline)} · закрыта ${new Date(o.closed_at * 1000).toLocaleDateString('ru-RU')}${s.est ? ' · оценка' : ''}</div>
-        <div class="grp">${row('Сумма заказа', rub(s.G))}${row('Чистая прибыль', rub(s.P), 'var(--green)')}${row('Остаток (сумма − прибыль)', rub(s.R))}
-        ${row('→ в кассу (½)', rub(s.kassa), 'var(--blue)')}${row('→ материал и расходы (½)', rub(s.spend))}
-        ${s.own ? row('&nbsp;&nbsp;&nbsp;в т.ч. наша работа → в зарплату', rub(s.own)) : ''}${s.masters ? row('&nbsp;&nbsp;&nbsp;в т.ч. работа мастеров', rub(s.masters)) : ''}
-        ${row('Зарплата нам', rub(s.zp), 'var(--green)')}</div>
-        ${s.est ? '<div class="foot-note" style="margin:0 4px 12px">Заказ отправлен не из калькулятора или до версии 2.49 — прибыль оценена как половина суммы.</div>' : ''}
+      const sh = shares();
+      openSheet(`<h2>${esc(o.name || 'Сделка ' + o.id)}</h2><div class="bs-sub">${esc(o.pipeline)} · закрыта ${new Date(o.closed_at * 1000).toLocaleDateString('ru-RU')}</div>
+        <div class="grp">${row('Цена для клиента', rub(s.G))}${s.svc ? row('&nbsp;&nbsp;&nbsp;в т.ч. доп. услуги → в зарплату', rub(s.svc)) : ''}${s.svc ? row('Делится на доли', rub(s.base)) : ''}
+        ${row(`Себестоимость (${pctTxt(sh.c)})`, rub(s.cost))}
+        ${s.own ? row('&nbsp;&nbsp;&nbsp;наша работа → в зарплату', rub(s.own)) : ''}${s.masters ? row('&nbsp;&nbsp;&nbsp;работа мастеров', rub(s.masters)) : ''}${s.labor ? row('&nbsp;&nbsp;&nbsp;материал', rub(s.material)) : ''}
+        ${row(`Касса — новый материал (${pctTxt(sh.k)})`, rub(s.kassa), 'var(--blue)')}${row(`Зарплатная касса (${pctTxt(sh.z)})`, rub(s.zpPart))}
+        ${row('Итого в зарплату', rub(s.zp), 'var(--green)')}</div>
+        ${s.est ? '<div class="foot-note" style="margin:0 4px 12px">Заказ не из калькулятора 2.49+ — работа и доп. услуги не известны, делится вся сумма.</div>' : ''}
         <a class="sbtn ghost" style="text-decoration:none; color:var(--blue)" href="${esc(o.url)}" target="_blank" rel="noopener">${IC.ext}Открыть в amoCRM</a>`);
       return; }
     const pb = e.target.closest('[data-op]');

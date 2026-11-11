@@ -302,7 +302,7 @@ export default {
         const kvAll = async prefix => { const out = []; let cursor; do { const r = await env.SP_ORDERS.list({ prefix, cursor }); out.push(...r.keys); cursor = r.list_complete ? null : r.cursor; } while (cursor); return out; };
         if (url.pathname === '/fin-op') {
           const o = d.op || {}, amount = Math.round((Number(o.amount) || 0) * 100) / 100;
-          const TYPES = ['expense', 'salary', 'master', 'kassa_in', 'zp_in', 'kassa_fix', 'zp_fix', 'start'];
+          const TYPES = ['expense', 'salary', 'master', 'kassa_in', 'zp_in', 'kassa_fix', 'zp_fix', 'start', 'cfg'];
           if (!TYPES.includes(o.type) || !amount) return json({ error: 'Неверная операция' }, 400);
           const date = Number(o.date) || Math.floor(Date.now() / 1000);
           const id = `op:${String(date).padStart(11, '0')}:${Math.random().toString(36).slice(2, 8)}`;
@@ -346,7 +346,7 @@ export default {
           // деньги заказа для «Финансов» (в метаданных — чтобы список читался одним запросом)
           if (d.fin && typeof d.fin === 'object') {
             const f = d.fin, n = v => Math.round(Number(v) || 0);
-            const meta = { t: String(f.t || '').slice(0, 80), g: n(f.g), p: n(f.p), lm: n(f.lm), li: n(f.li), om: f.om ? 1 : 0, oi: f.oi ? 1 : 0, at: n(f.at) || Math.floor(Date.now() / 1000) };
+            const meta = { t: String(f.t || '').slice(0, 80), g: n(f.g), p: n(f.p), sv: n(f.sv), lm: n(f.lm), li: n(f.li), om: f.om ? 1 : 0, oi: f.oi ? 1 : 0, at: n(f.at) || Math.floor(Date.now() / 1000) };
             await env.SP_ORDERS.put('fin:' + leadId, JSON.stringify(meta), { metadata: meta });
           }
           return json({ ok: true, size: text.length });

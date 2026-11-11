@@ -14,30 +14,36 @@ await p.evaluate(async () => { for (const o of JSON.parse(localStorage.getItem('
 await p.reload(); await p.waitForSelector('.b-card'); await p.waitForTimeout(400);
 const bal = async () => (await p.$$eval('.b-card .b-sum', e => e.map(x => x.textContent))).map(num);
 let [k, z, m] = await bal();
-chk('касса: 2750 + 2000 + 1500', k === 6250, String(k));
-chk('зарплатная: 4500+1100 + 4000 + 3000+200', z === 12800, String(z));
+chk('касса: ⅓ от 10000 + 8000 + 6000', k === 8000, String(k));
+chk('зарплатная: ⅓ + своя работа (1100 и 200)', z === 9300, String(z));
 chk('мастерам: сборка 300', m === 300, String(m));
 const kpi = await p.$$eval('.kpi b', e => e.map(x => x.textContent));
-chk('период: 3 заказа, 24 000 грязными, 11 500 чистыми', kpi[0] === '3' && num(kpi[1]) === 24000 && num(kpi[2]) === 11500, kpi.join(' | '));
-chk('старый заказ — пометка «оценка»', /оценка/.test(await p.textContent('#ops')));
+chk('период: 3 заказа, 24 000 грязными, 9 300 в зарплату', kpi[0] === '3' && num(kpi[1]) === 24000 && num(kpi[2]) === 9300, kpi.join(' | '));
+chk('старый заказ — подсказка', /не из калькулятора/.test(await p.textContent('#stats')));
 await p.screenshot({ path: OUT + 'fin_main.png', fullPage: true });
 // расход из кассы
 await p.click('#addExpense'); await p.waitForTimeout(400); await p.fill('#opA', '1000'); await p.click('.chip[data-c="Материал"]'); await p.screenshot({ path: OUT + 'fin_expense.png' });
 await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
-[k, z, m] = await bal(); chk('расход 1000 → касса 5250', k === 5250, String(k));
+[k, z, m] = await bal(); chk('расход 1000 → касса 7000', k === 7000, String(k));
 // выплата зарплаты
 await p.click('#addSalary'); await p.waitForTimeout(400); await p.fill('#opA', '5000'); await p.click('.chip[data-c="Мне"]'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
-[k, z, m] = await bal(); chk('выплата 5000 → зарплатная 7800', z === 7800, String(z));
+[k, z, m] = await bal(); chk('выплата 5000 → зарплатная 4300', z === 4300, String(z));
 // выплата мастерам и корректировка
 await p.click('#moreOps'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'fin_more.png' }); await p.click('[data-k="master"]'); await p.waitForTimeout(300); await p.fill('#opA', '300'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
 await p.click('#moreOps'); await p.waitForTimeout(300); await p.click('[data-k="fix"]'); await p.waitForTimeout(300); await p.fill('#opA', '20000'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
-[k, z, m] = await bal(); chk('мастерам 0, касса +20000 = 25250', m === 0 && k === 25250, `${k} / ${m}`);
+[k, z, m] = await bal(); chk('мастерам 0, касса +20000 = 27000', m === 0 && k === 27000, `${k} / ${m}`);
 // после обновления — всё сохранено у посредника
-await p.reload(); await p.waitForTimeout(1500); [k, z, m] = await bal(); chk('после обновления то же', k === 25250 && z === 7800, `${k} / ${z}`);
+await p.reload(); await p.waitForTimeout(1500); [k, z, m] = await bal(); chk('после обновления то же', k === 27000 && z === 4300, `${k} / ${z}`);
 // удаление операции
 await p.click('[data-op] >> nth=0'); await p.waitForTimeout(300); await p.click('#opDel'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
 chk('операция удалена', (await p.$$('[data-op]')).length === 3);
 // карточка заказа
 await p.click('[data-order="603"]'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'fin_order.png' });
-{ const t = (await p.textContent('#bsBody')).replace(/\s/g, ' '); chk('разбор заказа 603', /3 200/.test(t) && /1 500/.test(t) && /работа мастеров/.test(t)); }
+{ const t = (await p.textContent('#bsBody')).replace(/\s/g, ' '); chk('разбор заказа 603: в зарплату 2 200, касса 2 000', /2 200/.test(t) && /2 000/.test(t) && /работа мастеров/.test(t)); }
+await p.click('#veil', { position: { x: 20, y: 20 } }); await p.waitForTimeout(400);
+await p.click('#moreOps'); await p.waitForTimeout(400); await p.click('[data-k="shares"]'); await p.waitForTimeout(300);
+await p.screenshot({ path: OUT + 'fin_shares.png' });
+await p.click('.chip[data-v="40,30,30"]'); await p.click('#shSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
+{ const kp = await p.$$eval('.kpi b', e => e.map(x => x.textContent)); chk('доли 40/30/30: в зарплату 30% + своя работа = 8 500', num(kp[2]) === 8500, kp[2]); }
+await p.click('#moreOps'); await p.waitForTimeout(300); await p.click('[data-k="shares"]'); await p.waitForTimeout(300); await p.click('.chip[data-v="33.3,33.3,33.4"]'); await p.click('#shSave'); await p.waitForTimeout(800);
 console.log('errors', errs, ok ? 'ALL OK' : 'HAS FAILS'); await b.close();
