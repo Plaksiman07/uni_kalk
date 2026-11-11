@@ -19,6 +19,13 @@ globalThis.fetch = async (url, opts = {}) => {
     { id: 102, name: 'Цвет', type: 'select', enums: [{ id: 1, value: 'Белый' }, { id: 2, value: 'Коричневый' }, { id: 3, value: 'Антрацит' }] },
     { id: 103, name: 'Адрес', type: 'text' },
     ...[1,2,3,4,5,6,7,8].map(i => ({ id: 110 + i, name: 'Изделие ' + i, type: 'text' })) ] } });
+  if (url.includes('status_id]=142')) {   // «Финансы»: закрытые сделки
+    if (!url.includes('page=1&')) return new Response(null, { status: 204 });
+    const now = Math.floor(Date.now() / 1000);
+    return J({ _embedded: { leads: [{ id: 601, name: '№ 1301 Ставропольская 150', price: 10000, pipeline_id: 9662970, closed_at: now - 3600, updated_at: now },
+      { id: 602, name: '№ 1200 Старый заказ', price: 8000, pipeline_id: 1987228, closed_at: now - 7200, updated_at: now },
+      { id: 603, name: '№ 1302 Красная 5', price: 6000, pipeline_id: 1987228, closed_at: now - 1800, updated_at: now }] } });
+  }
   if (url.includes('/api/v4/leads?limit=250&page=')) {
     return J({ _embedded: { leads: [ { id: 1, name: '№ 1212 ул. Красная 12', created_at: 1000 }, { id: 2, name: '1215 Иванов, сетки', created_at: 900 }, { id: 3, name: 'Сделка без номера', created_at: 5000 },
       { id: 4, name: 'Заказ', created_at: 800, closed_at: 1200, custom_fields_values: [{ field_name: 'Номер заказа', values: [{ value: '1209' }] }] }, { id: 5, name: '3.5 м карниз', created_at: 4000 } ] } });
@@ -66,9 +73,11 @@ globalThis.fetch = async (url, opts = {}) => {
 const kv = new Map();
 const kvMeta = new Map();
 const SP_ORDERS = { async put(k, v, o) { kv.set(k, v); kvMeta.set(k, (o && o.metadata) || null); if (typeof v === 'string') fs.writeFileSync(OUT + 'kv_' + k.replace(':', '_') + '.json', v); },
-  async get(k) { return kv.has(k) ? kv.get(k) : null; },
+  async get(k) { return kv.has(k) ? kv.get(k) : null; }, async delete(k) { kv.delete(k); kvMeta.delete(k); },
   async getWithMetadata(k) { return kv.has(k) ? { value: new Uint8Array(kv.get(k)), metadata: kvMeta.get(k) } : { value: null, metadata: null }; },
   async list({ prefix }) { return { keys: [...kv.keys()].filter(k => k.startsWith(prefix)).map(name => ({ name, metadata: kvMeta.get(name) })), list_complete: true }; } };
+// «Финансы»: деньги заказов 601 (всё сами) и 603 (сборка — мастер)
+for (const [id, m] of [[601, { t: '№ 1301', g: 10000, p: 4500, lm: 600, li: 500, om: 1, oi: 1, at: 1 }], [603, { t: '№ 1302', g: 6000, p: 3000, lm: 300, li: 200, om: 0, oi: 1, at: 1 }]]) { kv.set('fin:' + id, JSON.stringify(m)); kvMeta.set('fin:' + id, m); }
 // заказ 504 («Москитные сетки №1210») — как будто отправлен из калькулятора: его можно скорректировать
 kv.set('lead:504', JSON.stringify({ v: 1, combo: { id: 'ord504', client: { orderNumber: '1210', clientName: 'Кузнецов Олег', clientPhone: '89186913293', clientAddress: 'г. Краснодар, ул. Ставропольская 150, кв. 88' }, parts: ['mesh'], sum: {}, priceSel: 'base', pipeline: 'Москитные сетки', services: [] },
   ls: { 'meshCalcState1@combo:ord504': JSON.stringify({ selectedPrice: 'base', meshType: 'antikoshka', meshColor: 'white', rooms: [{ name: 'Кухня', pk: 'k1', items: [{ w: '60', h: '120', qty: '1' }] }, { name: 'Детская', pk: 'k2', items: [{ w: '58', h: '118', qty: '2' }] }] }) }, photos: {} }));

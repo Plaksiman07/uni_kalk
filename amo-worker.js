@@ -16,6 +16,8 @@
  * /state-save, /state-get — данные заказа из калькулятора (для корректировки из «Текущих заказов»).
  * /move — сменить этап сделки («Изготовление», «Готов к установке», «На установку») или закрыть «Успешно реализовано».
  * /docs, /doc — список файлов сделки и сам файл (PDF КП, заказ-наряда, наклеек) — открыть в приложении.
+ * /finance, /fin-op, /fin-op-del — «Финансы»: закрытые («Успешно реализовано») сделки + деньги заказа из калькулятора,
+ *   ручные операции касс (расходы, выплаты зарплаты, корректировки).
  * /doc-save — копия PDF в хранилище приложения (KV) при отправке заказа: «Документы» открываются оттуда,
  *   amoCRM — резерв (из него берутся файлы только старых сделок).
  *   Хранятся в Cloudflare KV (привязка SP_ORDERS, создаётся автоматически из wrangler.jsonc).
@@ -40,7 +42,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 
     // Версия посредника (без ключа, ничего не раскрывает) — чтобы проверить обновление
-    if (new URL(request.url).pathname === '/version') return json({ worker_version: 6 });
+    if (new URL(request.url).pathname === '/version') return json({ worker_version: 7 });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (!originOk) return json({ error: 'Запрос не с адреса калькулятора (ALLOWED_ORIGINS)' }, 403);
     if (request.method !== 'POST') return json({ error: 'Только POST' }, 405);
@@ -140,7 +142,7 @@ export default {
       // Проверка связи
       if (url.pathname === '/ping') {
         const acc = await amo('/api/v4/account');
-        return json({ ok: true, account: acc.name || domain, worker_version: 6 });
+        return json({ ok: true, account: acc.name || domain, worker_version: 7 });
       }
 
       // Создать сделку (или обновить существующую) + примечание
@@ -209,7 +211,7 @@ export default {
         }
         const ps = d.__ps || {};
         return json({ ok: true, lead_id: leadId, created, contact_existing: !!d.__contactExisting, missing_fields: fieldsRes.missing, url: `${base}/leads/detail/${leadId}`,
-          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 6 });
+          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 7 });
       }
 
       // Сменить этап сделки / закрыть «Успешно реализовано»
@@ -293,6 +295,44 @@ export default {
           'X-File-Name': encodeURIComponent(name), 'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store' } });
       }
 
+      // «Финансы»
+      if (url.pathname === '/finance' || url.pathname === '/fin-op' || url.pathname === '/fin-op-del') {
+        if (!env.SP_ORDERS) return json({ error: 'В посреднике не подключено хранилище (KV «SP_ORDERS»)', no_store: true }, 501);
+        const d = await request.json().catch(() => ({}));
+        const kvAll = async prefix => { const out = []; let cursor; do { const r = await env.SP_ORDERS.list({ prefix, cursor }); out.push(...r.keys); cursor = r.list_complete ? null : r.cursor; } while (cursor); return out; };
+        if (url.pathname === '/fin-op') {
+          const o = d.op || {}, amount = Math.round((Number(o.amount) || 0) * 100) / 100;
+          const TYPES = ['expense', 'salary', 'master', 'kassa_in', 'zp_in', 'kassa_fix', 'zp_fix', 'start'];
+          if (!TYPES.includes(o.type) || !amount) return json({ error: 'Неверная операция' }, 400);
+          const date = Number(o.date) || Math.floor(Date.now() / 1000);
+          const id = `op:${String(date).padStart(11, '0')}:${Math.random().toString(36).slice(2, 8)}`;
+          const meta = { type: o.type, a: amount, n: String(o.note || '').slice(0, 300), d: date };
+          await env.SP_ORDERS.put(id, JSON.stringify(meta), { metadata: meta });
+          return json({ ok: true, id, op: meta });
+        }
+        if (url.pathname === '/fin-op-del') {
+          const id = String(d.id || ''); if (!/^op:\d{11}:[a-z0-9]+$/.test(id)) return json({ error: 'Неверная операция' }, 400);
+          await env.SP_ORDERS.delete(id); return json({ ok: true });
+        }
+        // закрытые сделки (статус 142) в рабочих воронках
+        const pd = await amo('/api/v4/leads/pipelines');
+        const pipes = ((pd._embedded && pd._embedded.pipelines) || []).filter(p => ['Солнцезащитные системы', 'Москитные сетки'].some(n => sameName(p.name, n)));
+        const fq = pipes.map((p, i) => `filter[statuses][${i}][pipeline_id]=${p.id}&filter[statuses][${i}][status_id]=142`).join('&');
+        const won = [];
+        if (fq) for (let page = 1; page <= 8; page++) {
+          const r = await fetch(`${base}/api/v4/leads?limit=250&page=${page}&order[updated_at]=desc&${fq}`, { headers: auth });
+          if (r.status === 204) break;
+          if (!r.ok) throw new Error(`amoCRM ответил ${r.status}: ${(await r.text()).slice(0, 300)}`);
+          const list = ((await r.json())._embedded || {}).leads || [];
+          won.push(...list); if (list.length < 250) break;
+        }
+        const fins = {}; (await kvAll('fin:')).forEach(k => { fins[Number(k.name.slice(4))] = k.metadata || null; });
+        const pname = {}; pipes.forEach(p => { pname[p.id] = p.name; });
+        const orders = won.map(l => ({ id: l.id, name: l.name || '', price: Number(l.price) || 0, closed_at: Number(l.closed_at) || Number(l.updated_at) || 0, pipeline: pname[l.pipeline_id] || '', fin: fins[l.id] || null, url: `${base}/leads/detail/${l.id}` }));
+        const ops = (await kvAll('op:')).map(k => ({ id: k.name, ...(k.metadata || {}) }));
+        return json({ ok: true, updated: Date.now(), orders, ops, worker_version: 7 });
+      }
+
       // Данные заказа калькулятора — для корректировки из «Текущих заказов» (Cloudflare KV)
       if (url.pathname === '/state-save' || url.pathname === '/state-get') {
         if (!env.SP_ORDERS) return json({ error: 'В посреднике не подключено хранилище заказов (KV «SP_ORDERS»)', no_store: true }, 501);
@@ -303,6 +343,12 @@ export default {
           const text = JSON.stringify(d.state || null);
           if (text.length > 24 * 1024 * 1024) return json({ error: 'Слишком большой заказ (фото) — сохранено не будет' }, 413);
           await env.SP_ORDERS.put('lead:' + leadId, text, { metadata: { at: Date.now(), size: text.length } });
+          // деньги заказа для «Финансов» (в метаданных — чтобы список читался одним запросом)
+          if (d.fin && typeof d.fin === 'object') {
+            const f = d.fin, n = v => Math.round(Number(v) || 0);
+            const meta = { t: String(f.t || '').slice(0, 80), g: n(f.g), p: n(f.p), lm: n(f.lm), li: n(f.li), om: f.om ? 1 : 0, oi: f.oi ? 1 : 0, at: n(f.at) || Math.floor(Date.now() / 1000) };
+            await env.SP_ORDERS.put('fin:' + leadId, JSON.stringify(meta), { metadata: meta });
+          }
           return json({ ok: true, size: text.length });
         }
         const text = await env.SP_ORDERS.get('lead:' + leadId);
@@ -370,7 +416,7 @@ export default {
           const fresh = Math.max(l.created_at || 0, l.closed_at || 0);
           if (!best || fresh > best.fresh) best = { number: n, lead_id: l.id, name: l.name, fresh, by: (l.closed_at || 0) > (l.created_at || 0) ? 'closed' : 'created' };
         }
-        return json({ ok: true, last: best, worker_version: 6 });
+        return json({ ok: true, last: best, worker_version: 7 });
       }
 
       // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
@@ -454,7 +500,7 @@ export default {
             lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`, editable: editable.has(l.id)
           });
         }
-        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 6 });
+        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 7 });
       }
 
       return json({ error: 'Неизвестный адрес' }, 404);

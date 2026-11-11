@@ -133,6 +133,14 @@
     .sv-del:active { background: var(--red-soft); color: var(--red); }
     .p-icon.svc-ic { background: var(--green-soft); color: var(--green); }
     [hidden] { display: none !important; }
+    .sw, .row label.sw { position: relative; flex: none; width: 51px; height: 31px; }
+    .sw input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+    .sw i { position: absolute; inset: 0; border-radius: 16px; background: #e3e1dc; transition: background .2s; }
+    .sw i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.18); transition: transform .2s; }
+    .sw input:checked + i { background: var(--green); }
+    .sw input:checked + i::after { transform: translateX(20px); }
+    .sw input:focus-visible + i { box-shadow: 0 0 0 3px var(--accent-soft); }
+    .row .r-sub { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
     .edit-banner { display: flex; gap: 10px; align-items: center; background: var(--blue-soft); color: var(--blue); border-radius: 14px; padding: 11px 13px; font-size: 13px; font-weight: 700; line-height: 1.4; margin: 4px 0 14px; }
     .edit-banner svg { flex: none; }
     .empty { text-align: center; padding: 26px 20px 8px; color: var(--muted); font-size: 15px; line-height: 1.45; }
@@ -250,6 +258,12 @@
       <div class="row tap" id="marginRow"><span class="lbl" style="width:auto;">Себестоимость и маржа</span><span class="val"></span><svg class="chev rot" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></div>
       <div class="fold"><div id="marginBody"></div></div>
     </div>
+    <div class="sec-h">Работа</div>
+    <div class="group">
+      <div class="row"><span class="lbl" style="flex:1; width:auto;">Собираем сами<span class="r-sub" id="ownMakeSub">изготовление — в нашу зарплату</span></span><label class="sw"><input type="checkbox" id="ownMake" aria-label="Собираем сами"><i></i></label></div>
+      <div class="row"><span class="lbl" style="flex:1; width:auto;">Устанавливаем сами<span class="r-sub" id="ownInstallSub">установка — в нашу зарплату</span></span><label class="sw"><input type="checkbox" id="ownInstall" aria-label="Устанавливаем сами"><i></i></label></div>
+    </div>
+    <div class="sec-f">Иначе деньги за работу идут в зарплату мастерам. Учитывается в «Финансах», когда заказ «Успешно реализован».</div>
     <div class="sec-h">amoCRM</div>
     <div class="group">
       <div class="row tap" id="pipeRow"><span class="lbl">Воронка</span><span class="val" id="pipeVal"></span><svg class="chev down" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></div>
@@ -320,8 +334,10 @@
   if (!st || !st.id) st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '' };
   if (!Array.isArray(st.services)) st.services = [];
   st.client = st.client || {};
+  if (st.ownMake === undefined) st.ownMake = true;
+  if (st.ownInstall === undefined) st.ownInstall = true;
   // «отпечаток» заказа: по нему главный экран понимает, есть ли не отправленные в amoCRM изменения
-  const sig = () => JSON.stringify([st.client, st.services, st.priceSel, [...st.parts].sort(), Object.keys(st.sum).sort().map(k => st.sum[k] && [st.sum[k].prices, (st.sum[k].items || []).map(i => i.text + '|' + i.qty + '|' + i.room)])]);
+  const sig = () => JSON.stringify([st.client, st.services, st.priceSel, !!st.ownMake, !!st.ownInstall, [...st.parts].sort(), Object.keys(st.sum).sort().map(k => st.sum[k] && [st.sum[k].prices, (st.sum[k].items || []).map(i => i.text + '|' + i.qty + '|' + i.room)])]);
   const save = () => {
     if (st.fresh && st.parts.every(id => st.sum[id])) { st.fresh = false; st.sentSig = sig(); }   // заказ открыт из «Текущих заказов» и досчитан
     st.sig = sig();
@@ -376,6 +392,21 @@
   window.addEventListener('popstate', () => { if (editing) closeSheet(true); });
 
   // сводка раздела из калькулятора; сквозная нумерация изделий по порядку разделов
+  // работа из настроек калькулятора: изготовление и установка, ₽ × штук
+  function laborOf(w, d, items) {
+    let S = {}; try { S = w.eval('SETTINGS') || {}; } catch (e) {}
+    const n = items.reduce((a, it) => a + it.qty, 0);
+    return { make: (Number(S.laborMake) || 0) * n, install: d.noInstall ? 0 : (Number(S.laborInstall) || 0) * n };
+  }
+  // деньги заказа: чистая прибыль → зарплатная касса; остаток (сумма − прибыль) пополам: расходы на изготовление и касса.
+  // Из расходов на изготовление — работа: «сами» → в нашу зарплату, иначе — зарплата мастерам.
+  function finOf(sel) {
+    const ps = partsSum(), G = total(sel);
+    const P = ps.reduce((a, p) => a + (Number(p.profitOf[sel]) || 0), 0) + svcSum();
+    const R = Math.max(0, G - P), lm = ps.reduce((a, p) => a + ((p.labor && p.labor.make) || 0), 0), li = ps.reduce((a, p) => a + ((p.labor && p.labor.install) || 0), 0);
+    const own = (st.ownMake ? lm : 0) + (st.ownInstall ? li : 0), masters = (st.ownMake ? 0 : lm) + (st.ownInstall ? 0 : li);
+    return { G, P, R, kassa: R / 2, spend: R / 2, lm, li, own, masters, material: R / 2 - lm - li, zpOur: P + own };
+  }
   function readPart(id) {
     const w = frames[id] && frames[id].win; if (!w || !w.calcData) return null;
     const d = w.calcData;
@@ -383,7 +414,7 @@
     return { id, name: CALC[id].name, pipeline: CALC[id].g === 'sun' ? 'Солнцезащитные системы' : 'Москитные сетки', problem: d.problem || '', items,
       prices: { base: d.priceBase, discount7: d.price7, discount12: d.price12, b2b: d.priceB2B },
       labels: { discount7: w.discountLabel('discount7'), discount12: w.discountLabel('discount12') },
-      cost: d.costTotal || 0, profitOf: d.profitOf || {}, noInstall: !!d.noInstall,
+      cost: d.costTotal || 0, profitOf: d.profitOf || {}, noInstall: !!d.noInstall, labor: laborOf(w, d, items),
       details: w.amoDetails(), fields: w.amoFields(), tags: w.amoTags() };
   }
   function renumber() {
@@ -506,6 +537,10 @@
     renderServices();
     $('addBtn').style.marginTop = ids.length || st.services.length ? '4px' : '14px';
     $('editBanner').hidden = !st.editLead;
+    $('ownMake').checked = !!st.ownMake; $('ownInstall').checked = !!st.ownInstall;
+    { const f = finOf(st.priceSel || 'base');
+      $('ownMakeSub').textContent = `изготовление ${rub(f.lm)} → ${st.ownMake ? 'в нашу зарплату' : 'мастерам'}`;
+      $('ownInstallSub').textContent = `установка ${rub(f.li)} → ${st.ownInstall ? 'в нашу зарплату' : 'мастерам'}`; }
     if (st.editLead) $('editBanner').querySelector('span').textContent = `Корректировка сделки №${st.editLead} в amoCRM. После изменений нажмите «В amoCRM» — сделка обновится.`;
     // стоимость
     const has = ids.length > 0 || st.services.length > 0, bad = problems();
@@ -522,7 +557,10 @@
     $('marginBody').innerHTML = partsSum().map(p => `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">${esc(CALC[p.id].name)}</span><span class="money" style="flex:none; color:var(--muted); font-size:15px;">${rub(p.cost)} → ${rub(p.prices[sel])}</span></div>`).join('') +
       (st.services.length ? `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">Доп. услуги</span><span class="money" style="flex:none; color:var(--muted); font-size:15px;">${rub(svcSum())}</span></div>` : '') +
       `<div class="row"><span class="lbl" style="width:auto;">Себестоимость</span><span class="money">${rub(cost)}</span></div>
-       <div class="row"><span class="lbl" style="width:auto;">Маржа</span><span class="money green">${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))}${tot > 0 ? ' · ' + Math.round(profit / tot * 100) + '%' : ''}</span></div>`;
+       <div class="row"><span class="lbl" style="width:auto;">Маржа</span><span class="money green">${profit >= 0 ? '+' : '−'}${rub(Math.abs(profit))}${tot > 0 ? ' · ' + Math.round(profit / tot * 100) + '%' : ''}</span></div>` +
+      (() => { const f = finOf(sel), r = (l, v, c) => `<div class="row"><span class="lbl" style="width:auto; flex:1; font-size:15px;">${l}</span><span class="money" style="flex:none; font-size:15px;${c ? ' color:' + c + ';' : ''}">${rub(v)}</span></div>`;
+        return `<div class="row" style="min-height:36px;"><span class="lbl" style="width:auto; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);">Куда пойдут деньги</span></div>` +
+          r('Зарплата — нам', f.zpOur, 'var(--green)') + (f.masters ? r('Зарплата мастерам', f.masters) : '') + r('В кассу', f.kassa, 'var(--blue)') + r('Материал и расходы', Math.max(0, f.material), 'var(--muted)'); })();
     // воронка: по умолчанию — где больше сумма
     if (!st.pipelineManual && has && ids.every(id => st.sum[id])) {
       const by = {}; partsSum().forEach(p => { by[p.pipeline] = (by[p.pipeline] || 0) + (Number(p.prices.base) || 0); });
@@ -566,6 +604,8 @@
     render();
     setTimeout(() => { const el = document.querySelector(`.sv-pr[data-i="${i}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); } }, 60);
   }
+
+  ['ownMake', 'ownInstall'].forEach(k => $(k).addEventListener('change', () => { st[k] = $(k).checked; save(); render(); }));
 
   // === События ===
   let cTmr = null;
@@ -614,7 +654,7 @@
     try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
     dropPhotos(st.id);
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
-    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [] }; addrInit(st.client); save();
+    st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [], ownMake: true, ownInstall: true }; addrInit(st.client); save();
     ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
   }
   $('moreBtn').onclick = () => menu($('moreBtn'), [
@@ -814,7 +854,9 @@
     // данные заказа — посреднику, чтобы потом скорректировать его из «Текущих заказов» (с любого телефона)
     setStatus('⏳ Сохраняю данные заказа для корректировки…');
     let stateNote = '';
-    try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState() }) }); }
+    const fin = finOf(sel);
+    const finRec = { t: [c.orderNumber ? '№ ' + c.orderNumber : '', c.clientName].filter(Boolean).join(' · ').slice(0, 80), g: Math.round(fin.G), p: Math.round(fin.P), lm: Math.round(fin.lm), li: Math.round(fin.li), om: st.ownMake ? 1 : 0, oi: st.ownInstall ? 1 : 0, at: Math.floor(Date.now() / 1000) };
+    try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState(), fin: finRec }) }); }
     catch (e) { stateNote = /хранилище/.test(e.message) ? '' : ' Данные для корректировки не сохранились: ' + esc(e.message) + '.'; }
     st.editLead = lead.lead_id; st.sentSig = sig(); save();
     const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Финансы — SunProtection</title>
+  <meta name="theme-color" content="#f5f4f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <style>
+    :root { --bg: #f5f4f1; --card: #ffffff; --ink: #16181d; --ink2: #3f434b; --muted: #6b7079; --sep: rgba(22,24,29,0.08); --fill: #f3f2ef;
+      --accent: #ea580c; --accent-2: #f97316; --accent-ink: #c2410c; --soft: #fff1e8; --blue: #0b72e7; --blue-soft: #e8f3ff; --red: #dc2626; --red-soft: #fef2f2;
+      --green: #15803d; --green-soft: #ecfdf3; --slate: #334155; --slate-soft: #eef1f5; --violet: #7c3aed; --violet-soft: #f3effd;
+      --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    [hidden] { display: none !important; }
+    body { font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased;
+      background: var(--bg); color: var(--ink); padding: calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    .top { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; min-height: 48px; }
+    .icon-btn { flex: none; width: 44px; height: 44px; border-radius: 14px; border: 0; background: var(--card); color: var(--ink2); display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; padding: 0; box-shadow: var(--shadow); transition: transform .15s; }
+    .icon-btn:active { transform: scale(0.94); }
+    .icon-btn.spin svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { flex: 1; min-width: 0; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+    h1 small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; letter-spacing: 0; }
+    .msg { background: #fff7e6; color: #b45309; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 600; line-height: 1.45; }
+    .msg.err { background: var(--red-soft); color: var(--red); }
+    .msg:empty { display: none; }
+
+    /* кассы */
+    .bal { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .b-card { background: var(--card); border-radius: 20px; padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+    .b-card.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+    .b-top { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink2); }
+    .b-ic { flex: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .b-sum { display: block; margin-top: 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .b-card.wide .b-sum { flex: none; margin: 0 0 0 auto; font-size: 18px; overflow: visible; }
+    .b-card.wide .b-txt { flex: 1; min-width: 0; }
+    .b-sub { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+    .neg { color: var(--red) !important; }
+    .acts { display: flex; gap: 8px; margin: 12px 0 0; }
+    .abtn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; border: 0; border-radius: 16px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; padding: 0 10px; white-space: nowrap; }
+    .abtn.pri { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .abtn.sec { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+    .abtn.more { flex: none; width: 48px; padding: 0; background: var(--card); color: var(--ink2); box-shadow: var(--shadow); }
+
+    .sec-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 24px 4px 8px; }
+    .sec-h span:last-child { text-transform: none; letter-spacing: 0; font-weight: 600; }
+    .seg { display: flex; gap: 4px; background: rgba(22,24,29,0.06); padding: 4px; border-radius: 14px; margin-top: 24px; }
+    .seg button { flex: 1; min-width: 0; border: none; background: transparent; border-radius: 11px; padding: 10px 4px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.10); }
+    .group { background: var(--card); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); }
+    .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--sep); }
+    .kpi div { padding: 14px 12px; min-width: 0; }
+    .kpi div + div { border-left: 1px solid var(--sep); }
+    .kpi b { display: block; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+    .line { display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-size: 15px; font-weight: 600; position: relative; }
+    .line + .line::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--sep); }
+    .line .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+    .line .l { flex: 1; min-width: 0; color: var(--ink2); }
+    .line .l small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+    .line .v { flex: none; font-weight: 800; white-space: nowrap; }
+    .bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin: 2px 14px 12px; background: var(--fill); }
+    .bar i { display: block; height: 100%; }
+    .foot-note { font-size: 12.5px; font-weight: 500; color: var(--muted); margin: 8px 4px 0; line-height: 1.45; }
+
+    /* операции */
+    .day { font-size: 12px; font-weight: 700; color: var(--muted); margin: 16px 4px 6px; }
+    .op { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 12px 14px; min-height: 60px; font: inherit; color: var(--ink); cursor: pointer; position: relative; }
+    .op + .op::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: var(--sep); }
+    .op:active { background: var(--fill); }
+    .op .tile { flex: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .op .o-b { flex: 1; min-width: 0; }
+    .op .o-t { display: block; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .op .o-s { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .op .o-v { flex: none; font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .plus { color: var(--green); }
+    .empty { padding: 18px 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
+    .est { display: inline-block; font-size: 11px; font-weight: 700; color: #b45309; background: #fff7e6; border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+
+    /* шторка */
+    .veil { position: fixed; inset: 0; z-index: 60; background: rgba(16,18,22,0.32); opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .veil.show { opacity: 1; pointer-events: auto; }
+    .bs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; max-width: 560px; margin: 0 auto; background: var(--bg); border-radius: 26px 26px 0 0; max-height: 90vh; overflow-y: auto;
+      padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(105%); visibility: hidden; transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s .3s; }
+    .bs.show { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+    .bs .grab { width: 38px; height: 5px; border-radius: 3px; background: #d5d3ce; margin: 0 auto 12px; }
+    .bs h2 { margin: 0 4px 2px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .bs .bs-sub { margin: 0 4px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .bs .grp { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 12px; }
+    .fld { display: flex; align-items: center; gap: 12px; padding: 0 14px; min-height: 54px; position: relative; }
+    .fld + .fld::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--sep); }
+    .fld label { flex: none; width: 92px; font-size: 15px; font-weight: 600; color: var(--ink2); }
+    .fld input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); padding: 14px 0; outline: none; text-align: right; }
+    .fld input.big { font-size: 22px; font-weight: 800; }
+    .fld input::placeholder { color: #a3a8b0; font-weight: 500; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px 12px; }
+    .chip { border: 0; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--sep); padding: 8px 12px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink2); cursor: pointer; }
+    .chip.on { background: var(--soft); color: var(--accent-ink); box-shadow: inset 0 0 0 2px var(--accent); }
+    .typeseg { display: flex; gap: 4px; background: rgba(22,24,29,0.06); padding: 4px; border-radius: 14px; margin-bottom: 12px; }
+    .typeseg button { flex: 1; border: 0; background: none; border-radius: 11px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+    .typeseg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.10); }
+    .sbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; padding: 15px; margin-top: 8px; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .sbtn.pri { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .sbtn.pri:disabled { opacity: 0.5; }
+    .sbtn.ghost { background: var(--card); color: var(--muted); box-shadow: var(--shadow); }
+    .sbtn.danger { background: var(--card); color: var(--red); box-shadow: var(--shadow); }
+    .opt { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 12px 14px; min-height: 58px; font: inherit; color: var(--ink); cursor: pointer; position: relative; text-decoration: none; }
+    .opt + .opt::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: var(--sep); }
+    .opt .tile { flex: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .opt .o-t { display: block; font-size: 16px; font-weight: 700; }
+    .opt .o-s { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+    .toast { position: fixed; left: 16px; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 70; max-width: 520px; margin: 0 auto; background: #16181d; color: #fff; border-radius: 16px; padding: 13px 15px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.25); transform: translateY(150%); visibility: hidden; transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s .3s; }
+    .toast.show { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+    .toast.err { background: var(--red); }
+    .skel { height: 92px; border-radius: 20px; background: linear-gradient(90deg, #ecebe7, #f6f5f2, #ecebe7); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+    @keyframes sk { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .bs, .veil, .toast { transition: none; } .skel { animation: none; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="icon-btn" href="index.html" aria-label="Назад" title="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <h1>Финансы<small id="updated">загрузка…</small></h1>
+    <button type="button" class="icon-btn" id="refresh" aria-label="Обновить" title="Обновить"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></button>
+  </div>
+  <div class="msg" id="msg"></div>
+
+  <div class="bal" id="bal"><div class="skel"></div><div class="skel"></div></div>
+  <div class="acts">
+    <button type="button" class="abtn pri" id="addExpense"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>Расход</button>
+    <button type="button" class="abtn sec" id="addSalary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/></svg>Выплата</button>
+    <button type="button" class="abtn more" id="moreOps" aria-label="Ещё операции"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+  </div>
+
+  <div class="seg" id="period">
+    <button type="button" data-p="month">Месяц</button><button type="button" data-p="prev">Прошлый</button><button type="button" data-p="year">Год</button><button type="button" data-p="all">Всё</button>
+  </div>
+  <div class="sec-h"><span>Заказы за период</span><span id="perLbl"></span></div>
+  <div class="group" id="stats"></div>
+  <div class="foot-note">Заказ попадает сюда, когда он «Успешно реализован». Чистая прибыль — в зарплату; остаток пополам: материал и расходы на изготовление / касса. Работа — нам, если собирали и ставили сами, иначе мастерам.</div>
+
+  <div class="sec-h"><span>Операции</span><span id="opsCount"></span></div>
+  <div id="ops"></div>
+  <div class="foot-note" id="startNote"></div>
+</div>
+
+<div class="veil" id="veil"></div>
+<div class="bs" id="bs" role="dialog" aria-modal="true"><div class="grab"></div><div id="bsBody"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const CFG_KEY = 'spAmoConfig', CACHE_KEY = 'spFinCache', UI_KEY = 'spFinUi';
+  const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rub = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
+  const sgn = v => (v < 0 ? '−' : '') + rub(Math.abs(v));
+  const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 10 || h >= 20) ? b : c; };
+  const ui = Object.assign({ period: 'month' }, ls.get(UI_KEY, {}));
+  let data = ls.get(CACHE_KEY, null);
+
+  const SVG = (d, sw = 2.2) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IC = {
+    kassa: SVG('<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M3 11h18M7 4h10"/>'),
+    zp: SVG('<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><circle cx="12" cy="12" r="2.5"/>'),
+    master: SVG('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
+    order: SVG('<path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1.2"/><path d="M9 13l2 2 4-4"/>'),
+    minus: SVG('<path d="M5 12h14"/>', 2.6), fix: SVG('<path d="M4 20h4L19 9l-4-4L4 16z"/>'),
+    cal: SVG('<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+    ext: SVG('<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>')
+  };
+  // виды ручных операций: из какой кассы и с каким знаком
+  const OPT = {
+    expense:   { name: 'Расход из кассы', box: 'kassa', sign: -1, icon: IC.minus, bg: 'var(--red-soft)', fg: 'var(--red)' },
+    salary:    { name: 'Выплата зарплаты', box: 'zp', sign: -1, icon: IC.zp, bg: 'var(--green-soft)', fg: 'var(--green)' },
+    master:    { name: 'Выплата мастерам', box: 'master', sign: -1, icon: IC.master, bg: 'var(--slate-soft)', fg: 'var(--slate)' },
+    kassa_in:  { name: 'Пополнение кассы', box: 'kassa', sign: 1, icon: IC.kassa, bg: 'var(--blue-soft)', fg: 'var(--blue)' },
+    zp_in:     { name: 'Пополнение зарплатной кассы', box: 'zp', sign: 1, icon: IC.zp, bg: 'var(--green-soft)', fg: 'var(--green)' },
+    kassa_fix: { name: 'Корректировка кассы', box: 'kassa', sign: 1, icon: IC.fix, bg: 'var(--blue-soft)', fg: 'var(--blue)' },
+    zp_fix:    { name: 'Корректировка зарплатной кассы', box: 'zp', sign: 1, icon: IC.fix, bg: 'var(--green-soft)', fg: 'var(--green)' }
+  };
+
+  // Деньги заказа. С данными калькулятора — точно; для старых сделок — оценка (наценка ×2: прибыль = половина суммы, работа не известна).
+  function split(o) {
+    const G = o.price || 0, f = o.fin;
+    const P = f ? f.p + (G - f.g) : G / 2;              // сумму меняли в amoCRM — разница идёт в прибыль
+    const R = Math.max(0, G - P), lm = f ? f.lm : 0, li = f ? f.li : 0;
+    const own = f ? (f.om ? lm : 0) + (f.oi ? li : 0) : 0, masters = f ? (f.om ? 0 : lm) + (f.oi ? 0 : li) : 0;
+    return { G, P, R, kassa: R / 2, spend: R / 2, labor: lm + li, own, masters, zp: P + own, material: R / 2 - lm - li, est: !f };
+  }
+  function startTs() {   // учёт касс — с этой даты (по умолчанию начало текущего месяца)
+    const s = ((data && data.ops) || []).filter(o => o.type === 'start').sort((a, b) => b.d - a.d)[0];
+    if (s) return s.a;
+    const n = new Date(); return Math.floor(new Date(n.getFullYear(), n.getMonth(), 1).getTime() / 1000);
+  }
+  function periodRange(p) {
+    const n = new Date(), y = n.getFullYear(), m = n.getMonth(), t = d => Math.floor(d.getTime() / 1000);
+    if (p === 'month') return [t(new Date(y, m, 1)), t(new Date(y, m + 1, 1)), n.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })];
+    if (p === 'prev') return [t(new Date(y, m - 1, 1)), t(new Date(y, m, 1)), new Date(y, m - 1, 1).toLocaleString('ru-RU', { month: 'long', year: 'numeric' })];
+    if (p === 'year') return [t(new Date(y, 0, 1)), t(new Date(y + 1, 0, 1)), y + ' год'];
+    return [0, 4e9, 'за всё время'];
+  }
+
+  function render() {
+    document.querySelectorAll('#period button').forEach(b => b.classList.toggle('on', b.dataset.p === ui.period));
+    if (!data) return;
+    const st = startTs(), orders = data.orders || [], ops = (data.ops || []).filter(o => OPT[o.type]);
+    // остатки касс — с даты начала учёта
+    const bal = { kassa: 0, zp: 0, master: 0 };
+    orders.filter(o => o.closed_at >= st).forEach(o => { const s = split(o); bal.kassa += s.kassa; bal.zp += s.zp; bal.master += s.masters; });
+    ops.filter(o => o.d >= st).forEach(o => { const t = OPT[o.type]; bal[t.box] += t.sign * o.a; });
+    $('bal').innerHTML = `
+      <div class="b-card"><div class="b-top"><span class="b-ic" style="background:var(--blue-soft);color:var(--blue)">${IC.kassa}</span>Касса</div><b class="b-sum${bal.kassa < 0 ? ' neg' : ''}">${sgn(bal.kassa)}</b><span class="b-sub">на материал и расходы</span></div>
+      <div class="b-card"><div class="b-top"><span class="b-ic" style="background:var(--green-soft);color:var(--green)">${IC.zp}</span>Зарплатная</div><b class="b-sum${bal.zp < 0 ? ' neg' : ''}">${sgn(bal.zp)}</b><span class="b-sub">чистая прибыль + наша работа</span></div>
+      ${bal.master || ops.some(o => o.type === 'master') ? `<div class="b-card wide"><span class="b-ic" style="background:var(--slate-soft);color:var(--slate)">${IC.master}</span><span class="b-txt"><span class="b-top" style="display:block">Мастерам к выплате</span><span class="b-sub">сборка и установка</span></span><b class="b-sum${bal.master < 0 ? ' neg' : ''}">${sgn(bal.master)}</b></div>` : ''}`;
+    // период
+    const [a, b, lbl] = periodRange(ui.period);
+    const po = orders.filter(o => o.closed_at >= a && o.closed_at < b), sum = { G: 0, P: 0, kassa: 0, spend: 0, zp: 0, masters: 0, own: 0, est: 0 };
+    po.forEach(o => { const s = split(o); sum.G += s.G; sum.P += s.P; sum.kassa += s.kassa; sum.spend += s.spend; sum.zp += s.zp; sum.masters += s.masters; sum.own += s.own; if (s.est) sum.est++; });
+    const pe = ops.filter(o => o.d >= a && o.d < b && o.type === 'expense').reduce((x, o) => x + o.a, 0);
+    $('perLbl').textContent = lbl;
+    const pct = v => sum.G > 0 ? Math.max(0, v / sum.G * 100) : 0;
+    const line = (c, l, sub, v, cls) => `<div class="line"><span class="dot" style="background:${c}"></span><span class="l">${l}${sub ? `<small>${sub}</small>` : ''}</span><span class="v${cls ? ' ' + cls : ''}">${v}</span></div>`;
+    $('stats').innerHTML = `<div class="kpi"><div><b>${po.length}</b><span>${plural(po.length, 'заказ', 'заказа', 'заказов')}</span></div><div><b>${rub(sum.G)}</b><span>грязными</span></div><div><b class="plus">${rub(sum.P)}</b><span>чистыми</span></div></div>
+      ${sum.G ? `<div style="padding-top:12px"><div class="bar"><i style="width:${pct(sum.zp)}%;background:var(--green)"></i><i style="width:${pct(sum.masters)}%;background:var(--slate)"></i><i style="width:${pct(sum.kassa)}%;background:var(--blue)"></i><i style="width:${pct(sum.spend - sum.own - sum.masters)}%;background:#c9c6bf"></i></div></div>` : ''}
+      ${line('var(--green)', 'Зарплата — нам', `чистая прибыль ${rub(sum.P)}${sum.own ? ` + наша работа ${rub(sum.own)}` : ''}`, rub(sum.zp))}
+      ${sum.masters ? line('var(--slate)', 'Зарплата мастерам', 'сборка и установка', rub(sum.masters)) : ''}
+      ${line('var(--blue)', 'В кассу', 'половина остатка', rub(sum.kassa))}
+      ${line('#c9c6bf', 'Материал и расходы на изготовление', 'вторая половина остатка' + (pe ? ` · из кассы потрачено ${rub(pe)}` : ''), rub(Math.max(0, sum.spend - sum.own - sum.masters)))}
+      ${po.length ? line('transparent', 'Средний чек', '', rub(sum.G / po.length)) : ''}
+      ${sum.est ? `<div class="line"><span class="l" style="font-size:12.5px; color:#b45309">${sum.est} ${plural(sum.est, 'заказ отправлен', 'заказа отправлены', 'заказов отправлены')} не из калькулятора или до версии 2.49 — по ним оценка: прибыль = половина суммы.</span></div>` : ''}`;
+    // операции за период
+    const items = [...po.map(o => ({ k: 'o', t: o.closed_at, o })), ...ops.filter(o => o.d >= a && o.d < b).map(o => ({ k: 'm', t: o.d, o }))].sort((x, y) => y.t - x.t);
+    $('opsCount').textContent = items.length ? items.length + ' шт' : '';
+    let html = '', lastDay = '';
+    const dayOf = t => new Date(t * 1000).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' });
+    for (const it of items) {
+      const d = dayOf(it.t);
+      if (d !== lastDay) { html += (lastDay ? '</div>' : '') + `<div class="day">${esc(d)}</div><div class="group">`; lastDay = d; }
+      if (it.k === 'o') { const s = split(it.o);
+        html += `<button type="button" class="op" data-order="${it.o.id}"><span class="tile" style="background:var(--soft);color:var(--accent)">${IC.order}</span><span class="o-b"><span class="o-t">${esc(it.o.name || 'Сделка ' + it.o.id)}${s.est ? '<span class="est">оценка</span>' : ''}</span><span class="o-s">чистыми ${rub(s.P)} · в кассу ${rub(s.kassa)}</span></span><span class="o-v plus">+${rub(s.G)}</span></button>`;
+      } else { const t = OPT[it.o.type];
+        html += `<button type="button" class="op" data-op="${esc(it.o.id)}"><span class="tile" style="background:${t.bg};color:${t.fg}">${t.icon}</span><span class="o-b"><span class="o-t">${esc(it.o.n || t.name)}</span><span class="o-s">${esc(t.name)}</span></span><span class="o-v${t.sign * it.o.a > 0 ? ' plus' : ''}">${t.sign * it.o.a > 0 ? '+' : '−'}${rub(Math.abs(it.o.a))}</span></button>`;
+      }
+    }
+    $('ops').innerHTML = html ? html + '</div>' : '<div class="group"><div class="empty">За этот период операций нет.</div></div>';
+    $('startNote').innerHTML = `Остатки касс считаются с <b>${new Date(st * 1000).toLocaleDateString('ru-RU')}</b>. Начальные суммы — через «•••» → «Корректировка».`;
+  }
+
+  // === посредник ===
+  async function api(path, body) {
+    const cfg = ls.get(CFG_KEY, {});
+    if (!cfg.url || !cfg.key) throw new Error('нет подключения amoCRM — откройте Настройки → любой калькулятор → «Подключение amoCRM»');
+    let last;
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const r = await fetch(String(cfg.url).trim().replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}), cache: 'no-store' });
+        let j = null; try { j = await r.json(); } catch (e) {}
+        if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — он обновится сам через пару минут.'), { final: true });
+        if (!r.ok || !j || j.error) throw Object.assign(new Error(j && j.error ? j.error : `посредник ответил ${r.status}`), { final: !!(j && j.error) });
+        return j;
+      } catch (e) { last = e; if (e.final) break; if (i < 3) await new Promise(res => setTimeout(res, 800 * i)); }
+    }
+    const m = String((last && last.message) || last);
+    throw new Error(/failed to fetch|load failed|networkerror/i.test(m) ? 'нет связи с посредником — проверьте интернет или VPN' : m);
+  }
+  async function load() {
+    $('refresh').classList.add('spin');
+    try {
+      data = await api('/finance', {}); ls.set(CACHE_KEY, data); $('msg').textContent = ''; $('msg').className = 'msg';
+    } catch (e) { $('msg').className = 'msg err'; $('msg').textContent = 'Не удалось обновить: ' + e.message + (data ? ' Показаны прошлые данные.' : ''); }
+    $('refresh').classList.remove('spin');
+    $('updated').textContent = data ? 'данные на ' + new Date(data.updated).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'нет данных';
+    render();
+  }
+
+  // === шторки ===
+  let toastTmr = null;
+  function toast(t, err) { const e = $('toast'); e.textContent = t; e.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toastTmr); toastTmr = setTimeout(() => { e.className = 'toast'; }, err ? 6000 : 3000); }
+  function openSheet(html) { $('bsBody').innerHTML = html; $('veil').classList.add('show'); $('bs').classList.add('show'); $('bs').scrollTop = 0; }
+  function closeSheet() { $('veil').classList.remove('show'); $('bs').classList.remove('show'); }
+  $('veil').addEventListener('click', closeSheet);
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const CATS = { expense: ['Материал', 'Фурнитура', 'Бензин', 'Инструмент', 'Аренда', 'Реклама', 'Другое'], salary: ['Мне', 'Партнёру'], master: ['Сборка', 'Установка'] };
+
+  function opSheet(type) {
+    const groups = { expense: ['expense'], salary: ['salary'], master: ['master'], fix: ['kassa_fix', 'zp_fix'], in: ['kassa_in', 'zp_in'] }[type];
+    let cur = groups[0];
+    const draw = () => {
+      const t = OPT[cur], fix = /_fix$/.test(cur);
+      openSheet(`<h2>${esc(fix ? 'Корректировка остатка' : t.name)}</h2><div class="bs-sub">${esc(fix ? 'Начальная сумма или исправление: со знаком «−», если нужно уменьшить' : t.box === 'kassa' ? 'Деньги уходят из кассы' : t.box === 'zp' ? 'Из зарплатной кассы' : 'Уменьшает долг мастерам')}</div>
+        ${groups.length > 1 ? `<div class="typeseg">${groups.map(g => `<button type="button" data-g="${g}" class="${g === cur ? 'on' : ''}">${OPT[g].box === 'kassa' ? 'Касса' : 'Зарплатная'}</button>`).join('')}</div>` : ''}
+        <div class="grp">
+          <div class="fld"><label for="opA">Сумма</label><input id="opA" class="big" inputmode="${fix ? 'text' : 'decimal'}" placeholder="0 ₽" autocomplete="off"></div>
+          <div class="fld"><label for="opN">${cur === 'salary' ? 'Кому' : 'Комментарий'}</label><input id="opN" placeholder="${cur === 'expense' ? 'например, ткань Омега' : ''}" autocomplete="off"></div>
+          <div class="fld"><label for="opD">Дата</label><input id="opD" type="date" value="${today()}"></div>
+        </div>
+        ${CATS[cur] ? `<div class="chips">${CATS[cur].map(c => `<button type="button" class="chip" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+        <button type="button" class="sbtn pri" id="opSave">Сохранить</button><button type="button" class="sbtn ghost" id="opCancel">Отмена</button>`);
+      $('bsBody').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { cur = b.dataset.g; draw(); });
+      $('bsBody').querySelectorAll('[data-c]').forEach(b => b.onclick = () => { const n = $('opN'); n.value = n.value && !CATS[cur].includes(n.value) ? n.value : b.dataset.c; $('bsBody').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); });
+      $('opCancel').onclick = closeSheet;
+      setTimeout(() => $('opA').focus(), 320);
+      $('opSave').onclick = async () => {
+        let a = parseFloat(String($('opA').value).replace(/\s/g, '').replace(',', '.').replace('−', '-'));
+        if (!a || (!fix && a < 0)) { $('opA').focus(); toast('Введите сумму', true); return; }
+        const dv = $('opD').value, d = dv ? Math.floor(new Date(dv + 'T12:00:00').getTime() / 1000) : Math.floor(Date.now() / 1000);
+        $('opSave').disabled = true; $('opSave').textContent = 'Сохраняю…';
+        try { const r = await api('/fin-op', { op: { type: cur, amount: a, note: $('opN').value.trim(), date: d } });
+          data.ops = [...(data.ops || []), { id: r.id, ...r.op }]; ls.set(CACHE_KEY, data); closeSheet(); render(); toast(`${t.name}: ${rub(Math.abs(a))}`);
+        } catch (e) { $('opSave').disabled = false; $('opSave').textContent = 'Сохранить'; toast('Не сохранено: ' + e.message, true); }
+      };
+    };
+    draw();
+  }
+  function startSheet() {
+    const d = new Date(startTs() * 1000), v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    openSheet(`<h2>Начало учёта касс</h2><div class="bs-sub">Заказы и операции раньше этой даты не входят в остатки касс (статистика по периодам видна всегда).</div>
+      <div class="grp"><div class="fld"><label for="stD">С даты</label><input id="stD" type="date" value="${v}"></div></div>
+      <button type="button" class="sbtn pri" id="stSave">Сохранить</button><button type="button" class="sbtn ghost" id="stCancel">Отмена</button>`);
+    $('stCancel').onclick = closeSheet;
+    $('stSave').onclick = async () => {
+      const ts = Math.floor(new Date($('stD').value + 'T00:00:00').getTime() / 1000); if (!ts) return;
+      try { const r = await api('/fin-op', { op: { type: 'start', amount: ts, note: 'Начало учёта', date: Math.floor(Date.now() / 1000) } }); data.ops = [...(data.ops || []), { id: r.id, ...r.op }]; ls.set(CACHE_KEY, data); closeSheet(); render(); toast('Учёт касс — с ' + new Date(ts * 1000).toLocaleDateString('ru-RU')); }
+      catch (e) { toast('Не сохранено: ' + e.message, true); }
+    };
+  }
+  $('addExpense').onclick = () => opSheet('expense');
+  $('addSalary').onclick = () => opSheet('salary');
+  $('moreOps').onclick = () => {
+    openSheet(`<h2>Операции</h2><div class="bs-sub">Ручные движения денег</div><div class="grp">
+      ${[['expense', 'Расход из кассы', 'материал, бензин, аренда…'], ['salary', 'Выплата зарплаты', 'из зарплатной кассы'], ['master', 'Выплата мастерам', 'за сборку и установку'], ['in', 'Пополнение', 'положить деньги в кассу'], ['fix', 'Корректировка', 'начальный остаток или исправление']].map(([k, t, s]) => {
+        const o = OPT[{ in: 'kassa_in', fix: 'kassa_fix' }[k] || k];
+        return `<button type="button" class="opt" data-k="${k}"><span class="tile" style="background:${o.bg};color:${o.fg}">${o.icon}</span><span><span class="o-t">${t}</span><span class="o-s">${s}</span></span></button>`; }).join('')}
+      <button type="button" class="opt" data-k="start"><span class="tile" style="background:var(--fill);color:var(--ink2)">${IC.cal}</span><span><span class="o-t">Начало учёта касс</span><span class="o-s">с ${new Date(startTs() * 1000).toLocaleDateString('ru-RU')}</span></span></button>
+      </div><button type="button" class="sbtn ghost" id="mCancel">Отмена</button>`);
+    $('mCancel').onclick = closeSheet;
+    $('bsBody').querySelectorAll('[data-k]').forEach(b => b.onclick = () => b.dataset.k === 'start' ? startSheet() : opSheet(b.dataset.k));
+  };
+  $('ops').addEventListener('click', e => {
+    const ob = e.target.closest('[data-order]');
+    if (ob) { const o = (data.orders || []).find(x => x.id === Number(ob.dataset.order)); if (!o) return; const s = split(o);
+      const row = (l, v, c) => `<div class="line"><span class="l">${l}</span><span class="v"${c ? ` style="color:${c}"` : ''}>${v}</span></div>`;
+      openSheet(`<h2>${esc(o.name || 'Сделка ' + o.id)}</h2><div class="bs-sub">${esc(o.pipeline)} · закрыта ${new Date(o.closed_at * 1000).toLocaleDateString('ru-RU')}${s.est ? ' · оценка' : ''}</div>
+        <div class="grp">${row('Сумма заказа', rub(s.G))}${row('Чистая прибыль', rub(s.P), 'var(--green)')}${row('Остаток (сумма − прибыль)', rub(s.R))}
+        ${row('→ в кассу (½)', rub(s.kassa), 'var(--blue)')}${row('→ материал и расходы (½)', rub(s.spend))}
+        ${s.own ? row('&nbsp;&nbsp;&nbsp;в т.ч. наша работа → в зарплату', rub(s.own)) : ''}${s.masters ? row('&nbsp;&nbsp;&nbsp;в т.ч. работа мастеров', rub(s.masters)) : ''}
+        ${row('Зарплата нам', rub(s.zp), 'var(--green)')}</div>
+        ${s.est ? '<div class="foot-note" style="margin:0 4px 12px">Заказ отправлен не из калькулятора или до версии 2.49 — прибыль оценена как половина суммы.</div>' : ''}
+        <a class="sbtn ghost" style="text-decoration:none; color:var(--blue)" href="${esc(o.url)}" target="_blank" rel="noopener">${IC.ext}Открыть в amoCRM</a>`);
+      return; }
+    const pb = e.target.closest('[data-op]');
+    if (pb) { const o = (data.ops || []).find(x => x.id === pb.dataset.op); if (!o) return; const t = OPT[o.type];
+      openSheet(`<h2>${esc(t.name)}</h2><div class="bs-sub">${new Date(o.d * 1000).toLocaleDateString('ru-RU')}${o.n ? ' · ' + esc(o.n) : ''}</div>
+        <div class="grp"><div class="line"><span class="l">Сумма</span><span class="v">${sgn(t.sign * o.a)}</span></div></div>
+        <button type="button" class="sbtn danger" id="opDel">Удалить операцию</button><button type="button" class="sbtn ghost" id="opCl">Закрыть</button>`);
+      $('opCl').onclick = closeSheet;
+      $('opDel').onclick = async () => { if (!confirm('Удалить операцию?')) return;
+        try { await api('/fin-op-del', { id: o.id }); data.ops = data.ops.filter(x => x.id !== o.id); ls.set(CACHE_KEY, data); closeSheet(); render(); toast('Операция удалена'); }
+        catch (err) { toast('Не удалено: ' + err.message, true); } };
+    }
+  });
+  $('period').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; ui.period = b.dataset.p; ls.set(UI_KEY, ui); render(); });
+  $('refresh').onclick = load;
+  if (data) { $('updated').textContent = 'данные на ' + new Date(data.updated).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); render(); }
+  load();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

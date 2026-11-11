@@ -34,6 +34,13 @@ chk('итог = изделия + 600', tot === base + 600, `${base} → ${tot}`)
 await p.click('#addBtn'); await p.waitForTimeout(300); await p.click('.menu .m-i:has-text("Демонтаж")'); await p.fill('.sv-pr[data-i="1"]', '1 500'); await p.waitForTimeout(400);
 chk('две услуги', +(await p.textContent('#dockSum')).replace(/\D/g, '') === base + 2100);
 await p.screenshot({ path: OUT + 'svc_combo.png', fullPage: true });
+// работа: собираем сами, устанавливает мастер
+chk('по умолчанию «сами» включено', await p.isChecked('#ownMake') && await p.isChecked('#ownInstall'));
+await p.click('#ownInstall'); await p.waitForTimeout(300);
+chk('установка → мастерам', /мастерам/.test(await p.textContent('#ownInstallSub')), await p.textContent('#ownInstallSub'));
+await p.click('#marginRow'); await p.waitForTimeout(400);
+await p.locator('#ownMake').scrollIntoViewIfNeeded(); await p.screenshot({ path: OUT + 'fin_combo.png', fullPage: true });
+chk('распределение в заказе', /Куда пойдут деньги/.test(await p.textContent('#marginBody')) && /Зарплата мастерам/.test(await p.textContent('#marginBody')));
 // КП: таблица услуг и итог
 await p.evaluate(() => { document.getElementById('printArea').innerHTML = kpHtml(); });
 const kp = await p.textContent('#printArea');
@@ -53,6 +60,8 @@ const kvFile = fs.readdirSync(OUT).filter(f => /^kv_lead_\d+\.json$/.test(f)).ma
 const kv = rd(kvFile);
 chk('данные заказа у посредника', kv.combo.services.length === 2 && Object.keys(kv.ls).some(k => k.startsWith('uniCalcState12@combo:')), kvFile);
 const LID = Number(kvFile.match(/(\d+)/)[1]);
+{ const f = JSON.parse(fs.readFileSync(OUT + 'kv_fin_' + LID + '.json', 'utf8'));
+  chk('деньги заказа для «Финансов»', f.g === lead.price && f.p > 0 && f.lm === 300 && f.li === 250 && f.om === 1 && f.oi === 0, JSON.stringify(f)); }
 const api = (path, body) => p.evaluate(async ([path, body]) => { const r = await fetch('http://localhost:8790' + path, { method: 'POST', headers: { 'X-App-Key': 'secret1', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   if (/json/.test(r.headers.get('Content-Type'))) return r.json(); const ab = await r.arrayBuffer(); return { bytes: ab.byteLength, head: new TextDecoder().decode(ab.slice(0, 4)) }; }, [path, body]);
 const dl = await api('/docs', { lead_id: LID });
