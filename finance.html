@@ -188,8 +188,8 @@
     master:    { name: 'Выплата мастерам', box: 'master', sign: -1, icon: IC.master, bg: 'var(--slate-soft)', fg: 'var(--slate)' },
     kassa_in:  { name: 'Пополнение кассы', box: 'kassa', sign: 1, icon: IC.kassa, bg: 'var(--blue-soft)', fg: 'var(--blue)' },
     zp_in:     { name: 'Пополнение зарплатной кассы', box: 'zp', sign: 1, icon: IC.zp, bg: 'var(--green-soft)', fg: 'var(--green)' },
-    kassa_fix: { name: 'Корректировка кассы', box: 'kassa', sign: 1, icon: IC.fix, bg: 'var(--blue-soft)', fg: 'var(--blue)' },
-    zp_fix:    { name: 'Корректировка зарплатной кассы', box: 'zp', sign: 1, icon: IC.fix, bg: 'var(--green-soft)', fg: 'var(--green)' }
+    kassa_fix: { name: 'Остаток кассы', set: true, box: 'kassa', sign: 1, icon: IC.fix, bg: 'var(--blue-soft)', fg: 'var(--blue)' },
+    zp_fix:    { name: 'Остаток зарплатной кассы', set: true, box: 'zp', sign: 1, icon: IC.fix, bg: 'var(--green-soft)', fg: 'var(--green)' }
   };
 
   // Деньги заказа — только от цены для клиента (калькулятор считает отдельно и не меняется):
@@ -211,6 +211,20 @@
     return { G, svc, base, cost, kassa, zpPart, own, masters, labor: lm + li, material: cost - lm - li, zp: zpPart + svc + own, est: !f };
   }
   const pctTxt = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + '%';
+  // Остатки касс на момент ts: по порядку времени; «Остаток кассы» (корректировка) ставит фактическую сумму,
+  // дальше к ней прибавляются заказы и операции, сделанные позже.
+  function balances(ts) {
+    const st = startTs(), bal = { kassa: 0, zp: 0, master: 0 }, ev = [];
+    ((data && data.orders) || []).filter(o => o.closed_at >= st && o.closed_at <= ts).forEach(o => ev.push([o.closed_at, 0, o]));
+    ((data && data.ops) || []).filter(o => OPT[o.type] && o.d >= st && o.d <= ts).forEach(o => ev.push([o.d, 1, o]));
+    ev.sort((a, b) => a[0] - b[0] || a[1] - b[1] || String(a[2].id).localeCompare(String(b[2].id)));
+    for (const [, k, o] of ev) {
+      if (!k) { const s = split(o); bal.kassa += s.kassa; bal.zp += s.zp; bal.master += s.masters; continue; }
+      const t = OPT[o.type];
+      if (t.set) bal[t.box] = o.a; else bal[t.box] += t.sign * o.a;
+    }
+    return bal;
+  }
   function startTs() {   // учёт касс — с этой даты (по умолчанию начало текущего месяца)
     const s = ((data && data.ops) || []).filter(o => o.type === 'start').sort((a, b) => b.d - a.d)[0];
     if (s) return s.a;
@@ -229,9 +243,7 @@
     if (!data) return;
     const st = startTs(), orders = data.orders || [], ops = (data.ops || []).filter(o => OPT[o.type]);
     // остатки касс — с даты начала учёта
-    const bal = { kassa: 0, zp: 0, master: 0 };
-    orders.filter(o => o.closed_at >= st).forEach(o => { const s = split(o); bal.kassa += s.kassa; bal.zp += s.zp; bal.master += s.masters; });
-    ops.filter(o => o.d >= st).forEach(o => { const t = OPT[o.type]; bal[t.box] += t.sign * o.a; });
+    const bal = balances(Infinity);
     $('bal').innerHTML = `
       <div class="b-card"><div class="b-top"><span class="b-ic" style="background:var(--blue-soft);color:var(--blue)">${IC.kassa}</span>Касса</div><b class="b-sum${bal.kassa < 0 ? ' neg' : ''}">${sgn(bal.kassa)}</b><span class="b-sub">на материал и расходы</span></div>
       <div class="b-card"><div class="b-top"><span class="b-ic" style="background:var(--green-soft);color:var(--green)">${IC.zp}</span>Зарплатная</div><b class="b-sum${bal.zp < 0 ? ' neg' : ''}">${sgn(bal.zp)}</b><span class="b-sub">чистая прибыль + наша работа</span></div>
@@ -265,11 +277,13 @@
       if (it.k === 'o') { const s = split(it.o);
         html += `<button type="button" class="op" data-order="${it.o.id}"><span class="tile" style="background:var(--soft);color:var(--accent)">${IC.order}</span><span class="o-b"><span class="o-t">${esc(it.o.name || 'Сделка ' + it.o.id)}</span><span class="o-s">в зарплату ${rub(s.zp)} · в кассу ${rub(s.kassa)}</span></span><span class="o-v plus">+${rub(s.G)}</span></button>`;
       } else { const t = OPT[it.o.type];
-        html += `<button type="button" class="op" data-op="${esc(it.o.id)}"><span class="tile" style="background:${t.bg};color:${t.fg}">${t.icon}</span><span class="o-b"><span class="o-t">${esc(it.o.n || t.name)}</span><span class="o-s">${esc(t.name)}</span></span><span class="o-v${t.sign * it.o.a > 0 ? ' plus' : ''}">${t.sign * it.o.a > 0 ? '+' : '−'}${rub(Math.abs(it.o.a))}</span></button>`;
+        html += t.set
+          ? `<button type="button" class="op" data-op="${esc(it.o.id)}"><span class="tile" style="background:${t.bg};color:${t.fg}">${t.icon}</span><span class="o-b"><span class="o-t">${esc(t.name)}: ${rub(it.o.a)}</span><span class="o-s">${esc(it.o.n || 'корректировка — фактическая сумма')}</span></span><span class="o-v">= ${rub(it.o.a)}</span></button>`
+          : `<button type="button" class="op" data-op="${esc(it.o.id)}"><span class="tile" style="background:${t.bg};color:${t.fg}">${t.icon}</span><span class="o-b"><span class="o-t">${esc(it.o.n || t.name)}</span><span class="o-s">${esc(t.name)}</span></span><span class="o-v${t.sign * it.o.a > 0 ? ' plus' : ''}">${t.sign * it.o.a > 0 ? '+' : '−'}${rub(Math.abs(it.o.a))}</span></button>`;
       }
     }
     $('ops').innerHTML = html ? html + '</div>' : '<div class="group"><div class="empty">За этот период операций нет.</div></div>';
-    $('startNote').innerHTML = `Остатки касс считаются с <b>${new Date(st * 1000).toLocaleDateString('ru-RU')}</b>. Начальные суммы — через «•••» → «Корректировка».`;
+    $('startNote').innerHTML = `Остатки касс считаются с <b>${new Date(st * 1000).toLocaleDateString('ru-RU')}</b>. Фактические суммы — через «•••» → «Корректировка».`;
   }
 
   // === посредник ===
@@ -313,10 +327,11 @@
     let cur = groups[0];
     const draw = () => {
       const t = OPT[cur], fix = /_fix$/.test(cur);
-      openSheet(`<h2>${esc(fix ? 'Корректировка остатка' : t.name)}</h2><div class="bs-sub">${esc(fix ? 'Начальная сумма или исправление: со знаком «−», если нужно уменьшить' : t.box === 'kassa' ? 'Деньги уходят из кассы' : t.box === 'zp' ? 'Из зарплатной кассы' : 'Уменьшает долг мастерам')}</div>
+      const nowBal = fix ? balances(Infinity)[t.box] : 0;
+      openSheet(`<h2>${esc(fix ? 'Корректировка остатка' : t.name)}</h2><div class="bs-sub">${fix ? `Впишите, сколько денег фактически лежит ${t.box === 'kassa' ? 'в кассе' : 'в зарплатной кассе'}. Сейчас в приложении: <b>${sgn(nowBal)}</b>` : esc(t.box === 'kassa' ? 'Деньги уходят из кассы' : t.box === 'zp' ? 'Из зарплатной кассы' : 'Уменьшает долг мастерам')}</div>
         ${groups.length > 1 ? `<div class="typeseg">${groups.map(g => `<button type="button" data-g="${g}" class="${g === cur ? 'on' : ''}">${OPT[g].box === 'kassa' ? 'Касса' : 'Зарплатная'}</button>`).join('')}</div>` : ''}
         <div class="grp">
-          <div class="fld"><label for="opA">Сумма</label><input id="opA" class="big" inputmode="${fix ? 'text' : 'decimal'}" placeholder="0 ₽" autocomplete="off"></div>
+          <div class="fld"><label for="opA">${fix ? 'Фактически' : 'Сумма'}</label><input id="opA" class="big" inputmode="decimal" placeholder="0 ₽" autocomplete="off"></div>
           <div class="fld"><label for="opN">${cur === 'salary' ? 'Кому' : 'Комментарий'}</label><input id="opN" placeholder="${cur === 'expense' ? 'например, ткань Омега' : ''}" autocomplete="off"></div>
           <div class="fld"><label for="opD">Дата</label><input id="opD" type="date" value="${today()}"></div>
         </div>
@@ -328,11 +343,11 @@
       setTimeout(() => $('opA').focus(), 320);
       $('opSave').onclick = async () => {
         let a = parseFloat(String($('opA').value).replace(/\s/g, '').replace(',', '.').replace('−', '-'));
-        if (!a || (!fix && a < 0)) { $('opA').focus(); toast('Введите сумму', true); return; }
-        const dv = $('opD').value, d = dv ? Math.floor(new Date(dv + 'T12:00:00').getTime() / 1000) : Math.floor(Date.now() / 1000);
+        if (fix ? !(a >= 0 || a < 0) : (!a || a < 0)) { $('opA').focus(); toast('Введите сумму', true); return; }
+        const dv = $('opD').value, d = !dv || dv === today() ? Math.floor(Date.now() / 1000) : Math.floor(new Date(dv + 'T23:59:00').getTime() / 1000);
         $('opSave').disabled = true; $('opSave').textContent = 'Сохраняю…';
         try { const r = await api('/fin-op', { op: { type: cur, amount: a, note: $('opN').value.trim(), date: d } });
-          data.ops = [...(data.ops || []), { id: r.id, ...r.op }]; ls.set(CACHE_KEY, data); closeSheet(); render(); toast(`${t.name}: ${rub(Math.abs(a))}`);
+          data.ops = [...(data.ops || []), { id: r.id, ...r.op }]; ls.set(CACHE_KEY, data); closeSheet(); render(); toast(fix ? `${t.name}: ${sgn(a)}` : `${t.name}: ${rub(Math.abs(a))}`);
         } catch (e) { $('opSave').disabled = false; $('opSave').textContent = 'Сохранить'; toast('Не сохранено: ' + e.message, true); }
       };
     };
@@ -375,7 +390,7 @@
   $('addSalary').onclick = () => opSheet('salary');
   $('moreOps').onclick = () => {
     openSheet(`<h2>Операции</h2><div class="bs-sub">Ручные движения денег</div><div class="grp">
-      ${[['expense', 'Расход из кассы', 'материал, бензин, аренда…'], ['salary', 'Выплата зарплаты', 'из зарплатной кассы'], ['master', 'Выплата мастерам', 'за сборку и установку'], ['in', 'Пополнение', 'положить деньги в кассу'], ['fix', 'Корректировка', 'начальный остаток или исправление']].map(([k, t, s]) => {
+      ${[['expense', 'Расход из кассы', 'материал, бензин, аренда…'], ['salary', 'Выплата зарплаты', 'из зарплатной кассы'], ['master', 'Выплата мастерам', 'за сборку и установку'], ['in', 'Пополнение', 'положить деньги в кассу'], ['fix', 'Корректировка', 'вписать, сколько денег фактически в кассе']].map(([k, t, s]) => {
         const o = OPT[{ in: 'kassa_in', fix: 'kassa_fix' }[k] || k];
         return `<button type="button" class="opt" data-k="${k}"><span class="tile" style="background:${o.bg};color:${o.fg}">${o.icon}</span><span><span class="o-t">${t}</span><span class="o-s">${s}</span></span></button>`; }).join('')}
       <button type="button" class="opt" data-k="shares"><span class="tile" style="background:var(--violet-soft);color:var(--violet)">${SVG('<path d="M12 3v9l7 4"/><circle cx="12" cy="12" r="9"/>')}</span><span><span class="o-t">Доли от заказа</span><span class="o-s">${(s => `${pctTxt(s.c)} себестоимость · ${pctTxt(s.k)} касса · ${pctTxt(s.z)} зарплата`)(shares())}</span></span></button>
@@ -401,7 +416,7 @@
     const pb = e.target.closest('[data-op]');
     if (pb) { const o = (data.ops || []).find(x => x.id === pb.dataset.op); if (!o) return; const t = OPT[o.type];
       openSheet(`<h2>${esc(t.name)}</h2><div class="bs-sub">${new Date(o.d * 1000).toLocaleDateString('ru-RU')}${o.n ? ' · ' + esc(o.n) : ''}</div>
-        <div class="grp"><div class="line"><span class="l">Сумма</span><span class="v">${sgn(t.sign * o.a)}</span></div></div>
+        <div class="grp"><div class="line"><span class="l">${t.set ? 'Установлен остаток' : 'Сумма'}</span><span class="v">${t.set ? rub(o.a) : sgn(t.sign * o.a)}</span></div></div>
         <button type="button" class="sbtn danger" id="opDel">Удалить операцию</button><button type="button" class="sbtn ghost" id="opCl">Закрыть</button>`);
       $('opCl').onclick = closeSheet;
       $('opDel').onclick = async () => { if (!confirm('Удалить операцию?')) return;

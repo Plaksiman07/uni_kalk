@@ -31,12 +31,17 @@ await p.click('#addSalary'); await p.waitForTimeout(400); await p.fill('#opA', '
 // выплата мастерам и корректировка
 await p.click('#moreOps'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'fin_more.png' }); await p.click('[data-k="master"]'); await p.waitForTimeout(300); await p.fill('#opA', '300'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
 await p.click('#moreOps'); await p.waitForTimeout(300); await p.click('[data-k="fix"]'); await p.waitForTimeout(300); await p.fill('#opA', '20000'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
-[k, z, m] = await bal(); chk('мастерам 0, касса +20000 = 27000', m === 0 && k === 27000, `${k} / ${m}`);
+[k, z, m] = await bal(); chk('мастерам 0; корректировка: в кассе фактически 20000', m === 0 && k === 20000, `${k} / ${m}`);
 // после обновления — всё сохранено у посредника
-await p.reload(); await p.waitForTimeout(1500); [k, z, m] = await bal(); chk('после обновления то же', k === 27000 && z === 4300, `${k} / ${z}`);
+await p.reload(); await p.waitForTimeout(1500); [k, z, m] = await bal(); chk('после обновления то же', k === 20000 && z === 4300, `${k} / ${z}`);
+await p.click('#moreOps'); await p.waitForTimeout(300); await p.click('[data-k="fix"]'); await p.waitForTimeout(300);
+chk('в шторке видно текущий остаток', /20 000/.test((await p.textContent('#bsBody .bs-sub')).replace(/\s/g, ' ')));
+await p.fill('#opA', '5974'); await p.click('#opSave'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
+[k, z, m] = await bal(); chk('повторная корректировка ставит сумму, а не прибавляет', k === 5974, String(k));
+await p.screenshot({ path: OUT + 'fin_fix.png', fullPage: true });
 // удаление операции
 await p.click('[data-op] >> nth=0'); await p.waitForTimeout(300); await p.click('#opDel'); await p.waitForSelector('#toast.show'); await p.waitForTimeout(300);
-chk('операция удалена', (await p.$$('[data-op]')).length === 3);
+chk('операция удалена', (await p.$$('[data-op]')).length === 4);
 // карточка заказа
 await p.click('[data-order="603"]'); await p.waitForTimeout(400); await p.screenshot({ path: OUT + 'fin_order.png' });
 { const t = (await p.textContent('#bsBody')).replace(/\s/g, ' '); chk('разбор заказа 603: в зарплату 2 200, касса 2 000', /2 200/.test(t) && /2 000/.test(t) && /работа мастеров/.test(t)); }

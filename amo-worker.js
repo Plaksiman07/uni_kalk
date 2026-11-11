@@ -303,7 +303,7 @@ export default {
         if (url.pathname === '/fin-op') {
           const o = d.op || {}, amount = Math.round((Number(o.amount) || 0) * 100) / 100;
           const TYPES = ['expense', 'salary', 'master', 'kassa_in', 'zp_in', 'kassa_fix', 'zp_fix', 'start', 'cfg'];
-          if (!TYPES.includes(o.type) || !amount) return json({ error: 'Неверная операция' }, 400);
+          if (!TYPES.includes(o.type) || (!amount && !/_fix$/.test(o.type))) return json({ error: 'Неверная операция' }, 400);
           const date = Number(o.date) || Math.floor(Date.now() / 1000);
           const id = `op:${String(date).padStart(11, '0')}:${Math.random().toString(36).slice(2, 8)}`;
           const meta = { type: o.type, a: amount, n: String(o.note || '').slice(0, 300), d: date };
