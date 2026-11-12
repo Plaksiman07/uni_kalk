@@ -45,7 +45,7 @@ EMBED_HEAD = """  <script>
       if (!m) return;
       window.SP_EMBED = m[1];
       document.documentElement.className += ' sp-embed';
-      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz|vsn)CalcState1|spExtra:.*)$/;
+      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz|vsn|pleat)CalcState1|spExtra:.*)$/;
       var key = function (k) { return re.test(k) ? k + '@combo:' + window.SP_EMBED : k; };
       var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem;
       P.getItem = function (k) { return g.call(this, key(k)); };
@@ -149,13 +149,24 @@ DEFS['vsn.html']='''
     }
     function amoTags() { const d = window.calcData; return ['Вставная', ...d.colors, `${d.totals.qty} шт`]; }
 '''
+DEFS['pleat.html']='''
+    const AMO_CALC_ID = 'pleat', AMO_CALC_NAME = 'Шторы плиссе', AMO_PIPELINE = 'Солнцезащитные системы';
+    function amoDetails() { const d = window.calcData; return ['Изделие: шторы плиссе', `Ткань: ${countBy("type", matLabel)}`, `Профиль: ${d.colors.join(', ')}`]; }
+    function amoItemText(it) { return `${fmtNum(it.w)}×${fmtNum(it.h)} см, ${it.qty} шт, ${matLabel(it.type)}, профиль ${colorNameOf(it.eff ? it.eff.color : ORD.color)}${it.color ? ' (' + it.color + ')' : ''}`; }
+    function amoItemField(it) { return `${String(fmtNum(it.w)).replace('.', ',')}×${String(fmtNum(it.h)).replace('.', ',')}${it.qty > 1 ? ', ' + it.qty + ' шт' : ''} · ${matLabel(it.type)}`; }
+    function amoFields() {
+      const d = window.calcData;
+      return { 'Материал': 'Плиссе: ' + [...new Set(d.items.map(it => matLabel(it.type)))].join(' / '), 'Цвет': d.colors.length === 1 ? d.colors[0] : '' };
+    }
+    function amoTags() { return ['Шторы плиссе', `${window.calcData.totals.qty} шт`]; }
+'''
 DEFS['uni2.html']=DEFS['uni.html'].replace("['UNI I', ", "['UNI II', ").replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'").replace(" (Ш гот. ${cutParts(it.w, it.h).wFinished})", " по штапику")
 assert "'uni2'" in DEFS['uni2.html'] and 'по штапику' in DEFS['uni2.html']
 DEFS['zebra.html']=DEFS['uni.html'].replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'zebra', AMO_CALC_NAME = 'Рулонные шторы зебра UNI I'").replace("['UNI I', ", "['UNI I зебра', ")
 assert "'zebra'" in DEFS['zebra.html'] and 'UNI I зебра' in DEFS['zebra.html']
 DEFS['zebra2.html']=DEFS['uni2.html'].replace("AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'", "AMO_CALC_ID = 'zebra2', AMO_CALC_NAME = 'Рулонные шторы зебра UNI II'").replace("['UNI II', ", "['UNI II зебра', ")
 assert "'zebra2'" in DEFS['zebra2.html'] and 'UNI II зебра' in DEFS['zebra2.html']
-for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('zebra2.html','zebra2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html'),('vsn.html','vsn_pre_amo.html')]:
+for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('zebra2.html','zebra2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html'),('vsn.html','vsn_pre_amo.html'),('pleat.html','pleat_pre_amo.html')]:
     s=open(S+src).read()
     def rep(a,b):
         global s
