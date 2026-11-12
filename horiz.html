@@ -1255,7 +1255,7 @@
       const laborWithMarkup = S.laborMarkup === 1;
       const matNoTrip = costProfile + costCloth + costParts;
       items.forEach(it => {
-        it.lab = unitLabor * it.qty;
+        it.lab = (it.unitLabor != null ? it.unitLabor : unitLabor) * it.qty;
         const mat = it.unitMat * it.qty;
         it.matCost = mat + (matNoTrip > 0 ? tripFee * mat / matNoTrip : (t.qty ? tripFee * it.qty / t.qty : 0));   // выезд — пропорционально
         it.lineCost = it.matCost + it.lab;

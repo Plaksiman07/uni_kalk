@@ -1163,7 +1163,7 @@
       const laborWithMarkup = S.laborMarkup === 1;
       const matNoTrip = costProfile + costCloth + costParts;
       items.forEach(it => {
-        it.lab = unitLabor * it.qty;
+        it.lab = (it.unitLabor != null ? it.unitLabor : unitLabor) * it.qty;
         const mat = it.unitMat * it.qty;
         it.mat = mat + (matNoTrip > 0 ? tripFee * mat / matNoTrip : (t.qty ? tripFee * it.qty / t.qty : 0));   // выезд — пропорционально
         it.lineCost = it.mat + it.lab;
@@ -1196,6 +1196,7 @@
             framePieces.push({ len: it.cut.profW, n: it.n, kind: 'Ш' }, { len: it.cut.profW, n: it.n, kind: 'Ш' },
                              { len: it.cut.profH, n: it.n, kind: 'В' }, { len: it.cut.profH, n: it.n, kind: 'В' });
             impPieces.push({ len: it.cut.imp, n: it.n, kind: 'С' });
+            if (it.cut.impN > 1) impPieces.push({ len: it.cut.imp, n: it.n, kind: 'И' });
           }
         });
         return framePieces.length ? { color: col.key, name: col.name, frame: packBars(framePieces), imp: packBars(impPieces) } : null;

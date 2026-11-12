@@ -550,7 +550,8 @@
   function laborOf(w, d, items) {
     let S = {}; try { S = w.eval('SETTINGS') || {}; } catch (e) {}
     const n = items.reduce((a, it) => a + it.qty, 0);
-    return { make: (Number(S.laborMake) || 0) * n, install: d.noInstall ? 0 : (Number(S.laborInstall) || 0) * n };
+    const make = items.reduce((a, it) => a + (it.labMake != null ? Number(it.labMake) || 0 : Number(S.laborMake) || 0) * it.qty, 0);
+    return { make, install: d.noInstall ? 0 : (Number(S.laborInstall) || 0) * n };
   }
   // деньги заказа: чистая прибыль → зарплатная касса; остаток (сумма − прибыль) пополам: расходы на изготовление и касса.
   // Из расходов на изготовление — работа: «сами» → в нашу зарплату, иначе — зарплата мастерам.

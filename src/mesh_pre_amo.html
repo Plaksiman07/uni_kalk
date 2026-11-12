@@ -513,15 +513,16 @@
       return {
         profW: r1(w - 6),        // профиль по ширине, 2 шт
         profH: r1(h - 6),        // профиль по высоте, 2 шт
-        imp: r1(w - 4.7),        // импост, 1 шт
-        impMount: r1(h / 2),     // крепление импоста (середина высоты)
+        imp: r1(w - 4.7),        // импост: 1 шт, от 160 см высоты — 2 шт
+        impN: h >= 160 ? 2 : 1,
+        impMount: h >= 160 ? `${r1(h / 3)} и ${r1(h * 2 / 3)}` : r1(h / 2),     // крепление импоста: середина высоты (2 импоста — по третям)
         handleMount: r1(h / 2 + 10)  // крепление ручки = креп. импоста + 10
       };
     }
 
     // === НАСТРОЙКИ ===
     const DEFAULT_SETTINGS = {
-      laborMake: 150, laborInstall: 200,
+      laborMake: 150, laborMakeAntipyl: 200, laborMakeAntikoshka: 200, laborInstall: 200,
       profile: 100, impost: 100, colorExtra: 0,
       clothStandard: 120, clothAntimoshka: 150, clothAntipyl: 250, clothAntikoshka: 800, clothWaste: 10,
       cord: 4, corner: 50, impConn: 5, mountKit: 50, handle: 15,
@@ -534,7 +535,9 @@
     };
     const SETTINGS_DEF = [
       { group: 'Работы', items: [
-        ['laborMake', 'Изготовление, ₽ за сетку'],
+        ['laborMake', 'Изготовление, ₽ за сетку (стандарт, антимошка)'],
+        ['laborMakeAntipyl', 'Изготовление антипыли, ₽ за сетку'],
+        ['laborMakeAntikoshka', 'Изготовление антикошки, ₽ за сетку'],
         ['laborInstall', 'Установка, ₽ за сетку'] ] },
       { group: 'Профиль', items: [
         ['profile', 'Профиль рамочный, ₽/м.п.'],
@@ -549,7 +552,7 @@
       { group: 'Комплектующие (цена за единицу)', items: [
         ['cord', 'Шнур закаточный, ₽/м.п.'],
         ['corner', 'Уголки соединительные, ₽ за 4 шт (на сетку)'],
-        ['impConn', 'Соединитель импоста, ₽/шт (2 на сетку)'],
+        ['impConn', 'Соединитель импоста, ₽/шт (2 на импост)'],
         ['mountKit', 'Крепления, ₽ за комплект на сетку'],
         ['handle', 'Ручки, ₽ за 2 шт (на сетку)'] ] },
       { group: 'Наценки и скидки', items: [
@@ -873,22 +876,24 @@
       const mw = 1 + S.metalWaste / 100;
       const CLOTH = { standard: S.clothStandard, antimoshka: S.clothAntimoshka, antipyl: S.clothAntipyl, antikoshka: S.clothAntikoshka };
       const MARKUP = { standard: S.markupStandard, antimoshka: S.markupAntimoshka, antipyl: S.markupAntipyl, antikoshka: S.markupAntikoshka };
-      const t = { qty: 0, frameCm: 0, impCm: 0, clothM: 0, cordCm: 0, byColor: {}, byType: {} };
+      const t = { qty: 0, frameCm: 0, impCm: 0, impQty: 0, clothM: 0, cordCm: 0, byColor: {}, byType: {} };
       let costProfile = 0, costCloth = 0, costParts = 0, costLabor = 0;
       const unitLabor = S.laborMake + (noInstall ? 0 : S.laborInstall);
       items.forEach(it => {
         const c = it.cut;
         const colorK = it.color === 'white' ? 1 : 1 + S.colorExtra / 100;
-        const frameCm = 2 * (c.profW + c.profH), impCm = c.imp;
+        const frameCm = 2 * (c.profW + c.profH), impCm = c.imp * c.impN;
+        const make = it.type === 'antipyl' ? S.laborMakeAntipyl : it.type === 'antikoshka' ? S.laborMakeAntikoshka : S.laborMake;
+        it.labMake = make; it.unitLabor = make + (noInstall ? 0 : S.laborInstall);
         const clothM = (it.h / 100) * (1 + S.clothWaste / 100);   // полотно, м.п.: по высоте сетки + запас
         const prof = (frameCm / 100) * mw * S.profile * colorK + (impCm / 100) * mw * S.impost * colorK;
         const cloth = clothM * (CLOTH[it.type] || 0);
-        const parts = (frameCm / 100) * S.cord + S.corner + 2 * S.impConn + S.mountKit + S.handle;
+        const parts = (frameCm / 100) * S.cord + S.corner + 2 * c.impN * S.impConn + S.mountKit + S.handle;
         it.markup = MARKUP[it.type] || 1;   // наценка по типу полотна этой сетки
         it.unitMat = prof + cloth + parts;
-        it.unitCost = it.unitMat + unitLabor;
-        costProfile += prof * it.qty; costCloth += cloth * it.qty; costParts += parts * it.qty; costLabor += unitLabor * it.qty;
-        t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM * it.qty; t.cordCm += frameCm * it.qty;
+        it.unitCost = it.unitMat + it.unitLabor;
+        costProfile += prof * it.qty; costCloth += cloth * it.qty; costParts += parts * it.qty; costLabor += it.unitLabor * it.qty;
+        t.impQty += c.impN * it.qty; t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM * it.qty; t.cordCm += frameCm * it.qty;
         const bc = t.byColor[it.color] || (t.byColor[it.color] = { frameCm: 0, impCm: 0 });
         bc.frameCm += frameCm * it.qty; bc.impCm += impCm * it.qty;
         t.byType[it.type] = (t.byType[it.type] || 0) + clothM * it.qty;
@@ -900,7 +905,7 @@
       const laborWithMarkup = S.laborMarkup === 1;
       const matNoTrip = costProfile + costCloth + costParts;
       items.forEach(it => {
-        it.lab = unitLabor * it.qty;
+        it.lab = (it.unitLabor != null ? it.unitLabor : unitLabor) * it.qty;
         const mat = it.unitMat * it.qty;
         it.mat = mat + (matNoTrip > 0 ? tripFee * mat / matNoTrip : (t.qty ? tripFee * it.qty / t.qty : 0));   // выезд — пропорционально
         it.lineCost = it.mat + it.lab;
@@ -933,6 +938,7 @@
             framePieces.push({ len: it.cut.profW, n: it.n, kind: 'Ш' }, { len: it.cut.profW, n: it.n, kind: 'Ш' },
                              { len: it.cut.profH, n: it.n, kind: 'В' }, { len: it.cut.profH, n: it.n, kind: 'В' });
             impPieces.push({ len: it.cut.imp, n: it.n, kind: 'И' });
+            if (it.cut.impN > 1) impPieces.push({ len: it.cut.imp, n: it.n, kind: 'И' });
           }
         });
         return framePieces.length ? { color: col.key, name: col.name, frame: packBars(framePieces), imp: packBars(impPieces) } : null;
@@ -986,7 +992,7 @@
         ...MESH_TYPES.filter(x => t.byType[x.key]).map(x => [`Полотно «${x.name}» (с запасом ${fmtNum(SETTINGS.clothWaste)}%)`, 'м.п.', t.byType[x.key].toFixed(2)]),
         ['Шнур закаточный', 'м.п.', m(t.cordCm)],
         ['Уголок соединительный', 'шт', t.qty * 4],
-        ['Соединитель импоста', 'шт', t.qty * 2],
+        ['Соединитель импоста', 'шт', (t.impQty || t.qty) * 2],
         ['Крепления', 'компл', t.qty],
         ['Ручка', 'шт', t.qty * 2]
       ];
@@ -1108,10 +1114,10 @@
         <div class="table-scroll"><table class="tech-table">
           <thead><tr><th>№</th><th class="left">Комната</th><th>Кол-во</th><th>Размер<small>Ш × В</small></th>${mixed ? `<th>${optHead()}</th>` : ''}
             <th>Ш рез<small>(Ш − 6), 2 шт</small></th><th>В рез<small>(В − 6), 2 шт</small></th>
-            <th>Импост<small>(Ш − 4,7), 1 шт</small></th><th>Креп. имп.<small>(В / 2)</small></th><th>Креп. руч.<small>(креп. имп. + 10)</small></th></tr></thead>
+            <th>Импост<small>(Ш − 4,7), от В 160 — 2 шт</small></th><th>Креп. имп.<small>(В / 2)</small></th><th>Креп. руч.<small>(креп. имп. + 10)</small></th></tr></thead>
           <tbody>${d.items.map(it => `<tr><td>${it.n}</td><td class="left">${esc(it.room)}</td><td>${it.qty} шт</td>
             <td>${fmtNum(it.w)}×${fmtNum(it.h)}</td>${mixed ? `<td class="opt">${esc(optText(it))}</td>` : ''}<td class="key">${it.cut.profW} см</td><td class="key">${it.cut.profH} см</td>
-            <td class="key">${it.cut.imp} см</td><td class="ctrl">${it.cut.impMount} см</td><td class="ctrl">${it.cut.handleMount} см</td></tr>`).join('')}</tbody></table></div>`;
+            <td class="key">${it.cut.imp} см${it.cut.impN > 1 ? ' × 2' : ''}</td><td class="ctrl">${it.cut.impMount} см</td><td class="ctrl">${it.cut.handleMount} см</td></tr>`).join('')}</tbody></table></div>`;
 
       document.getElementById('techBars').innerHTML =
         `<div class="bars-legend">Цвет хлыста — цвет профиля${d.mixedColor ? ', каждый цвет раскраивается отдельно' : ` (${colorName().toLowerCase()})`}. Рама — с пазом под шнур, импост — без паза. На отрезке: номер сетки · Ш / В / Имп · длина в см. Красная линия — рез, пропил ${cmTxt(SETTINGS.sawKerf)} см.</div>` +
@@ -1477,7 +1483,7 @@
       const compRows = componentsList().map(r => `<tr>${td(esc(r[0]), 'text-align:left;')}${td(r[1])}${td('<strong>' + r[2] + '</strong>')}</tr>`).join('');
       const cutRows = d.items.map(it => `<tr><td>${it.n}</td><td style="text-align:left;">${esc(it.room)}</td><td>${it.qty}</td><td>${fmtNum(it.w)}×${fmtNum(it.h)}</td>${mixed ? `<td style="font-weight:bold; color:#8e44ad; white-space:nowrap;">${esc(optText(it))}</td>` : ''}
         <td style="font-weight:bold; color:#16a085;">${it.cut.profW}</td><td style="font-weight:bold; color:#16a085;">${it.cut.profH}</td>
-        <td style="font-weight:bold; color:#16a085;">${it.cut.imp}</td><td style="font-weight:bold; color:#d35400;">${it.cut.impMount}</td><td style="font-weight:bold; color:#d35400;">${it.cut.handleMount}</td><td></td></tr>`).join('');
+        <td style="font-weight:bold; color:#16a085;">${it.cut.imp}${it.cut.impN > 1 ? ' × 2' : ''}</td><td style="font-weight:bold; color:#d35400;">${it.cut.impMount}</td><td style="font-weight:bold; color:#d35400;">${it.cut.handleMount}</td><td></td></tr>`).join('');
 
       const sheetHeader = (title, extra) => `
         <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #8e44ad; padding-bottom: 6px; margin-bottom: 8px;">
@@ -1636,7 +1642,7 @@
                 <th>№</th><th style="text-align: left;">Комната</th><th>Кол-во, шт</th><th>Размер Ш × В</th>${mixed ? `<th>${optHead()}</th>` : ''}
                 <th>Ш рез<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(Ш − 6), 2 шт</span></th>
                 <th>В рез<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(В − 6), 2 шт</span></th>
-                <th>Импост<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(Ш − 4,7), 1 шт</span></th>
+                <th>Импост<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(Ш − 4,7), от В 160 — 2 шт</span></th>
                 <th>Креп. имп.<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(В / 2)</span></th>
                 <th>Креп. руч.<br><span style="font-size:10px; font-weight:normal; color:#7f8c8d;">(креп. имп. + 10)</span></th>
                 <th>Готово</th>
