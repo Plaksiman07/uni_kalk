@@ -10,7 +10,7 @@ await p.goto(B + 'index.html'); await p.evaluate(() => localStorage.clear()); aw
 chk('главный: «Новый заказ», калькуляторов нет', await p.isVisible('#newBtn') && !(await p.isVisible('a[href="uni.html"]')));
 await p.screenshot({ path: OUT + 'idx_home.png', fullPage: true });
 await p.click('a[href="#settings"]'); await p.waitForTimeout(150);
-chk('настройки: все 8 калькуляторов', (await p.$$eval('#viewSettings a.row', e => e.length)) === 8 && await p.isVisible('a[href="uni.html"]'));
+chk('настройки: все 9 калькуляторов', (await p.$$eval('#viewSettings a.row', e => e.length)) === 9 && await p.isVisible('a[href="uni.html"]'));
 await p.screenshot({ path: OUT + 'idx_settings.png', fullPage: true });
 await p.goBack(); await p.waitForTimeout(150); chk('назад — главный', await p.isVisible('#newBtn'));
 // подготовка: обычный UNI со своим заказом (не должен пострадать)

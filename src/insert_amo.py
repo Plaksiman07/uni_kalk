@@ -45,7 +45,7 @@ EMBED_HEAD = """  <script>
       if (!m) return;
       window.SP_EMBED = m[1];
       document.documentElement.className += ' sp-embed';
-      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz)CalcState1|spExtra:.*)$/;
+      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz|vsn)CalcState1|spExtra:.*)$/;
       var key = function (k) { return re.test(k) ? k + '@combo:' + window.SP_EMBED : k; };
       var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem;
       P.getItem = function (k) { return g.call(this, key(k)); };
@@ -138,13 +138,24 @@ DEFS['horiz.html']='''
     }
     function amoTags() { return ['Горизонтальные', `${window.calcData.totals.qty} шт`]; }
 '''
+DEFS['vsn.html']='''
+    const AMO_CALC_ID = 'vsn', AMO_CALC_NAME = 'Вставные сетки', AMO_PIPELINE = 'Москитные сетки';
+    function amoDetails() { return ['Изделие: москитная сетка вставная (VSN)', `Полотно: ${countBy("type", matLabel)}`]; }
+    function amoItemText(it) { return `${fmtNum(it.w)}×${fmtNum(it.h)} см, ${it.qty} шт, ${vsnDesc(it)}${it.color ? ' (' + it.color + ')' : ''}`; }
+    function amoItemField(it) { return `${String(fmtNum(it.w)).replace('.', ',')}×${String(fmtNum(it.h)).replace('.', ',')}${it.qty > 1 ? ', ' + it.qty + ' шт' : ''} · ${matLabel(it.type)}`; }
+    function amoFields() {
+      const d = window.calcData;
+      return { 'Материал': 'Вставная: ' + [...new Set(d.items.map(it => matLabel(it.type)))].join(' / '), 'Цвет': d.colors.length === 1 ? d.colors[0] : '' };
+    }
+    function amoTags() { const d = window.calcData; return ['Вставная', ...d.colors, `${d.totals.qty} шт`]; }
+'''
 DEFS['uni2.html']=DEFS['uni.html'].replace("['UNI I', ", "['UNI II', ").replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'").replace(" (Ш гот. ${cutParts(it.w, it.h).wFinished})", " по штапику")
 assert "'uni2'" in DEFS['uni2.html'] and 'по штапику' in DEFS['uni2.html']
 DEFS['zebra.html']=DEFS['uni.html'].replace("AMO_CALC_ID = 'uni', AMO_CALC_NAME = 'Рулонные шторы UNI I'", "AMO_CALC_ID = 'zebra', AMO_CALC_NAME = 'Рулонные шторы зебра UNI I'").replace("['UNI I', ", "['UNI I зебра', ")
 assert "'zebra'" in DEFS['zebra.html'] and 'UNI I зебра' in DEFS['zebra.html']
 DEFS['zebra2.html']=DEFS['uni2.html'].replace("AMO_CALC_ID = 'uni2', AMO_CALC_NAME = 'Рулонные шторы UNI II'", "AMO_CALC_ID = 'zebra2', AMO_CALC_NAME = 'Рулонные шторы зебра UNI II'").replace("['UNI II', ", "['UNI II зебра', ")
 assert "'zebra2'" in DEFS['zebra2.html'] and 'UNI II зебра' in DEFS['zebra2.html']
-for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('zebra2.html','zebra2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html')]:
+for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),('zebra.html','zebra_pre_amo.html'),('zebra2.html','zebra2_pre_amo.html'),('mesh.html','mesh_pre_amo.html'),('plisse.html','plisse_pre_amo.html'),('vert.html','vert_pre_amo.html'),('horiz.html','horiz_pre_amo.html'),('vsn.html','vsn_pre_amo.html')]:
     s=open(S+src).read()
     def rep(a,b):
         global s
@@ -179,8 +190,8 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     s = s.replace('data-save style="margin:0;">Сохранить</button>', 'data-save style="margin:0;">Готово</button>')
     s = s.replace('Настройки сеток отдельные от рулонных штор.', 'Настройки этого калькулятора хранятся отдельно от других.' if f != 'mesh.html' else 'Настройки сеток отдельные от рулонных штор.')
     s = s.replace('<div class="block-title">Помещения и Размеры</div>\n      <div id="roomsContainer"></div>', '<div class="block-title">Помещения и Размеры</div>\n      <div class="visual-hint" style="text-align:left;">Размеры в см.</div>\n      <div id="roomsContainer"></div>')
-    if f in ('mesh.html', 'vert.html', 'horiz.html'):   # картинка изделия в КП и заказ-наряде
-        MICON = open(S + {'mesh.html': 'mesh_icon.svg', 'vert.html': 'vert_icon.svg', 'horiz.html': 'horiz_icon.svg'}[f]).read()
+    if f in ('mesh.html', 'vert.html', 'horiz.html', 'vsn.html'):   # картинка изделия в КП и заказ-наряде
+        MICON = open(S + {'mesh.html': 'mesh_icon.svg', 'vsn.html': 'mesh_icon.svg', 'vert.html': 'vert_icon.svg', 'horiz.html': 'horiz_icon.svg'}[f]).read()
         rep('                <div style="width: 140px;"></div>\n', '                <div style="width: 140px; text-align: right;">' + MICON + '</div>\n')
         rep('''                <div style="text-align: right; font-size: 13px; color: #7f8c8d;">Дата формирования:<br><strong style="color: #2c3e50;">${dateStr}</strong></div>''',
             '''                <table style="border-collapse: collapse;"><tr>
@@ -225,6 +236,7 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
         ("icon: '🐱'", "icon: \"" + TI('<path d="M5 20V9l-1-5 4 3h8l4-3-1 5v11z"/><path d="M9 13h.01M15 13h.01M10.5 16.5h3"/>').replace('"', "'") + "\""),
         ("icon: '🪟'", "icon: \"" + TI('<rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M8 3l2 3-2 3 2 3-2 3 2 3-2 3" stroke-width="1.5"/><path d="M12 3v18" stroke-width="2.4"/>').replace('"', "'") + "\""),
         ('`🕸 Полотно', '`' + ROOMI('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 12h16M12 3v18"/>') + 'Полотно'),
+        ('`🕸 Сетка', '`' + ROOMI('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 12h16M12 3v18"/>') + 'Сетка'),
         ('`🧵 Ткань', '`' + ROOMI('<path d="M4 4h16v4H4z"/><path d="M6 8v12h12V8"/>') + 'Ткань'),
         ("'🧵 Ткань", "'" + ROOMI('<path d="M4 4h16v4H4z"/><path d="M6 8v12h12V8"/>').replace('"', "\\'") + "Ткань"),
         ('`🪟 Ламели', '`' + ROOMI('<path d="M3 4h18M5 8h14M5 12h14M5 16h14M5 20h14"/>') + 'Ламели'),

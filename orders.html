@@ -484,7 +484,7 @@
   }
   function idbDel(db, key) { return new Promise(res => { try { const r = indexedDB.open(db, 1); r.onupgradeneeded = () => r.result.createObjectStore('kv');
     r.onsuccess = () => { try { const tx = r.result.transaction('kv', 'readwrite'); tx.objectStore('kv').delete(key); tx.oncomplete = () => { r.result.close(); res(); }; } catch (e) { res(); } }; r.onerror = () => res(); } catch (e) { res(); } }); }
-  const CALC_IDS = ['uni', 'uni2', 'zebra', 'zebra2', 'vert', 'horiz', 'mesh', 'plisse'];
+  const CALC_IDS = ['uni', 'uni2', 'zebra', 'zebra2', 'vert', 'horiz', 'mesh', 'plisse', 'vsn'];
   async function editOrder(leadId, btn) {
     const cfg = ls.get(CFG_KEY, {});
     const cur = ls.get('spCombo2', null);

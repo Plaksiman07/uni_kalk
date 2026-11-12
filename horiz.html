@@ -7,7 +7,7 @@
       if (!m) return;
       window.SP_EMBED = m[1];
       document.documentElement.className += ' sp-embed';
-      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz)CalcState1|spExtra:.*)$/;
+      var re = /^((uni|uni2|zebra|zebra2)CalcState(12|1)|(mesh|plisse|vert|horiz|vsn)CalcState1|spExtra:.*)$/;
       var key = function (k) { return re.test(k) ? k + '@combo:' + window.SP_EMBED : k; };
       var P = Storage.prototype, g = P.getItem, s = P.setItem, r = P.removeItem;
       P.getItem = function (k) { return g.call(this, key(k)); };
