@@ -11,7 +11,7 @@ await p.goto(B + 'index.html'); await p.evaluate(() => { localStorage.clear(); l
 await p.goto(B + 'stock.html'); await p.waitForTimeout(800);
 chk('пустой раздел предлагает заполнить', await p.isVisible('#seedBtn'));
 await p.click('#seedBtn'); await p.waitForTimeout(600);
-const n1 = await p.$$eval('#list .it', e => e.length); chk('позиции сеток добавлены', n1 === 15, n1);
+const n1 = await p.$$eval('#list .it', e => e.length); chk('позиции сеток добавлены', n1 === 18, n1);
 // 2. корректировка и мин. остаток для профиля, приход полотна с ценой
 await p.click('.it:has-text("Профиль рамочный, белый")'); await p.waitForTimeout(350); await p.screenshot({ path: OUT + 'st_item.png' });
 await p.fill('#bsBody [data-m]', '10'); await p.press('#bsBody [data-m]', 'Tab'); await p.waitForTimeout(500);
@@ -40,7 +40,7 @@ const leadA = await p.evaluate(() => Number(localStorage.getItem('spComboLead2:S
 chk('сделка А создана', leadA > 1000, leadA);
 it = await item('mesh', 'Профиль рамочный, белый', 'м.п.'); chk('при отправке не списано', it.q === 5);
 // 4. «Готов к установке» → списание; повторно — нет
-let r = await api('/move', { lead_id: leadA, to: 'Готов к установке' }); chk('перевод в «Готов к установке» списал позиции', r.stock_used === 8, JSON.stringify(r));
+let r = await api('/move', { lead_id: leadA, to: 'Готов к установке' }); chk('перевод в «Готов к установке» списал позиции', r.stock_used === 9, JSON.stringify(r));
 it = await item('mesh', 'Профиль рамочный, белый', 'м.п.'); chk('профиль 5 − 9,52 = −4,52', it.q === -4.52, it.q);
 it = await item('mesh', 'Полотно «Стандарт»', 'м.п.'); chk('полотно 100 − 3,74', it.q === 96.26, it.q);
 r = await api('/move', { lead_id: leadA, to: 'won' }); chk('повторно не списывает', !r.stock_used, JSON.stringify(r));

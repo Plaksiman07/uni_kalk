@@ -751,7 +751,7 @@
       laborMake: 150, laborMakeAntipyl: 200, laborMakeAntikoshka: 200, laborInstall: 200,
       profile: 100, impost: 100, colorExtra: 0,
       clothStandard: 120, clothAntimoshka: 150, clothAntipyl: 250, clothAntikoshka: 800, clothWaste: 10,
-      cord: 4, corner: 50, impConn: 5, mountKit: 50, handle: 15,
+      cord: 4, corner: 50, impConn: 5, mountKit: 50, screw: 1, handle: 15,
       markupStandard: 1.72, markupAntimoshka: 2.18, markupAntipyl: 2.35, markupAntikoshka: 1.61,
       discount7: 7, discount12: 12, b2bExtra: 15,
       taxB2B: 6, tripFee: 0, minOrder: 0, roundStep: 10,
@@ -779,7 +779,8 @@
         ['cord', 'Шнур закаточный, ₽/м.п.'],
         ['corner', 'Уголки соединительные, ₽ за 4 шт (на сетку)'],
         ['impConn', 'Соединитель импоста, ₽/шт (2 на импост)'],
-        ['mountKit', 'Крепления, ₽ за комплект на сетку'],
+        ['mountKit', 'Комплект креплений (2 верхних + 2 нижних), ₽ на сетку'],
+        ['screw', 'Саморезы, ₽ за шт (16 на сетку)'],
         ['handle', 'Ручки, ₽ за 2 шт (на сетку)'] ] },
       { group: 'Наценки и скидки', items: [
         ['laborMarkup', 'Изготовление и установка в цене клиента', [[0, 'Без наценки'], [1, 'С наценкой']]],
@@ -1114,14 +1115,14 @@
         const clothM = (it.h / 100) * (1 + S.clothWaste / 100);   // полотно, м.п.: по высоте сетки + запас
         const prof = (frameCm / 100) * mw * S.profile * colorK + (impCm / 100) * mw * S.impost * colorK;
         const cloth = clothM * (CLOTH[it.type] || 0);
-        const parts = (frameCm / 100) * S.cord + S.corner + 2 * c.impN * S.impConn + S.mountKit + S.handle;
+        const parts = (frameCm / 100) * S.cord + S.corner + 2 * c.impN * S.impConn + S.mountKit + 16 * (S.screw || 0) + S.handle;
         it.markup = MARKUP[it.type] || 1;   // наценка по типу полотна этой сетки
         it.unitMat = prof + cloth + parts;
         it.unitCost = it.unitMat + it.unitLabor;
         costProfile += prof * it.qty; costCloth += cloth * it.qty; costParts += parts * it.qty; costLabor += it.unitLabor * it.qty;
         t.impQty += c.impN * it.qty; t.qty += it.qty; t.frameCm += frameCm * it.qty; t.impCm += impCm * it.qty; t.clothM += clothM * it.qty; t.cordCm += frameCm * it.qty;
-        const bc = t.byColor[it.color] || (t.byColor[it.color] = { frameCm: 0, impCm: 0 });
-        bc.frameCm += frameCm * it.qty; bc.impCm += impCm * it.qty;
+        const bc = t.byColor[it.color] || (t.byColor[it.color] = { frameCm: 0, impCm: 0, qty: 0 });
+        bc.frameCm += frameCm * it.qty; bc.impCm += impCm * it.qty; bc.qty += it.qty;
         t.byType[it.type] = (t.byType[it.type] || 0) + clothM * it.qty;
       });
       const tripFee = items.length ? S.tripFee : 0;
@@ -1219,7 +1220,8 @@
         ['Шнур закаточный', 'м.п.', m(t.cordCm)],
         ['Уголок соединительный', 'шт', t.qty * 4],
         ['Соединитель импоста', 'шт', (t.impQty || t.qty) * 2],
-        ['Крепления', 'компл', t.qty],
+        ...cols.map(c => [`Комплект креплений, ${c.name.toLowerCase()} (2 верхних + 2 нижних)`, 'компл', t.byColor[c.key].qty]),
+        ['Саморезы', 'шт', t.qty * 16],
         ['Ручка', 'шт', t.qty * 2]
       ];
     }
@@ -2528,7 +2530,7 @@
     if (!d || !d.items || !d.items.length || d.blocked) return [];
     const num = v => parseFloat(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
     // пояснения в скобках («хлыстов: 3», «с запасом 10%», «2 шт на изделие») убираем, а уточнения вида «(труба)» оставляем
-    const clean = n => String(n).replace(/\s*\(([^()]*)\)\s*$/, (m, x) => /хлыст|запас|шт на|по ширине|по высоте|люверс/i.test(x) ? '' : m).replace(/\s+/g, ' ').trim();
+    const clean = n => String(n).replace(/\s*\(([^()]*)\)\s*$/, (m, x) => /хлыст|запас|шт на|по ширине|по высоте|люверс|верхних/i.test(x) ? '' : m).replace(/\s+/g, ' ').trim();
     let rows = [];
     try { rows = componentsList.length ? componentsList(readOrder().totals) : componentsList(); } catch (e) { rows = []; }
     const out = rows.map(r => ({ n: clean(r[0]), u: String(r[1]), q: num(r[2]) })).filter(x => x.n && x.q > 0);

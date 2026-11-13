@@ -1,0 +1,20 @@
+import { chromium } from '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs';
+const b = await chromium.launch(); const p = await (await b.newContext({ serviceWorkers: 'block' })).newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+let ok = true; const chk = (n, c, x = '') => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + n + ' ' + x); if (!c) ok = false; };
+await p.goto('http://localhost:8765/mesh.html');
+// старые настройки без «саморезов» — подставляется значение по умолчанию
+await p.evaluate(() => { localStorage.clear(); localStorage.setItem('meshCalcSettings3', JSON.stringify({ mountKit: 50, handle: 15 }));
+  localStorage.setItem('meshCalcState1', JSON.stringify({ meshType: 'standard', meshColor: 'white', rooms: [{ name: 'К', pk: 'a', items: [{ w: '80', h: '150', qty: '2' }, { w: '60', h: '120', qty: '1', c: 'brown' }] }] })); });
+await p.reload(); await p.waitForTimeout(600);
+const r = await p.evaluate(() => { calculateTotals(); return { screw: SETTINGS.screw, comps: componentsList(), lines: window.stockLines(), parts: window.calcData.items.map(i => i.unitMat) }; });
+const kit = r.comps.filter(x => /Комплект креплений/.test(x[0]));
+chk('саморез по умолчанию 1 ₽', r.screw === 1);
+chk('комплекты креплений по цветам: белый 2, коричневый 1', kit.length === 2 && kit.some(x => /белый/.test(x[0]) && x[2] === 2) && kit.some(x => /коричневый/.test(x[0]) && x[2] === 1), JSON.stringify(kit));
+chk('саморезов 3 × 16 = 48', r.comps.some(x => x[0] === 'Саморезы' && x[2] === 48));
+chk('на склад: «Комплект креплений, белый»', r.lines.some(l => l.n === 'Комплект креплений, белый' && l.q === 2), JSON.stringify(r.lines.filter(l => /Комплект|Саморез/.test(l.n))));
+await p.evaluate(() => { SETTINGS.screw = 0; }); const a0 = await p.evaluate(() => { calculateTotals(); return window.calcData.items[0].unitMat; });
+await p.evaluate(() => { SETTINGS.screw = 1; }); const a1 = await p.evaluate(() => { calculateTotals(); return window.calcData.items[0].unitMat; });
+chk('в себестоимости сетки +16 ₽ саморезов', Math.abs(a1 - a0 - 16) < 0.01, a1 - a0);
+const tech = await p.evaluate(() => document.getElementById('techComponents').innerText);
+chk('в тех части есть комплекты и саморезы', /Комплект креплений, белый/.test(tech) && /Саморезы/.test(tech));
+console.log('errors', errs, ok ? 'ALL OK' : 'HAS FAILS'); await b.close();
