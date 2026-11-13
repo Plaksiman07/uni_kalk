@@ -364,7 +364,7 @@
         s.leads = s.leads.filter(x => x.id !== id);
         if (!r.won) { const t = (p.statuses || []).find(x => x.name.toLowerCase() === String(r.status_name).toLowerCase()); if (t) { l.updated_at = Math.floor(Date.now() / 1000); t.leads.unshift(l); } }
         ls.set(CACHE_KEY, data); closeSheet(); render();
-        toast(r.won ? `Готово: «${leadTitle(l)}» — успешно реализовано` : `Этап изменён: ${r.status_name}`);
+        toast((r.won ? `Готово: «${leadTitle(l)}» — успешно реализовано` : `Этап изменён: ${r.status_name}`) + (r.stock_used ? ` · со склада списано позиций: ${r.stock_used}` : ''));
         setTimeout(load, 1500);
       } catch (err) { closeSheet(); toast('Этап не изменён: ' + err.message, true); }
     };

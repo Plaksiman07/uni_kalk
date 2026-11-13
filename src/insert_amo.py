@@ -183,6 +183,8 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     rep("get('photos')", "get(" + PK + ")")
     s = s.replace('<a href="index.html" class="home-btn"', '<a href="index.html#settings" data-back class="home-btn"')
     s = s.replace('</body>', open(S + 'back_snippet.html').read() + '</body>', 1)
+    if f in ('uni.html', 'uni2.html', 'zebra.html', 'zebra2.html', 'mesh.html', 'plisse.html'):
+        s = s.replace('</body>', open(S + 'stock_snippet.html').read() + '</body>', 1)
     import re as _re
     s = _re.sub(r'(<a href="index.html#settings" data-back class="home-btn" )title="Все калькуляторы" aria-label="Все калькуляторы">\s*<svg.*?</svg>',
                 lambda m: m.group(1) + 'title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>', s, count=1, flags=_re.S)

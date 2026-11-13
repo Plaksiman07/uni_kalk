@@ -43,6 +43,10 @@
     .sec-h { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 16px 7px; display: flex; justify-content: space-between; align-items: baseline; }
     .wrap > .sec-h:first-of-type { margin-top: 4px; }
     #priceArea .sec-h { margin-top: 24px; }
+    .stock-warn { margin: 12px 0 0; background: #fff7e6; color: #92400e; border-radius: 16px; padding: 12px 14px; font-size: 13.5px; line-height: 1.45; }
+    .stock-warn b { display: block; font-size: 14.5px; margin-bottom: 4px; color: #b45309; }
+    .stock-warn div + div { margin-top: 2px; }
+    .stock-warn a { color: #b45309; font-weight: 700; }
     .sec-f { font-size: 13px; color: var(--muted); margin: 7px 16px 0; line-height: 1.4; }
     .group { background: var(--card); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow); }
     .row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; position: relative; }
@@ -247,6 +251,7 @@
   <div id="parts"></div>
   <div id="services"></div>
   <button type="button" class="add-btn" id="addBtn"><span class="plus"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Добавить изделие или услугу<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+  <div class="stock-warn" id="stockWarn" hidden></div>
 
   <div id="priceArea">
     <div class="sec-h">Стоимость</div>
@@ -523,7 +528,40 @@
   const ui = { client: null, margin: false, parts: {} };
   const initials = n => String(n || '').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
 
+  // === Склад: расход материалов заказа и проверка остатков ===
+  const STOCK_SEC = { mesh: 'mesh', plisse: 'plisse', uni: 'roll', uni2: 'roll', zebra: 'roll', zebra2: 'roll' };
+  const stockKey = (sec, n, u) => `${sec}|${String(n).trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ')}|${String(u).trim()}`;
+  function useLines() {
+    const agg = {};
+    ordered().forEach(id => {
+      const sec = STOCK_SEC[id], rec = frames[id];
+      if (!sec || !rec || !rec.win || typeof rec.win.stockLines !== 'function') return;
+      let lines = []; try { lines = rec.win.stockLines() || []; } catch (e) {}
+      lines.forEach(l => { const k = stockKey(sec, l.n, l.u); if (!agg[k]) agg[k] = { s: sec, n: l.n, u: l.u, q: 0 }; agg[k].q = Math.round((agg[k].q + Number(l.q || 0)) * 1000) / 1000; });
+    });
+    return Object.values(agg);
+  }
+  let stockDoc = null;
+  try { stockDoc = JSON.parse(localStorage.getItem('spStockCache')); } catch (e) {}
+  function stockRefresh() {
+    let cfg = {}; try { cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}') || {}; } catch (e) {}
+    if (!cfg.url || !cfg.key) return;
+    call(cfg, '/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(j => { if (j && j.items) { stockDoc = { items: j.items, log: j.log || [], updated: Date.now() }; try { localStorage.setItem('spStockCache', JSON.stringify(stockDoc)); } catch (e) {} stockCheck(); } }).catch(() => {});
+  }
+  const fq = v => (Math.round(v * 100) / 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  function stockCheck() {
+    const box = $('stockWarn');
+    if (!stockDoc || !stockDoc.items || !Object.keys(stockDoc.items).length) { box.hidden = true; return; }
+    const short = useLines().map(l => ({ l, it: stockDoc.items[stockKey(l.s, l.n, l.u)] })).filter(x => x.it && !x.it.h && (x.it.q || x.it.m || x.it.p) && x.it.q < x.l.q);   // позиции, остаток которых ещё не вносили (0, без мин. и цены), не считаем
+    box.hidden = !short.length;
+    if (short.length) box.innerHTML = `<b>На складе не хватает на этот заказ</b>` + short.slice(0, 8).map(x => `<div>${esc(x.l.n)}: нужно ${fq(x.l.q)} ${esc(x.l.u)}, есть ${fq(Math.max(0, x.it.q))}</div>`).join('') + (short.length > 8 ? `<div>…и ещё ${short.length - 8}</div>` : '') + `<div style="margin-top:6px;"><a href="stock.html">Открыть склад</a></div>`;
+  }
+  let stockT = 0;
+  const stockSoon = () => { clearTimeout(stockT); stockT = setTimeout(stockCheck, 400); };
+
   function render() {
+    stockSoon();
     CLIENT.forEach(id => { const el = $(id); if (document.activeElement !== el && el.value !== (st.client[id] || '')) el.value = st.client[id] || ''; });
     const sel = st.priceSel, ids = ordered(), c = st.client;
     const nItems = partsSum().reduce((a, p) => a + pcs(p), 0);
@@ -901,7 +939,7 @@
     let stateNote = '';
     const fin = finOf(sel);
     const finRec = { t: [c.orderNumber ? '№ ' + c.orderNumber : '', c.clientName].filter(Boolean).join(' · ').slice(0, 80), g: Math.round(fin.G), p: Math.round(fin.P), sv: Math.round(fin.svc), lm: Math.round(fin.lm), li: Math.round(fin.li), om: st.ownMake ? 1 : 0, oi: st.ownInstall ? 1 : 0, at: Math.floor(Date.now() / 1000) };
-    try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState(), fin: finRec }) }); }
+    try { await call(cfg, '/state-save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: lead.lead_id, state: await gatherState(), fin: finRec, use: useLines() }) }); }
     catch (e) { stateNote = /хранилище/.test(e.message) ? '' : ' Данные для корректировки не сохранились: ' + esc(e.message) + '.'; }
     st.editLead = lead.lead_id; st.sentSig = sig(); save();
     const link = `<a href="${esc(lead.url)}" target="_blank" rel="noopener">открыть сделку</a>`;
@@ -936,6 +974,7 @@
   if (location.search) history.replaceState(null, '', location.pathname);
   render();
   ordered().forEach(id => frameFor(id));
+  setTimeout(stockRefresh, 1500);
   // «Добавить в amoCRM» из черновиков на главном: досчитать разделы и отправить
   if (P.get('send') === '1' && ordered().length) {
     setStatus('⏳ Готовлю заказ к отправке…');

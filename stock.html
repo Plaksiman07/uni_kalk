@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Склад — SunProtection</title>
+  <meta name="theme-color" content="#f5f4f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/favicon-64.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <style>
+    :root { --bg: #f5f4f1; --card: #ffffff; --ink: #16181d; --ink2: #3f434b; --muted: #6b7079; --sep: rgba(22,24,29,0.08); --fill: #f3f2ef;
+      --accent: #ea580c; --accent-2: #f97316; --accent-ink: #c2410c; --soft: #fff1e8; --blue: #0b72e7; --blue-soft: #e8f3ff; --red: #dc2626; --red-soft: #fef2f2;
+      --green: #15803d; --green-soft: #ecfdf3; --slate: #334155; --slate-soft: #eef1f5; --violet: #7c3aed; --violet-soft: #f3effd;
+      --shadow: 0 1px 2px rgba(16,24,40,0.04), 0 6px 20px rgba(16,24,40,0.05); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    [hidden] { display: none !important; }
+    body { font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased;
+      background: var(--bg); color: var(--ink); padding: calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    .top { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; min-height: 48px; }
+    .icon-btn { flex: none; width: 44px; height: 44px; border-radius: 14px; border: 0; background: var(--card); color: var(--ink2); display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; padding: 0; box-shadow: var(--shadow); transition: transform .15s; }
+    .icon-btn:active { transform: scale(0.94); }
+    .icon-btn.spin svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h1 { flex: 1; min-width: 0; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+    h1 small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; letter-spacing: 0; }
+    .msg { background: #fff7e6; color: #b45309; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; font-size: 13px; font-weight: 600; line-height: 1.45; }
+    .msg.err { background: var(--red-soft); color: var(--red); }
+    .msg:empty { display: none; }
+
+    /* кассы */
+    .bal { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .b-card { background: var(--card); border-radius: 20px; padding: 14px; box-shadow: var(--shadow); min-width: 0; }
+    .b-card.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+    .b-top { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink2); }
+    .b-ic { flex: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .b-sum { display: block; margin-top: 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .b-card.wide .b-sum { flex: none; margin: 0 0 0 auto; font-size: 18px; overflow: visible; }
+    .b-card.wide .b-txt { flex: 1; min-width: 0; }
+    .b-sub { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+    .neg { color: var(--red) !important; }
+    .acts { display: flex; gap: 8px; margin: 12px 0 0; }
+    .abtn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; border: 0; border-radius: 16px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; padding: 0 10px; white-space: nowrap; }
+    .abtn.pri { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .abtn.sec { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+    .abtn.more { flex: none; width: 48px; padding: 0; background: var(--card); color: var(--ink2); box-shadow: var(--shadow); }
+
+    .sec-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 24px 4px 8px; }
+    .sec-h span:last-child { text-transform: none; letter-spacing: 0; font-weight: 600; }
+    .seg { display: flex; gap: 4px; background: rgba(22,24,29,0.06); padding: 4px; border-radius: 14px; margin-top: 24px; }
+    .seg button { flex: 1; min-width: 0; border: none; background: transparent; border-radius: 11px; padding: 10px 4px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.10); }
+    .group { background: var(--card); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); }
+    .kpi { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--sep); }
+    .kpi div { padding: 14px 12px; min-width: 0; }
+    .kpi div + div { border-left: 1px solid var(--sep); }
+    .kpi b { display: block; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+    .line { display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-size: 15px; font-weight: 600; position: relative; }
+    .line + .line::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--sep); }
+    .line .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+    .line .l { flex: 1; min-width: 0; color: var(--ink2); }
+    .line .l small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+    .line .v { flex: none; font-weight: 800; white-space: nowrap; }
+    .bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; margin: 2px 14px 12px; background: var(--fill); }
+    .bar i { display: block; height: 100%; }
+    .foot-note { font-size: 12.5px; font-weight: 500; color: var(--muted); margin: 8px 4px 0; line-height: 1.45; }
+
+    /* операции */
+    .day { font-size: 12px; font-weight: 700; color: var(--muted); margin: 16px 4px 6px; }
+    .op { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 12px 14px; min-height: 60px; font: inherit; color: var(--ink); cursor: pointer; position: relative; }
+    .op + .op::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: var(--sep); }
+    .op:active { background: var(--fill); }
+    .op .tile { flex: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .op .o-b { flex: 1; min-width: 0; }
+    .op .o-t { display: block; font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .op .o-s { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .op .o-v { flex: none; font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .plus { color: var(--green); }
+    .empty { padding: 18px 14px; font-size: 14px; font-weight: 600; color: var(--muted); }
+    .est { display: inline-block; font-size: 11px; font-weight: 700; color: #b45309; background: #fff7e6; border-radius: 6px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+
+    /* шторка */
+    .veil { position: fixed; inset: 0; z-index: 60; background: rgba(16,18,22,0.32); opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .veil.show { opacity: 1; pointer-events: auto; }
+    .bs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 61; max-width: 560px; margin: 0 auto; background: var(--bg); border-radius: 26px 26px 0 0; max-height: 90vh; overflow-y: auto;
+      padding: 10px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(105%); visibility: hidden; transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s .3s; }
+    .bs.show { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+    .bs .grab { width: 38px; height: 5px; border-radius: 3px; background: #d5d3ce; margin: 0 auto 12px; }
+    .bs h2 { margin: 0 4px 2px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .bs .bs-sub { margin: 0 4px 14px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .bs .grp { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 12px; }
+    .fld { display: flex; align-items: center; gap: 12px; padding: 0 14px; min-height: 54px; position: relative; }
+    .fld + .fld::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--sep); }
+    .fld label { flex: none; width: 92px; font-size: 15px; font-weight: 600; color: var(--ink2); }
+    .fld input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 700; color: var(--ink); padding: 14px 0; outline: none; text-align: right; }
+    .fld input.big { font-size: 22px; font-weight: 800; }
+    .fld input::placeholder { color: #a3a8b0; font-weight: 500; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 2px 12px; }
+    .chip { border: 0; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--sep); padding: 8px 12px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink2); cursor: pointer; }
+    .chip.on { background: var(--soft); color: var(--accent-ink); box-shadow: inset 0 0 0 2px var(--accent); }
+    .typeseg { display: flex; gap: 4px; background: rgba(22,24,29,0.06); padding: 4px; border-radius: 14px; margin-bottom: 12px; }
+    .typeseg button { flex: 1; border: 0; background: none; border-radius: 11px; padding: 9px 4px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--muted); cursor: pointer; }
+    .typeseg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(16,24,40,0.10); }
+    .sbtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; padding: 15px; margin-top: 8px; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .sbtn.pri { background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: #fff; box-shadow: 0 6px 16px rgba(234,88,12,0.24); }
+    .sbtn.pri:disabled { opacity: 0.5; }
+    .sbtn.ghost { background: var(--card); color: var(--muted); box-shadow: var(--shadow); }
+    .sbtn.danger { background: var(--card); color: var(--red); box-shadow: var(--shadow); }
+    .opt { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 12px 14px; min-height: 58px; font: inherit; color: var(--ink); cursor: pointer; position: relative; text-decoration: none; }
+    .opt + .opt::before { content: ""; position: absolute; top: 0; left: 62px; right: 0; height: 1px; background: var(--sep); }
+    .opt .tile { flex: none; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .opt .o-t { display: block; font-size: 16px; font-weight: 700; }
+    .opt .o-s { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+    .toast { position: fixed; left: 16px; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 70; max-width: 520px; margin: 0 auto; background: #16181d; color: #fff; border-radius: 16px; padding: 13px 15px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.25); transform: translateY(150%); visibility: hidden; transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s .3s; }
+    .toast.show { transform: none; visibility: visible; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+    .toast.err { background: var(--red); }
+    .skel { height: 92px; border-radius: 20px; background: linear-gradient(90deg, #ecebe7, #f6f5f2, #ecebe7); background-size: 200% 100%; animation: sk 1.2s linear infinite; }
+    @keyframes sk { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .bs, .veil, .toast { transition: none; } .skel { animation: none; } }
+
+    /* склад */
+    .search { display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 14px; padding: 0 12px; margin-top: 12px; box-shadow: var(--shadow); }
+    .search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 600; padding: 12px 0; outline: none; color: var(--ink); }
+    .search svg { flex: none; color: var(--muted); }
+    .it { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; text-align: left; padding: 11px 14px; min-height: 60px; font: inherit; color: var(--ink); cursor: pointer; position: relative; }
+    .it + .it::before { content: ""; position: absolute; top: 0; left: 14px; right: 0; height: 1px; background: var(--sep); }
+    .it:active { background: var(--fill); }
+    .it .st { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #c9ccd2; }
+    .it.ok .st { background: var(--green); } .it.low .st { background: #f59e0b; } .it.out .st { background: var(--red); }
+    .it .i-b { flex: 1; min-width: 0; }
+    .it .i-t { display: block; font-size: 15px; font-weight: 700; line-height: 1.3; }
+    .it .i-s { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin-top: 1px; }
+    .it .i-q { flex: none; text-align: right; font-size: 16px; font-weight: 800; white-space: nowrap; }
+    .it .i-q small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+    .it.low .i-q { color: #b45309; } .it.out .i-q { color: var(--red); }
+    .it.hid { opacity: .55; }
+    .tag { display: inline-block; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 1px 6px; margin-left: 6px; vertical-align: 1px; }
+    .tag.low { color: #b45309; background: #fff7e6; } .tag.out { color: var(--red); background: var(--red-soft); }
+    .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--red); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+    .bigq { text-align: center; margin: 4px 0 14px; }
+    .bigq b { display: block; font-size: 38px; font-weight: 800; letter-spacing: -0.03em; }
+    .bigq span { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .two { display: flex; gap: 8px; } .two .sbtn { margin-top: 0; }
+    .sbtn.sec { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+    .hist { font-size: 13px; }
+    .hist .line { font-size: 13.5px; padding: 10px 14px; }
+    .units { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+    .fld input.left { text-align: left; }
+    .buy-txt { white-space: pre-wrap; font-size: 13.5px; font-weight: 600; line-height: 1.5; padding: 12px 14px; color: var(--ink2); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="icon-btn" href="index.html" data-back aria-label="Назад" title="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Склад<small id="updated">загрузка…</small></h1>
+    <button type="button" class="icon-btn" id="refresh" aria-label="Обновить" title="Обновить"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+  </div>
+  <div class="msg" id="msg"></div>
+
+  <div class="seg" id="tabs" style="margin-top:0;">
+    <button type="button" data-t="mesh">Сетки</button><button type="button" data-t="roll">Рулонные</button><button type="button" data-t="plisse">Плиссе</button><button type="button" data-t="buy">Купить</button>
+  </div>
+
+  <div id="secView">
+    <div class="group" style="margin-top:12px;"><div class="kpi" id="kpi" style="border-bottom:0;"></div></div>
+    <div class="acts">
+      <button type="button" class="abtn pri" id="addIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Приход</button>
+      <button type="button" class="abtn sec" id="addItem"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.3L12 12l8.7-4.7M12 22V12"/></svg>Позиция</button>
+      <button type="button" class="abtn more" id="moreBtn" aria-label="Ещё"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+    </div>
+    <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" id="q" placeholder="Поиск по складу" autocomplete="off"></label>
+    <div class="sec-h"><span>Остатки</span><span id="cnt"></span></div>
+    <div class="group" id="list"></div>
+    <div id="hidWrap"></div>
+    <div class="foot-note">Материалы заказа списываются сами, когда заказ переходит в «Готов к установке» — из приложения или прямо в amoCRM. Расход — по калькулятору (профиль — метрами по раскрою). Новые позиции появляются при отправке заказа. Нажмите на позицию: приход, корректировка остатка, минимальный остаток.</div>
+  </div>
+
+  <div id="buyView" hidden>
+    <div class="sec-h" style="margin-top:18px;"><span>Заканчивается</span><span id="buyCnt"></span></div>
+    <div class="group" id="buyList"></div>
+    <div class="two" style="margin-top:12px;">
+      <button type="button" class="sbtn pri" id="buyShare"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg>Отправить</button>
+      <button type="button" class="sbtn sec" id="buyCopy">Скопировать</button>
+    </div>
+    <div class="foot-note">Сюда попадает всё, что меньше минимального остатка или ушло в минус. Сколько купить — до минимального остатка. Минимальный остаток задаётся в позиции.</div>
+  </div>
+</div>
+
+<div class="veil" id="veil"></div>
+<div class="bs" id="bs" role="dialog" aria-modal="true"><div class="grab"></div><div id="bsBody"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const CFG_KEY = 'spAmoConfig', CACHE_KEY = 'spStockCache', UI_KEY = 'spStockUi';
+  const $ = id => document.getElementById(id);
+  const ls = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rub = v => `${Math.round(v || 0).toLocaleString('ru-RU')} ₽`;
+  const fq = v => { const n = Math.round((Number(v) || 0) * 100) / 100; return n.toLocaleString('ru-RU', { maximumFractionDigits: 2 }); };
+  const num = v => parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.'));
+  const SECS = { mesh: 'Москитные сетки', roll: 'Рулонные шторы', plisse: 'Сетки плиссе' };
+  const UNITS = ['м.п.', 'шт', 'компл', 'м²', 'кг', 'рул'];
+  // позиции, которые считают калькуляторы (кнопка «Заполнить позиции»)
+  const COLORS = ['белый', 'коричневый', 'антрацит'];
+  const SEED = {
+    mesh: [...COLORS.flatMap(c => [[`Профиль рамочный, ${c}`, 'м.п.'], [`Импост, ${c}`, 'м.п.']]),
+      ...['Стандарт', 'Антимошка', 'Антипыль', 'Антикошка'].map(t => [`Полотно «${t}»`, 'м.п.']),
+      ['Шнур закаточный', 'м.п.'], ['Уголок соединительный', 'шт'], ['Соединитель импоста', 'шт'], ['Крепления', 'компл'], ['Ручка', 'шт']],
+    plisse: [...COLORS.flatMap(c => [[`Профиль рамочный, ${c}`, 'м.п.'], [`Профиль створочный, ${c}`, 'м.п.']]),
+      ['Полотно плиссе, рулон 3 м', 'м.п.'], ['Окантовочная лента', 'м.п.'], ['Нить плиссе', 'м.п.'], ['Магнитная лента', 'м.п.'],
+      ['Углы', 'шт'], ['Ролики', 'шт'], ['Шконты', 'шт'], ['Заглушки 8 мм', 'шт'], ['Заглушки на углы', 'шт'], ['Клепки размер 3', 'шт'],
+      ['Саморезы с пресс-шайбой', 'шт'], ['Саморезы 40 мм', 'шт'], ['Саморезы 19 мм', 'шт'], ['Комплект аксессуаров (чёрный)', 'компл'], ['Комплект накладок', 'компл']],
+    roll: [['Механизм управления UNI', 'компл/шт'], ['Короб UNI', 'м.п.'], ['Труба', 'м.п.'], ['Доп. профиль UNI', 'м.п.'], ['Доп. профиль UNI зебра', 'м.п.'],
+      ['Утяжелитель ткани', 'м.п.'], ['Отвес для зебры UNI 10 мм', 'м.п.'], ['Направляющие UNI', 'м.п.'], ['Направляющая типа С', 'м.п.'], ['Накладки', 'шт'],
+      ['Цепь управления', 'м.п.'], ['Груз цепи управления', 'шт'], ['Соединитель цепи управления', 'шт'], ['Ограничитель цепи управления', 'шт'], ['Фиксатор цепи управления', 'шт'],
+      ['Шлегель', 'м.п.'], ['Крышка утяжелителя', 'шт'], ['Заглушка отвеса', 'шт'], ['Лента 7мм', 'м.п.'], ['Скотч (труба)', 'м.п.'], ['Скотч 9мм (направляющие)', 'м.п.']]
+  };
+
+  let data = ls.get(CACHE_KEY, null), ui = ls.get(UI_KEY, { t: 'mesh' }), busy = false;
+  if (!['mesh', 'roll', 'plisse', 'buy'].includes(ui.t)) ui.t = 'mesh';
+  const items = () => Object.entries((data && data.items) || {}).map(([id, it]) => Object.assign({ id }, it));
+  // остаток ещё не вносили (0, без минимума и цены) — нейтрально, не «нет»
+  const fresh = it => it.q === 0 && !it.m && !it.p;
+  const state = it => fresh(it) ? '' : it.q <= 0 ? 'out' : (it.m > 0 && it.q <= it.m ? 'low' : (it.m > 0 ? 'ok' : ''));
+  const needBuy = it => !it.h && (it.q <= 0 && (it.m > 0 || it.q < 0) || (it.m > 0 && it.q <= it.m));
+  const toBuy = it => Math.max(0, (it.m > 0 ? it.m : 0) - it.q);
+
+  async function api(path, body) {
+    const cfg = ls.get(CFG_KEY, {});
+    if (!cfg.url || !cfg.key) throw new Error('нет подключения amoCRM — откройте Настройки → любой калькулятор → «Подключение amoCRM»');
+    let last;
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + path, { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+        let j = null; try { j = await r.json(); } catch (e) {}
+        if (j && j.error === 'Неизвестный адрес') throw Object.assign(new Error('Посредник amoCRM старой версии — он обновится сам через пару минут после обновления приложения'), { final: true });
+        if (!r.ok || !j || j.error) throw Object.assign(new Error(j && j.error ? j.error : `посредник ответил ${r.status}`), { final: !!(j && j.error) });
+        return j;
+      } catch (e) { last = e; if (e.final) break; if (i < 3) await new Promise(res => setTimeout(res, 800 * i)); }
+    }
+    const m = String((last && last.message) || last);
+    throw new Error(/failed to fetch|load failed|networkerror/i.test(m) ? 'нет связи с посредником — проверьте интернет или VPN' : m);
+  }
+  function setData(j) { data = { items: j.items || {}, log: j.log || [], updated: Date.now() }; ls.set(CACHE_KEY, data); }
+  async function load() {
+    $('refresh').classList.add('spin');
+    try {
+      const j = await api('/stock', {}); setData(j); $('msg').textContent = ''; $('msg').className = 'msg';
+      if (j.applied) toast(`Списаны материалы ${j.applied} ${j.applied === 1 ? 'заказа' : 'заказов'} — «Готов к установке»`);
+    } catch (e) { $('msg').className = 'msg err'; $('msg').textContent = 'Не удалось обновить: ' + e.message + (data ? ' Показаны прошлые данные.' : ''); }
+    $('refresh').classList.remove('spin');
+    render();
+  }
+  async function op(o, okMsg) {
+    if (busy) return false; busy = true;
+    try { const j = await api('/stock-op', { op: o }); setData(j); render(); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(j) : okMsg); return true; }
+    catch (e) { toast('Не сохранилось: ' + e.message, true); return false; }
+    finally { busy = false; }
+  }
+
+  // ===== экран =====
+  function render() {
+    $('updated').textContent = data && data.updated ? 'данные на ' + new Date(data.updated).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'нет данных';
+    const all = items(), nBuy = all.filter(needBuy).length;
+    document.querySelectorAll('#tabs button').forEach(b => {
+      b.classList.toggle('on', b.dataset.t === ui.t);
+      if (b.dataset.t === 'buy') b.innerHTML = 'Купить' + (nBuy ? `<span class="badge">${nBuy}</span>` : '');
+    });
+    $('secView').hidden = ui.t === 'buy'; $('buyView').hidden = ui.t !== 'buy';
+    if (ui.t === 'buy') return renderBuy(all);
+    const sec = all.filter(it => it.s === ui.t), q = $('q').value.trim().toLowerCase();
+    const vis = sec.filter(it => !it.h), hid = sec.filter(it => it.h);
+    const low = vis.filter(it => state(it) === 'low').length, out = vis.filter(it => state(it) === 'out').length;
+    $('kpi').innerHTML = `<div><b>${vis.length}</b><span>позиций</span></div><div><b class="${out ? 'neg' : ''}">${low + out}</b><span>заканчивается</span></div><div><b>${rub(vis.reduce((a, it) => a + Math.max(0, it.q) * (it.p || 0), 0))}</b><span>на складе</span></div>`;
+    const match = it => !q || it.n.toLowerCase().includes(q);
+    const ord = arr => arr.filter(match).sort((a, b) => ({ out: 0, low: 1 }[state(a)] ?? 2) - ({ out: 0, low: 1 }[state(b)] ?? 2) || a.n.localeCompare(b.n, 'ru'));
+    const L = ord(vis);
+    $('cnt').textContent = q ? `найдено ${L.length}` : '';
+    $('list').innerHTML = L.length ? L.map(row).join('') : (sec.length ? `<div class="empty">Ничего не найдено</div>` :
+      `<div class="empty">В разделе «${SECS[ui.t]}» пока нет позиций.<button type="button" class="sbtn pri" id="seedBtn" style="margin-top:12px;">Заполнить позициями из калькулятора</button></div>`);
+    const H = ord(hid);
+    $('hidWrap').innerHTML = H.length ? `<div class="sec-h"><span>Скрытые</span><span>${H.length}</span></div><div class="group">${H.map(row).join('')}</div>` : '';
+    const sb = $('seedBtn'); if (sb) sb.onclick = seed;
+  }
+  function row(it) {
+    const s = state(it);
+    const sub = fresh(it) ? 'остаток не внесён' : [it.m > 0 ? `мин. ${fq(it.m)} ${it.u}` : 'мин. не задан', it.p > 0 ? `${fq(it.p)} ₽/${it.u}` : ''].filter(Boolean).join(' · ');
+    return `<button type="button" class="it ${s}${it.h ? ' hid' : ''}" data-i="${esc(it.id)}"><i class="st"></i><span class="i-b"><span class="i-t">${esc(it.n)}${s === 'out' ? '<span class="tag out">нет</span>' : s === 'low' ? '<span class="tag low">мало</span>' : ''}</span><span class="i-s">${esc(sub)}</span></span><span class="i-q">${fq(it.q)}<small>${esc(it.u)}</small></span></button>`;
+  }
+  function buyText(L) {
+    return 'Купить:\n' + Object.keys(SECS).map(s => { const a = L.filter(it => it.s === s); return a.length ? `\n${SECS[s]}:\n` + a.map(it => `— ${it.n}: ${fq(toBuy(it))} ${it.u}`).join('\n') : ''; }).join('');
+  }
+  function renderBuy(all) {
+    const L = all.filter(needBuy).sort((a, b) => a.s.localeCompare(b.s) || a.n.localeCompare(b.n, 'ru'));
+    $('buyCnt').textContent = L.length ? L.length + ' поз.' : '';
+    $('buyList').innerHTML = L.length ? Object.keys(SECS).map(s => { const a = L.filter(it => it.s === s); return a.length ? `<div class="day" style="margin:12px 14px 2px;">${SECS[s]}</div>` + a.map(it => `<button type="button" class="it ${state(it)}" data-i="${esc(it.id)}"><i class="st"></i><span class="i-b"><span class="i-t">${esc(it.n)}</span><span class="i-s">остаток ${fq(it.q)} ${esc(it.u)}${it.m > 0 ? ` · мин. ${fq(it.m)}` : ''}</span></span><span class="i-q">${fq(toBuy(it))}<small>${esc(it.u)} купить</small></span></button>`).join('') : ''; }).join('')
+      : `<div class="empty">Всего хватает. Задайте минимальный остаток у позиций — и здесь появится то, что пора докупить.</div>`;
+    $('buyShare').disabled = $('buyCopy').disabled = !L.length;
+    $('buyShare').onclick = async () => { const t = buyText(L); if (navigator.share) { try { await navigator.share({ text: t }); return; } catch (e) { if (e.name === 'AbortError') return; } } copy(t); };
+    $('buyCopy').onclick = () => copy(buyText(L));
+  }
+  async function copy(t) { try { await navigator.clipboard.writeText(t); toast('Список скопирован'); } catch (e) { toast('Не удалось скопировать', true); } }
+
+  // ===== шторки =====
+  function sheet(html, after) {
+    $('bsBody').innerHTML = html; $('veil').classList.add('show'); $('bs').classList.add('show');
+    if (after) after($('bsBody'));
+  }
+  function closeSheet() { $('veil').classList.remove('show'); $('bs').classList.remove('show'); }
+  $('veil').onclick = closeSheet;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+  const OPN = { in: 'Приход', fix: 'Корректировка', use: 'Списано в заказ', new: 'Новая позиция', del: 'Удалена' };
+  const when = d => new Date(d * 1000).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+  function openItem(id) {
+    const it = items().find(x => x.id === id); if (!it) return;
+    const hist = ((data && data.log) || []).filter(l => l.i === id).slice(-15).reverse();
+    sheet(`<h2>${esc(it.n)}</h2><div class="bs-sub">${SECS[it.s]}${it.p > 0 ? ` · ${fq(it.p)} ₽/${esc(it.u)}` : ''}</div>
+      <div class="bigq"><b class="${state(it) === 'out' ? 'neg' : ''}">${fq(it.q)} ${esc(it.u)}</b><span>${it.m > 0 ? `минимальный остаток ${fq(it.m)} ${esc(it.u)}` : 'минимальный остаток не задан'}</span></div>
+      <div class="two"><button type="button" class="sbtn pri" data-a="in">Приход</button><button type="button" class="sbtn sec" data-a="fix">Корректировка</button></div>
+      <div class="grp" style="margin-top:12px;"><div class="fld"><label>Мин. остаток</label><input type="text" inputmode="decimal" data-m value="${it.m > 0 ? fq(it.m) : ''}" placeholder="не задан"><span style="color:var(--muted);font-weight:600;">${esc(it.u)}</span></div></div>
+      ${hist.length ? `<div class="sec-h" style="margin-top:10px;"><span>История</span></div><div class="grp hist">${hist.map(l => `<div class="line"><span class="l">${OPN[l.t] || l.t}${l.n ? `<small>${esc(l.n)}</small>` : ''}<small>${when(l.d)}</small></span><span class="v ${l.q > 0 ? 'plus' : ''}">${l.t === 'fix' ? '= ' + fq(l.v) : (l.q > 0 ? '+' : '') + fq(l.q)}</span></div>`).join('')}</div>` : ''}
+      <div class="two"><button type="button" class="sbtn ghost" data-a="hide">${it.h ? 'Показать' : 'Скрыть'}</button><button type="button" class="sbtn danger" data-a="del">Удалить</button></div>`, b => {
+      const mi = b.querySelector('[data-m]');
+      mi.onchange = () => { const v = num(mi.value); op({ type: 'item', i: id, m: isFinite(v) ? v : 0 }, 'Минимальный остаток сохранён'); };
+      b.querySelector('[data-a="in"]').onclick = () => openIn(id);
+      b.querySelector('[data-a="fix"]').onclick = () => openFix(id);
+      b.querySelector('[data-a="hide"]').onclick = async () => { if (await op({ type: 'item', i: id, h: !it.h }, it.h ? 'Позиция снова в списке' : 'Позиция скрыта')) closeSheet(); };
+      b.querySelector('[data-a="del"]').onclick = async () => { if (!confirm(`Удалить «${it.n}» со склада? Если она снова понадобится заказу — появится с нулём.`)) return; if (await op({ type: 'del', i: id }, 'Позиция удалена')) closeSheet(); };
+    });
+  }
+  // приход: позиция (если не выбрана) + количество + цена
+  function openIn(id) {
+    const sec = ui.t === 'buy' ? null : ui.t;
+    const list = items().filter(it => !it.h && (id ? it.id === id : (!sec || it.s === sec))).sort((a, b) => a.n.localeCompare(b.n, 'ru'));
+    if (!list.length) { toast('Сначала добавьте позиции'); return; }
+    sheet(`<h2>Приход</h2><div class="bs-sub">${id ? esc(list[0].n) : 'Поступление материала на склад'}</div>
+      <div class="grp">${id ? '' : `<div class="fld"><label>Позиция</label><select data-i style="flex:1;min-width:0;border:0;background:none;font:inherit;font-size:15px;font-weight:700;text-align:right;outline:none;">${list.map(it => `<option value="${esc(it.id)}">${esc(it.n)}</option>`).join('')}</select></div>`}
+        <div class="fld"><label>Количество</label><input type="text" inputmode="decimal" class="big" data-q placeholder="0"><span data-u style="color:var(--muted);font-weight:600;">${esc(list[0].u)}</span></div>
+        <div class="fld"><label>Цена за ед.</label><input type="text" inputmode="decimal" data-p placeholder="необязательно"><span style="color:var(--muted);font-weight:600;">₽</span></div>
+        <div class="fld"><label>Сумма</label><input type="text" inputmode="decimal" data-s placeholder="или вся сумма"><span style="color:var(--muted);font-weight:600;">₽</span></div>
+        <div class="fld"><label>Заметка</label><input type="text" class="left" data-n placeholder="поставщик, накладная…"></div></div>
+      <button type="button" class="sbtn pri" data-ok>Оприходовать</button><button type="button" class="sbtn ghost" data-x>Отмена</button>`, b => {
+      const sel = b.querySelector('[data-i]'), qi = b.querySelector('[data-q]'), pi = b.querySelector('[data-p]'), si = b.querySelector('[data-s]');
+      if (sel) sel.onchange = () => { const it = list.find(x => x.id === sel.value); b.querySelector('[data-u]').textContent = it ? it.u : ''; };
+      // цена ↔ сумма
+      pi.oninput = () => { const q = num(qi.value), p = num(pi.value); si.value = q > 0 && p > 0 ? fq(q * p) : ''; };
+      si.oninput = () => { const q = num(qi.value), s = num(si.value); pi.value = q > 0 && s > 0 ? fq(s / q) : ''; };
+      qi.oninput = () => { if (num(pi.value) > 0) pi.oninput(); };
+      setTimeout(() => qi.focus(), 300);
+      b.querySelector('[data-x]').onclick = closeSheet;
+      b.querySelector('[data-ok]').onclick = async () => {
+        const q = num(qi.value), p = num(pi.value), iid = id || sel.value, it = list.find(x => x.id === iid);
+        if (!(q > 0)) { qi.focus(); toast('Укажите количество', true); return; }
+        if (await op({ type: 'in', i: iid, q, p: p > 0 ? p : 0, n: b.querySelector('[data-n]').value.trim() }, `Приход: ${it.n} +${fq(q)} ${it.u}`)) closeSheet();
+      };
+    });
+  }
+  function openFix(id) {
+    const it = items().find(x => x.id === id); if (!it) return;
+    sheet(`<h2>Корректировка</h2><div class="bs-sub">${esc(it.n)} · сейчас ${fq(it.q)} ${esc(it.u)}</div>
+      <div class="grp"><div class="fld"><label>Фактически</label><input type="text" inputmode="decimal" class="big" data-q value="${fq(it.q)}"><span style="color:var(--muted);font-weight:600;">${esc(it.u)}</span></div>
+        <div class="fld"><label>Причина</label><input type="text" class="left" data-n placeholder="инвентаризация, брак…"></div></div>
+      <button type="button" class="sbtn pri" data-ok>Сохранить остаток</button><button type="button" class="sbtn ghost" data-x>Отмена</button>`, b => {
+      const qi = b.querySelector('[data-q]'); setTimeout(() => { qi.focus(); qi.select(); }, 300);
+      b.querySelector('[data-x]').onclick = closeSheet;
+      b.querySelector('[data-ok]').onclick = async () => {
+        const q = num(qi.value); if (!isFinite(q)) { qi.focus(); return; }
+        if (await op({ type: 'fix', i: id, q, n: b.querySelector('[data-n]').value.trim() }, `Остаток: ${fq(q)} ${it.u}`)) closeSheet();
+      };
+    });
+  }
+  function openNew() {
+    const sec = ui.t === 'buy' ? 'mesh' : ui.t; let unit = 'шт';
+    sheet(`<h2>Новая позиция</h2><div class="bs-sub">Раздел «${SECS[sec]}»</div>
+      <div class="grp"><div class="fld"><label>Название</label><input type="text" class="left" data-n placeholder="например: Ткань Альфа белая 200"></div>
+        <div class="units">${UNITS.map(u => `<button type="button" class="chip${u === unit ? ' on' : ''}" data-u="${u}">${u}</button>`).join('')}</div>
+        <div class="fld"><label>Остаток</label><input type="text" inputmode="decimal" data-q placeholder="0"></div>
+        <div class="fld"><label>Мин. остаток</label><input type="text" inputmode="decimal" data-m placeholder="не задан"></div>
+        <div class="fld"><label>Цена за ед.</label><input type="text" inputmode="decimal" data-p placeholder="необязательно"></div></div>
+      <div class="foot-note" style="margin:0 4px 6px;">Чтобы склад списывал позицию сам, название должно совпадать с «Комплектующими» в тех части калькулятора. Проще всего — дождаться, когда она появится сама после отправки заказа.</div>
+      <button type="button" class="sbtn pri" data-ok>Добавить</button><button type="button" class="sbtn ghost" data-x>Отмена</button>`, b => {
+      b.querySelectorAll('[data-u]').forEach(c => c.onclick = () => { unit = c.dataset.u; b.querySelectorAll('[data-u]').forEach(x => x.classList.toggle('on', x === c)); });
+      setTimeout(() => b.querySelector('[data-n]').focus(), 300);
+      b.querySelector('[data-x]').onclick = closeSheet;
+      b.querySelector('[data-ok]').onclick = async () => {
+        const n = b.querySelector('[data-n]').value.trim(); if (!n) { b.querySelector('[data-n]').focus(); return; }
+        const v = k => { const x = num(b.querySelector(k).value); return isFinite(x) ? x : 0; };
+        if (await op({ type: 'item', s: sec, n, u: unit, q: v('[data-q]'), m: v('[data-m]'), p: v('[data-p]') }, 'Позиция добавлена')) closeSheet();
+      };
+    });
+  }
+  function openMore() {
+    sheet(`<h2>Склад</h2><div class="bs-sub">Раздел «${SECS[ui.t] || ''}»</div><div class="grp">
+      <button type="button" class="opt" data-a="seed"><span class="tile" style="background:var(--soft);color:var(--accent);">＋</span><span><span class="o-t">Заполнить позиции</span><span class="o-s">Всё, что считает калькулятор раздела (с нулём)</span></span></button>
+      <button type="button" class="opt" data-a="log"><span class="tile" style="background:var(--blue-soft);color:var(--blue);">≡</span><span><span class="o-t">Журнал</span><span class="o-s">Приходы, списания по заказам, корректировки</span></span></button></div>
+      <button type="button" class="sbtn ghost" data-x>Закрыть</button>`, b => {
+      b.querySelector('[data-a="seed"]').onclick = seed;
+      b.querySelector('[data-a="log"]').onclick = openLog;
+      b.querySelector('[data-x]').onclick = closeSheet;
+    });
+  }
+  function openLog() {
+    const all = Object.fromEntries(items().map(it => [it.id, it]));
+    const L = ((data && data.log) || []).slice(-80).reverse();
+    const nm = l => all[l.i] ? all[l.i].n : (l.t === 'del' && l.n ? l.n : String(l.i || '').split('|')[1] || '');
+    const un = l => all[l.i] ? all[l.i].u : String(l.i || '').split('|')[2] || '';
+    sheet(`<h2>Журнал</h2><div class="bs-sub">Последние операции склада</div><div class="grp hist">${L.length ? L.map(l => `<div class="line"><span class="l">${esc(nm(l))}<small>${OPN[l.t] || l.t}${l.t === 'use' && l.n ? ' · ' + esc(l.n) : (l.t !== 'del' && l.n ? ' · ' + esc(l.n) : '')} · ${when(l.d)}</small></span><span class="v ${l.q > 0 ? 'plus' : ''}">${l.t === 'del' ? '' : l.t === 'fix' ? '= ' + fq(l.v) : (l.q > 0 ? '+' : '') + fq(l.q) + ' ' + esc(un(l))}</span></div>`).join('') : '<div class="empty">Пока пусто</div>'}</div>
+      <button type="button" class="sbtn ghost" data-x>Закрыть</button>`, b => { b.querySelector('[data-x]').onclick = closeSheet; });
+  }
+  async function seed() {
+    const sec = ui.t === 'buy' ? 'mesh' : ui.t;
+    if (await op({ type: 'seed', list: SEED[sec].map(([n, u]) => ({ s: sec, n, u })) }, j => j.applied ? `Добавлено позиций: ${j.applied}. Внесите остатки — нажмите на позицию → «Корректировка».` : 'Все позиции уже есть')) closeSheet();
+  }
+  function toast(t, err) { const el = $('toast'); el.textContent = t; el.className = 'toast show' + (err ? ' err' : ''); clearTimeout(toast.t); toast.t = setTimeout(() => { el.className = 'toast'; }, err ? 4200 : 3200); }
+
+  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { ui.t = b.dataset.t; ls.set(UI_KEY, ui); $('q').value = ''; render(); window.scrollTo(0, 0); });
+  document.addEventListener('click', e => { const b = e.target.closest('.it[data-i]'); if (b) openItem(b.dataset.i); });
+  $('q').oninput = render;
+  $('addIn').onclick = () => openIn(null);
+  $('addItem').onclick = openNew;
+  $('moreBtn').onclick = openMore;
+  $('refresh').onclick = load;
+  render(); load();
+</script>
+<script>
+  // «Назад»: возвращаемся по истории, а не добавляем новую запись — иначе системная «назад» гоняет по кругу
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-back]');
+    if (!a) return;
+    e.preventDefault();
+    const norm = p => p.replace(/index\.html$/, '');
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null, t = new URL(a.getAttribute('href'), location.href);
+      if (r && r.origin === location.origin && norm(r.pathname) === norm(t.pathname) && history.length > 1) { history.back(); return; }
+      location.replace(t.href);
+    } catch (_) { location.href = a.getAttribute('href'); }
+  });
+</script>
+</body>
+</html>

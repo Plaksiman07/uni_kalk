@@ -3359,5 +3359,20 @@
     } catch (_) { location.href = a.getAttribute('href'); }
   });
 </script>
+<script>
+  // Склад: расход материалов этого заказа (для списания со склада). Названия — как в «Комплектующих» тех части, без пояснений в скобках.
+  window.stockLines = function () {
+    const d = window.calcData;
+    if (!d || !d.items || !d.items.length || d.blocked) return [];
+    const num = v => parseFloat(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
+    // пояснения в скобках («хлыстов: 3», «с запасом 10%», «2 шт на изделие») убираем, а уточнения вида «(труба)» оставляем
+    const clean = n => String(n).replace(/\s*\(([^()]*)\)\s*$/, (m, x) => /хлыст|запас|шт на|по ширине|по высоте|люверс/i.test(x) ? '' : m).replace(/\s+/g, ' ').trim();
+    let rows = [];
+    try { rows = componentsList.length ? componentsList(readOrder().totals) : componentsList(); } catch (e) { rows = []; }
+    const out = rows.map(r => ({ n: clean(r[0]), u: String(r[1]), q: num(r[2]) })).filter(x => x.n && x.q > 0);
+    (d.fabricGroups || []).forEach(g => { if (g.lengthM > 0) out.push({ n: 'Ткань ' + (typeof specText === 'function' ? specText(g.spec) : (g.spec && g.spec.name) || ''), u: 'м.п.', q: Math.round(g.lengthM * 100) / 100 }); });
+    return out;
+  };
+</script>
 </body>
 </html>

@@ -18,6 +18,9 @@
  * /docs, /doc — список файлов сделки и сам файл (PDF КП, заказ-наряда, наклеек) — открыть в приложении.
  * /finance, /fin-op, /fin-op-del — «Финансы»: закрытые («Успешно реализовано») сделки + деньги заказа из калькулятора,
  *   ручные операции касс (расходы, выплаты зарплаты, корректировки).
+ * /stock, /stock-op — «Склад»: остатки материалов (москитные сетки, рулонные шторы, сетки плиссе), приход, корректировка.
+ *   Расход заказа калькулятор присылает при отправке (/state-save → use:<сделка>); списывается один раз,
+ *   когда заказ переходит в «Готов к установке» (или дальше) — из приложения или прямо в amoCRM.
  * /doc-save — копия PDF в хранилище приложения (KV) при отправке заказа: «Документы» открываются оттуда,
  *   amoCRM — резерв (из него берутся файлы только старых сделок).
  *   Хранятся в Cloudflare KV (привязка SP_ORDERS, создаётся автоматически из wrangler.jsonc).
@@ -42,7 +45,7 @@ export default {
     const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, 'Content-Type': 'application/json; charset=utf-8' } });
 
     // Версия посредника (без ключа, ничего не раскрывает) — чтобы проверить обновление
-    if (new URL(request.url).pathname === '/version') return json({ worker_version: 7 });
+    if (new URL(request.url).pathname === '/version') return json({ worker_version: 8 });
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (!originOk) return json({ error: 'Запрос не с адреса калькулятора (ALLOWED_ORIGINS)' }, 403);
     if (request.method !== 'POST') return json({ error: 'Только POST' }, 405);
@@ -142,7 +145,7 @@ export default {
       // Проверка связи
       if (url.pathname === '/ping') {
         const acc = await amo('/api/v4/account');
-        return json({ ok: true, account: acc.name || domain, worker_version: 7 });
+        return json({ ok: true, account: acc.name || domain, worker_version: 8 });
       }
 
       // Создать сделку (или обновить существующую) + примечание
@@ -211,10 +214,99 @@ export default {
         }
         const ps = d.__ps || {};
         return json({ ok: true, lead_id: leadId, created, contact_existing: !!d.__contactExisting, missing_fields: fieldsRes.missing, url: `${base}/leads/detail/${leadId}`,
-          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 7 });
+          pipeline_name: ps.pipeline_name, status_name: ps.status_name, status_fallback: !!ps.status_fallback, worker_version: 8 });
       }
 
       // Сменить этап сделки / закрыть «Успешно реализовано»
+      // === Склад: один документ «stock» { items: { id: позиция }, log: [последние операции] } ===
+      const STOCK_SECS = ['mesh', 'roll', 'plisse'];
+      const READY_STAGES = ['Готов к установке', 'На установку'];
+      const r2 = v => Math.round((Number(v) || 0) * 1000) / 1000;
+      const stockKey = (sec, name, unit) => `${sec}|${String(name).trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ')}|${String(unit).trim()}`;
+      async function stockGet() { const t = env.SP_ORDERS ? await env.SP_ORDERS.get('stock') : null; const d = t ? JSON.parse(t) : {}; d.items = d.items || {}; d.log = d.log || []; return d; }
+      async function stockPut(d) { d.log = d.log.slice(-600); d.at = Date.now(); await env.SP_ORDERS.put('stock', JSON.stringify(d)); }
+      const stockLog = (d, e) => d.log.push(Object.assign({ d: Math.floor(Date.now() / 1000) }, e));
+      function stockEnsure(d, sec, name, unit) {
+        const id = stockKey(sec, name, unit);
+        if (!d.items[id]) d.items[id] = { s: sec, n: String(name).trim().slice(0, 120), u: String(unit).trim().slice(0, 12), q: 0, m: 0, p: 0 };
+        return id;
+      }
+      // списать расход заказа (один раз)
+      async function stockUse(leadId, d) {
+        const raw = JSON.parse((await env.SP_ORDERS.get('use:' + leadId)) || 'null');
+        if (!raw || raw.done) return null;
+        const doc = d || await stockGet(), used = [];
+        for (const l of raw.lines || []) {
+          if (!STOCK_SECS.includes(l.s) || !(Number(l.q) > 0)) continue;
+          const id = stockEnsure(doc, l.s, l.n, l.u);
+          doc.items[id].q = r2(doc.items[id].q - Number(l.q));
+          stockLog(doc, { t: 'use', i: id, q: -r2(l.q), l: leadId, n: raw.t || '' });
+          used.push(id);
+        }
+        raw.done = Math.floor(Date.now() / 1000);
+        await env.SP_ORDERS.put('use:' + leadId, JSON.stringify(raw), { metadata: { done: 1, t: raw.t || '' } });
+        if (!d) await stockPut(doc);
+        return used.length;
+      }
+
+      if (url.pathname === '/stock' || url.pathname === '/stock-op') {
+        if (!env.SP_ORDERS) return json({ error: 'В посреднике не подключено хранилище (KV «SP_ORDERS»)', no_store: true }, 501);
+        const d = await request.json().catch(() => ({}));
+        const doc = await stockGet();
+        let applied = 0;
+        if (url.pathname === '/stock-op') {
+          const o = d.op || {}, id = String(o.i || ''), it = doc.items[id];
+          if (o.type === 'item') {   // новая позиция или настройки позиции
+            if (it) { if (o.m !== undefined) it.m = Math.max(0, r2(o.m)); if (o.h !== undefined) it.h = o.h ? 1 : 0; if (o.p !== undefined) it.p = Math.max(0, r2(o.p)); }
+            else {
+              if (!STOCK_SECS.includes(o.s) || !String(o.n || '').trim() || !String(o.u || '').trim()) return json({ error: 'Укажите раздел, название и единицу' }, 400);
+              const nid = stockEnsure(doc, o.s, o.n, o.u);
+              const ni = doc.items[nid]; ni.m = Math.max(0, r2(o.m)); ni.q = r2(o.q); ni.p = Math.max(0, r2(o.p)); ni.h = 0;
+              stockLog(doc, { t: 'new', i: nid, q: ni.q, p: ni.p });
+            }
+          } else if (o.type === 'seed') {   // заполнить позиции из калькуляторов (существующие не трогаем)
+            let n = 0; (o.list || []).slice(0, 400).forEach(x => { if (STOCK_SECS.includes(x.s) && x.n && x.u && !doc.items[stockKey(x.s, x.n, x.u)]) { stockEnsure(doc, x.s, x.n, x.u); n++; } });
+            applied = n;
+          } else {
+            if (!it) return json({ error: 'Нет такой позиции' }, 404);
+            const q = r2(o.q);
+            if (o.type === 'in') {   // приход: остаток растёт, цена — средняя
+              if (!(q > 0)) return json({ error: 'Укажите количество прихода' }, 400);
+              const p = Math.max(0, r2(o.p)), had = Math.max(0, it.q);
+              if (p > 0) it.p = r2(had + q > 0 ? (had * (it.p || 0) + q * p) / (had + q) : p);
+              it.q = r2(it.q + q);
+              stockLog(doc, { t: 'in', i: id, q, p, n: String(o.n || '').slice(0, 200) });
+            } else if (o.type === 'fix') {   // корректировка: фактический остаток
+              const was = it.q; it.q = q;
+              stockLog(doc, { t: 'fix', i: id, q: r2(q - was), v: q, n: String(o.n || '').slice(0, 200) });
+            } else if (o.type === 'del') {
+              delete doc.items[id];
+              stockLog(doc, { t: 'del', i: id, n: it.n });
+            } else return json({ error: 'Неверная операция' }, 400);
+          }
+          await stockPut(doc);
+          return json({ ok: true, items: doc.items, log: doc.log, applied, worker_version: 8 });
+        }
+        // список: заодно списать заказы, которые уже «Готов к установке» (в том числе переведённые прямо в amoCRM)
+        try {
+          const pend = []; let cursor;
+          do { const r = await env.SP_ORDERS.list({ prefix: 'use:', cursor }); r.keys.forEach(k => { if (!(k.metadata && k.metadata.done)) pend.push(Number(k.name.slice(4))); }); cursor = r.list_complete ? null : r.cursor; } while (cursor);
+          if (pend.length) {
+            const pd = await amo('/api/v4/leads/pipelines');
+            const stName = {}; ((pd._embedded && pd._embedded.pipelines) || []).forEach(p => ((p._embedded && p._embedded.statuses) || []).forEach(x => { stName[x.id] = x.name; }));
+            for (let i = 0; i < pend.length; i += 40) {
+              const r = await fetch(`${base}/api/v4/leads?limit=250&${pend.slice(i, i + 40).map(id => `filter[id][]=${id}`).join('&')}`, { headers: auth });
+              if (!r.ok || r.status === 204) continue;
+              for (const l of (((await r.json())._embedded || {}).leads || [])) {
+                if (l.status_id === 142 || READY_STAGES.some(n => sameName(stName[l.status_id] || '', n))) { if (await stockUse(l.id, doc)) applied++; }
+              }
+            }
+            if (applied) await stockPut(doc);
+          }
+        } catch (e) {}
+        return json({ ok: true, items: doc.items, log: doc.log, applied, worker_version: 8 });
+      }
+
       if (url.pathname === '/move') {
         const d = await request.json().catch(() => ({}));
         const leadId = Number(d.lead_id) || 0, to = String(d.to || '');
@@ -227,7 +319,10 @@ export default {
         const st = to === 'won' ? (sts.find(x => x.id === 142) || { id: 142, name: 'Успешно реализовано' }) : sts.find(x => sameName(x.name, to));
         if (!st) return json({ error: `В воронке «${pipe.name}» нет этапа «${to}». Этапы: ${sts.filter(x => x.id !== 142 && x.id !== 143).map(x => `«${x.name}»`).join(', ')}` }, 404);
         if (lead.status_id !== st.id) await amo(`/api/v4/leads/${leadId}`, 'PATCH', { status_id: st.id, pipeline_id: pipe.id });
-        return json({ ok: true, lead_id: leadId, status_id: st.id, status_name: st.name, won: st.id === 142 });
+        // «Готов к установке» и дальше — списать материалы заказа со склада
+        let stock = null;
+        if (env.SP_ORDERS && (st.id === 142 || READY_STAGES.some(n => sameName(st.name, n)))) { try { stock = await stockUse(leadId); } catch (e) {} }
+        return json({ ok: true, lead_id: leadId, status_id: st.id, status_name: st.name, won: st.id === 142, stock_used: stock });
       }
 
       // Копия PDF в приложении (KV): doc:<сделка>:<kp|order|labels> — новая версия заменяет старую
@@ -330,7 +425,7 @@ export default {
         const pname = {}; pipes.forEach(p => { pname[p.id] = p.name; });
         const orders = won.map(l => ({ id: l.id, name: l.name || '', price: Number(l.price) || 0, closed_at: Number(l.closed_at) || Number(l.updated_at) || 0, pipeline: pname[l.pipeline_id] || '', fin: fins[l.id] || null, url: `${base}/leads/detail/${l.id}` }));
         const ops = (await kvAll('op:')).map(k => ({ id: k.name, ...(k.metadata || {}) }));
-        return json({ ok: true, updated: Date.now(), orders, ops, worker_version: 7 });
+        return json({ ok: true, updated: Date.now(), orders, ops, worker_version: 8 });
       }
 
       // Данные заказа калькулятора — для корректировки из «Текущих заказов» (Cloudflare KV)
@@ -343,6 +438,17 @@ export default {
           const text = JSON.stringify(d.state || null);
           if (text.length > 24 * 1024 * 1024) return json({ error: 'Слишком большой заказ (фото) — сохранено не будет' }, 413);
           await env.SP_ORDERS.put('lead:' + leadId, text, { metadata: { at: Date.now(), size: text.length } });
+          // расход материалов — для «Склада» (списывается при «Готов к установке»; после списания не меняется)
+          if (Array.isArray(d.use)) {
+            const old = JSON.parse((await env.SP_ORDERS.get('use:' + leadId)) || 'null');
+            if (!old || !old.done) {
+              const lines = d.use.filter(l => l && STOCK_SECS.includes(l.s) && l.n && l.u && Number(l.q) > 0).slice(0, 300).map(l => ({ s: l.s, n: String(l.n).slice(0, 120), u: String(l.u).slice(0, 12), q: r2(l.q) }));
+              const t = d.fin && d.fin.t ? String(d.fin.t).slice(0, 80) : '';
+              await env.SP_ORDERS.put('use:' + leadId, JSON.stringify({ lines, t, at: Date.now() }), { metadata: { done: 0, t } });
+              // новые позиции появляются на складе сразу (с нулём), чтобы их можно было заполнить
+              if (lines.length) { const doc = await stockGet(); const before = Object.keys(doc.items).length; lines.forEach(l => stockEnsure(doc, l.s, l.n, l.u)); if (Object.keys(doc.items).length !== before) await stockPut(doc); }
+            }
+          }
           // деньги заказа для «Финансов» (в метаданных — чтобы список читался одним запросом)
           if (d.fin && typeof d.fin === 'object') {
             const f = d.fin, n = v => Math.round(Number(v) || 0);
@@ -416,7 +522,7 @@ export default {
           const fresh = Math.max(l.created_at || 0, l.closed_at || 0);
           if (!best || fresh > best.fresh) best = { number: n, lead_id: l.id, name: l.name, fresh, by: (l.closed_at || 0) > (l.created_at || 0) ? 'closed' : 'created' };
         }
-        return json({ ok: true, last: best, worker_version: 7 });
+        return json({ ok: true, last: best, worker_version: 8 });
       }
 
       // Текущие заказы: сделки на рабочих этапах выбранных воронок (только чтение)
@@ -500,7 +606,7 @@ export default {
             lastNote: notes[l.id] && notes[l.id].other ? notes[l.id].other.text : '', url: `${base}/leads/detail/${l.id}`, editable: editable.has(l.id)
           });
         }
-        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 7 });
+        return json({ ok: true, base, updated: Date.now(), pipelines: out, store: !!env.SP_ORDERS, worker_version: 8 });
       }
 
       return json({ error: 'Неизвестный адрес' }, 404);

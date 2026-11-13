@@ -179,6 +179,11 @@
         <span class="r-body"><span class="r-name">Финансы</span><span class="r-desc">Заказы, касса, зарплата, расходы</span></span>
         <svg class="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </a>
+      <a class="row" href="stock.html">
+        <span class="tile" style="background:#f3effd;color:#7c3aed"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5z"/><path d="M3.3 7.3L12 12l8.7-4.7M12 22V12"/></svg></span>
+        <span class="r-body"><span class="r-name">Склад</span><span class="r-desc" id="stockDesc">Сетки, рулонные шторы, плиссе — остатки</span></span>
+        <svg class="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
       <a class="row" id="amoOpen" href="#" target="_blank" rel="noopener">
         <span class="tile blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18"/><path d="M8 13h3M8 16h6"/><path d="M15.5 13.5l1.2 1.2 2.3-2.4"/></svg></span>
         <span class="r-body"><span class="r-name">amoCRM</span><span class="r-desc" id="amoDesc">Сделки, воронки и заказы</span></span>
@@ -238,7 +243,7 @@
     <div class="group"><div class="ver"><span>Версия</span><span>2.55</span></div></div>
   </div>
 
-  <footer id="foot">SunProtection · версия 2.58</footer>
+  <footer id="foot">SunProtection · версия 2.59</footer>
 </main>
 
 <div class="veil" id="veil"></div>
@@ -294,6 +299,21 @@
       route();
     });
     route();
+  })();
+
+  // «Склад»: сколько позиций заканчивается (из кэша сразу, потом свежие данные)
+  (function () {
+    const show = d => {
+      if (!d || !d.items) return;
+      const all = Object.values(d.items).filter(it => !it.h);
+      const low = all.filter(it => it.q <= 0 && (it.m > 0 || it.q < 0) || (it.m > 0 && it.q <= it.m)).length;
+      const el = $('stockDesc');
+      el.innerHTML = low ? `<b style="color:#dc2626">Заканчивается: ${low} ${low % 10 === 1 && low % 100 !== 11 ? 'позиция' : (low % 10 >= 2 && low % 10 <= 4 && (low % 100 < 10 || low % 100 >= 20)) ? 'позиции' : 'позиций'}</b>` : (all.length ? `${all.length} позиций · всего хватает` : 'Сетки, рулонные шторы, плиссе — остатки');
+    };
+    let cfg = {}; try { show(JSON.parse(localStorage.getItem('spStockCache'))); cfg = JSON.parse(localStorage.getItem('spAmoConfig')) || {}; } catch (e) {}
+    if (!cfg.url || !cfg.key) return;
+    fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1') + '/stock', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: '{}' })
+      .then(r => r.json()).then(j => { if (j && j.items) { const d = { items: j.items, log: j.log || [], updated: Date.now() }; try { localStorage.setItem('spStockCache', JSON.stringify(d)); } catch (e) {} show(d); } }).catch(() => {});
   })();
 
   // «Новый заказ» и черновики. Открытый заказ — spCombo2, сохранённые — spDrafts (drafts.js)
