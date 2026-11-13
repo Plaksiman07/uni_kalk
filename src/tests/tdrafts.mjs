@@ -1,5 +1,5 @@
 import { chromium } from '/home/claude/.npm-global/lib/node_modules/playwright/index.mjs';
-const OUT = new URL('./out/', import.meta.url).pathname;
+const OUT = new URL('./out/', import.meta.url).pathname; (await import('fs')).mkdirSync(OUT, { recursive: true });
 const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
 const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
 let ok = true; const chk = (n, c, x = '') => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + n + ' ' + x); if (!c) ok = false; };
@@ -43,7 +43,22 @@ chk('В и Б в черновиках, А — нет', (await drafts()).length =
 // 5. «Удалить» Б
 await p.goto(B + 'index.html'); await p.waitForTimeout(300);
 const idB = await p.evaluate(() => Object.values(JSON.parse(localStorage.getItem('spDrafts'))).find(x => x.client.clientName === 'Петров').id);
-await p.click(`#draftsList [data-d="${idB}"]`); await p.waitForTimeout(300); await p.click('#dsDel'); await p.waitForTimeout(400);
+// свайп влево по Б → «Удалить»
+const swipe = async (sel, dist) => { const bx = await p.locator(sel).boundingBox(); const y = bx.y + bx.height / 2, x = bx.x + bx.width - 30;
+  await p.mouse.move(x, y); await p.mouse.down(); for (let i = 1; i <= 8; i++) await p.mouse.move(x - dist * i / 8, y); await p.mouse.up(); await p.waitForTimeout(350); };
+await swipe(`#draftsList [data-d="${idB}"]`, 110);
+await p.screenshot({ path: OUT + 'dr_swipe.png' });
+chk('свайп открыл «Удалить», шторка не открылась', await p.isVisible(`[data-del="${idB}"]`) && !(await p.evaluate(() => document.getElementById('dsheet').classList.contains('show'))));
+// тап по строке — закрывает, ещё раз свайп и «Удалить» → отмена
+await p.click(`#draftsList [data-d="${idB}"]`); await p.waitForTimeout(300);
+chk('тап по открытой строке закрыл её', await p.evaluate(id => !document.querySelector(`[data-d="${id}"]`).style.transform, idB));
+await swipe(`#draftsList [data-d="${idB}"]`, 110); await p.click(`[data-del="${idB}"]`); await p.waitForTimeout(400);
+await p.screenshot({ path: OUT + 'dr_undo.png' });
+chk('после удаления строки нет, есть «Отменить»', (await p.$$(`#draftsList [data-d="${idB}"]`)).length === 0 && await p.isVisible('#itoast button'));
+await p.click('#itoast button'); await p.waitForTimeout(400);
+chk('«Отменить» вернул черновик', (await p.$$(`#draftsList [data-d="${idB}"]`)).length === 1 && (await drafts()).includes(idB));
+// длинный свайп — удаление сразу, через 4,5 с — насовсем
+await swipe(`#draftsList [data-d="${idB}"]`, 300); await p.waitForTimeout(5000);
 chk('Б удалён вместе с разделом', !(await drafts()).includes(idB) && await p.evaluate(id => !localStorage.getItem('meshCalcState1@combo:' + id), idB));
 // 6. «Добавить в amoCRM» для А (он открыт) → сделка создана, А пропал из черновиков
 await p.click('#draftsList [data-d="A1"]'); await p.waitForTimeout(300); await p.click('#dsSend'); await p.waitForURL(/combo/);
