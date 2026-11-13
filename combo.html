@@ -213,7 +213,7 @@
 </head>
 <body>
 <div class="nav" id="nav">
-  <a href="index.html" aria-label="Назад" title="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+  <a href="index.html" data-back aria-label="Назад" title="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
   <span class="nav-title" id="navTitle">Новый заказ</span>
   <button type="button" id="moreBtn" aria-label="Ещё"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
 </div>
@@ -1054,6 +1054,20 @@
   render();
   ordered().forEach(id => frameFor(id));
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+<script>
+  // «Назад»: возвращаемся по истории, а не добавляем новую запись — иначе системная «назад» гоняет по кругу
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-back]');
+    if (!a) return;
+    e.preventDefault();
+    const norm = p => p.replace(/index\.html$/, '');
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null, t = new URL(a.getAttribute('href'), location.href);
+      if (r && r.origin === location.origin && norm(r.pathname) === norm(t.pathname) && history.length > 1) { history.back(); return; }
+      location.replace(t.href);
+    } catch (_) { location.href = a.getAttribute('href'); }
+  });
 </script>
 </body>
 </html>

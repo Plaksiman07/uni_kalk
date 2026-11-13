@@ -181,9 +181,10 @@ for f,src in [('uni.html','uni_pre_amo.html'),('uni2.html','uni2_pre_amo.html'),
     PK = "(window.SP_EMBED ? 'photos@combo:' + window.SP_EMBED : 'photos')"
     rep("put(data, 'photos')", "put(data, " + PK + ")")
     rep("get('photos')", "get(" + PK + ")")
-    s = s.replace('<a href="index.html" class="home-btn"', '<a href="index.html#settings" class="home-btn"')
+    s = s.replace('<a href="index.html" class="home-btn"', '<a href="index.html#settings" data-back class="home-btn"')
+    s = s.replace('</body>', open(S + 'back_snippet.html').read() + '</body>', 1)
     import re as _re
-    s = _re.sub(r'(<a href="index.html#settings" class="home-btn" )title="Все калькуляторы" aria-label="Все калькуляторы">\s*<svg.*?</svg>',
+    s = _re.sub(r'(<a href="index.html#settings" data-back class="home-btn" )title="Все калькуляторы" aria-label="Все калькуляторы">\s*<svg.*?</svg>',
                 lambda m: m.group(1) + 'title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>', s, count=1, flags=_re.S)
     # сквозная нумерация изделий в комбинированном заказе
     if "let n = 0;\n      const specCache" in s: rep("let n = 0;\n      const specCache", "let n = window.__numOffset || 0;\n      const specCache")

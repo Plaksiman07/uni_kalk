@@ -1,0 +1,14 @@
+<script>
+  // «Назад»: возвращаемся по истории, а не добавляем новую запись — иначе системная «назад» гоняет по кругу
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-back]');
+    if (!a) return;
+    e.preventDefault();
+    const norm = p => p.replace(/index\.html$/, '');
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null, t = new URL(a.getAttribute('href'), location.href);
+      if (r && r.origin === location.origin && norm(r.pathname) === norm(t.pathname) && history.length > 1) { history.back(); return; }
+      location.replace(t.href);
+    } catch (_) { location.href = a.getAttribute('href'); }
+  });
+</script>

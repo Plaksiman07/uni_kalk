@@ -142,7 +142,7 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <a class="icon-btn" href="index.html" title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <a class="icon-btn" href="index.html" data-back title="Назад" aria-label="Назад"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
     <h1>Текущие заказы<small id="stamp">загрузка…</small></h1>
     <button type="button" class="icon-btn" id="reload" title="Обновить" aria-label="Обновить"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
   </div>
@@ -553,6 +553,20 @@
 
   render(); load();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+<script>
+  // «Назад»: возвращаемся по истории, а не добавляем новую запись — иначе системная «назад» гоняет по кругу
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-back]');
+    if (!a) return;
+    e.preventDefault();
+    const norm = p => p.replace(/index\.html$/, '');
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null, t = new URL(a.getAttribute('href'), location.href);
+      if (r && r.origin === location.origin && norm(r.pathname) === norm(t.pathname) && history.length > 1) { history.back(); return; }
+      location.replace(t.href);
+    } catch (_) { location.href = a.getAttribute('href'); }
+  });
 </script>
 </body>
 </html>

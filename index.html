@@ -212,7 +212,7 @@
     <div class="group"><div class="ver"><span>Версия</span><span>2.55</span></div></div>
   </div>
 
-  <footer id="foot">SunProtection · версия 2.55</footer>
+  <footer id="foot">SunProtection · версия 2.56</footer>
 </main>
 
 <div class="veil" id="veil"></div>
@@ -238,8 +238,20 @@
   // Экраны: главный и настройки (#settings)
   (function () {
     const route = () => { const s = location.hash === '#settings'; $('viewHome').hidden = s; $('viewSettings').hidden = !s; $('foot').hidden = s; window.scrollTo(0, 0); };
-    $('backBtn').addEventListener('click', e => { e.preventDefault(); if (history.length > 1 && document.referrer.indexOf(location.origin) === 0 && location.hash === '#settings') history.back(); else location.hash = ''; });
-    window.addEventListener('hashchange', route); route();
+    // в настройки пришли с главного — «назад» возвращает по истории; открыли сразу настройки — подменяем запись на главный, без новой
+    const FROM = 'spSettingsFromHome';
+    const ss = (k, v) => { try { return v === undefined ? sessionStorage.getItem(k) : (v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v)); } catch (_) { return null; } };
+    $('backBtn').addEventListener('click', e => {
+      e.preventDefault();
+      if (ss(FROM) === '1' && history.length > 1) { ss(FROM, null); history.back(); }
+      else { history.replaceState(null, '', location.pathname + location.search); route(); }
+    });
+    window.addEventListener('hashchange', e => {
+      if (location.hash === '#settings' && !/#settings$/.test(e.oldURL || '')) ss(FROM, '1');
+      if (location.hash !== '#settings') ss(FROM, null);
+      route();
+    });
+    route();
   })();
 
   // «Новый заказ»: если есть незаконченный — спросить
