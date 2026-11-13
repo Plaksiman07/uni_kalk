@@ -120,6 +120,16 @@
     .sbtn.sec svg { color: var(--accent); }
     .sbtn.ghost { background: none; color: var(--muted); }
 
+    /* черновики */
+    button.row { width: 100%; border: 0; background: none; font: inherit; text-align: left; }
+    .d-amt { flex: none; font-size: 15px; font-weight: 800; white-space: nowrap; }
+    .d-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; }
+    .sbtn.danger { background: var(--card); color: #c0392b; box-shadow: var(--shadow); }
+    .sbtn.danger svg { color: #c0392b; }
+    .itoast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 60; transform: translate(-50%, 20px); opacity: 0; max-width: calc(100% - 32px);
+      background: #1f2328; color: #fff; font-size: 14px; font-weight: 700; padding: 12px 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transition: opacity .25s, transform .25s; pointer-events: none; }
+    .itoast.show { opacity: 1; transform: translate(-50%, 0); }
+
     footer { text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); margin-top: 28px; }
     @media (prefers-reduced-motion: reduce) { .sheet, .veil, .hero, .icon-btn { transition: none; } }
   </style>
@@ -140,6 +150,11 @@
       <span class="hero-desc">Любые изделия в одном заказе: расчёт, КП, заказ-наряд с раскроем и сделка в amoCRM</span>
       <span class="draft" id="draftChip" hidden><i></i><span id="draftChipText"></span></span>
     </button>
+
+    <div id="draftsSec" hidden>
+      <div class="sec-h">Черновики</div>
+      <div class="group" id="draftsList"></div>
+    </div>
 
     <div class="sec-h">Работа</div>
     <div class="group">
@@ -212,7 +227,7 @@
     <div class="group"><div class="ver"><span>Версия</span><span>2.55</span></div></div>
   </div>
 
-  <footer id="foot">SunProtection · версия 2.56</footer>
+  <footer id="foot">SunProtection · версия 2.57</footer>
 </main>
 
 <div class="veil" id="veil"></div>
@@ -229,6 +244,22 @@
   <button type="button" class="sbtn sec" id="dNew"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Начать новый</button>
   <button type="button" class="sbtn ghost" id="dCancel">Отмена</button>
 </div>
+<div class="sheet" id="dsheet" role="dialog" aria-modal="true" aria-labelledby="dsTitle">
+  <div class="grab"></div>
+  <h2 id="dsTitle">Черновик</h2>
+  <p id="dsNote">Что сделать с заказом?</p>
+  <div class="d-card">
+    <span class="tile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1.2"/><path d="M9 12h6M9 16h4"/></svg></span>
+    <span style="min-width: 0;"><b id="dsName"></b><small id="dsSub"></small></span>
+    <span class="d-sum" id="dsSum"></span>
+  </div>
+  <button type="button" class="sbtn pri" id="dsEdit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Изменить</button>
+  <button type="button" class="sbtn sec" id="dsSend"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>Добавить в amoCRM</button>
+  <button type="button" class="sbtn danger" id="dsDel"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Удалить</button>
+  <button type="button" class="sbtn ghost" id="dsCancel">Отмена</button>
+</div>
+<div class="itoast" id="itoast" role="status"></div>
+<script src="drafts.js"></script>
 
 <script>
   const $ = id => document.getElementById(id);
@@ -254,31 +285,67 @@
     route();
   })();
 
-  // «Новый заказ»: если есть незаконченный — спросить
+  // «Новый заказ» и черновики. Открытый заказ — spCombo2, сохранённые — spDrafts (drafts.js)
   (function () {
-    let st = null; try { st = JSON.parse(localStorage.getItem('spCombo2') || 'null'); } catch (e) {}
-    const c = (st && st.client) || {}, parts = (st && st.parts) || [];
-    // черновик — только заказ, который ещё не отправлен в amoCRM
-    // или отправленный, но потом изменённый (корректировка) и ещё не отправленный повторно
-    const sent = !!(st && st.id && ls('spComboLead2:' + st.id));
-    const changed = !!(st && sent && st.sentSig && st.sig && st.sig !== st.sentSig);
-    const has = !!(st && (sent ? changed : (parts.length || (st.services || []).length || c.clientName || c.orderNumber || c.clientPhone)));
-    let pcs = 0, sum = 0;
-    if (has) (st.services || []).forEach(x => { sum += parseFloat(String(x.price || '').replace(/\s/g, '').replace(',', '.')) || 0; });
-    if (has) parts.forEach(id => { const s = st.sum && st.sum[id]; if (!s) return; (s.items || []).forEach(it => { pcs += Number(it.qty) || 1; }); sum += Number(s.prices && s.prices[st.priceSel || 'base']) || 0; });
-    const title = c.orderNumber ? 'Заказ № ' + c.orderNumber : (c.clientName || 'Заказ без номера');
-    const sub = [c.orderNumber ? c.clientName : '', pcs ? pcs + ' ' + plural(pcs, 'изделие', 'изделия', 'изделий') : 'изделий пока нет'].filter(Boolean).join(' · ');
-    if (changed) { $('shTitle').textContent = 'Изменения не отправлены'; $('shTitle').nextElementSibling.textContent = 'Заказ скорректирован, но в amoCRM ещё старая версия. Продолжить корректировку или начать новый заказ?'; $('dCont').textContent = 'Продолжить корректировку'; }
-    if (has) { $('draftChip').hidden = false; $('draftChipText').textContent = (changed ? 'Не отправлено: ' : 'Черновик: ') + [title, pcs ? pcs + ' шт' : ''].filter(Boolean).join(' · '); }
-    const open = () => { $('dTitle').textContent = title; $('dSub').textContent = sub; $('dSum').textContent = sum ? Math.round(sum).toLocaleString('ru-RU') + ' ₽' : '';
-      $('veil').classList.add('show'); $('sheet').classList.add('show'); setTimeout(() => $('dCont').focus(), 50); };
-    const close = () => { $('veil').classList.remove('show'); $('sheet').classList.remove('show'); };
-    $('newBtn').addEventListener('click', () => { if (has) open(); else location.href = 'combo.html?new=1'; });
+    const D = window.SPDrafts;
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = v => v ? Math.round(v).toLocaleString('ru-RU') + ' ₽' : '';
+    const when = t => { if (!t) return ''; const d = new Date(t), now = new Date();
+      const hm = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      return d.toDateString() === now.toDateString() ? 'сегодня, ' + hm : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) + ', ' + hm; };
+    const CLIP = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1.2"/><path d="M9 12h6M9 16h4"/></svg>';
+    const CHEV = '<svg class="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+    let items = [], cur = null, sel = null;
+    const veil = $('veil');
+    const show = id => { veil.classList.add('show'); $(id).classList.add('show'); };
+    const close = () => { veil.classList.remove('show'); $('sheet').classList.remove('show'); $('dsheet').classList.remove('show'); };
+    function render() {
+      items = D ? D.all() : [];
+      cur = items.find(x => x.active) || null;
+      // чип на «Новом заказе» — про открытый заказ
+      $('draftChip').hidden = !cur;
+      if (cur) $('draftChipText').textContent = (cur.changed ? 'Не отправлено: ' : 'Черновик: ') + [cur.title, cur.pcs ? cur.pcs + ' шт' : ''].filter(Boolean).join(' · ');
+      $('draftsSec').hidden = !items.length;
+      $('draftsList').innerHTML = items.map(x => `<button type="button" class="row" data-d="${esc(x.id)}">
+        <span class="tile">${CLIP}</span>
+        <span class="r-body"><span class="r-name">${esc(x.title)}</span><span class="r-desc">${x.active ? '<i class="d-dot"></i>' : ''}${esc([x.sub, x.changed ? 'не отправлено' : (x.active ? 'открыт' : when(x.when))].filter(Boolean).join(' · '))}</span></span>
+        <span class="d-amt">${esc(money(x.sum))}</span>${CHEV}</button>`).join('');
+    }
+    // «Новый заказ»: открытый незаконченный — спросить (новый не стирает его, а кладёт в черновики)
+    $('newBtn').addEventListener('click', () => {
+      if (!cur) { location.href = 'combo.html?new=1'; return; }
+      if (cur.changed) { $('shTitle').textContent = 'Изменения не отправлены'; $('shTitle').nextElementSibling.textContent = 'Заказ скорректирован, но в amoCRM ещё старая версия. Продолжить корректировку или начать новый? Корректировка останется в черновиках.'; $('dCont').textContent = 'Продолжить корректировку'; }
+      else { $('shTitle').textContent = 'Есть незаконченный заказ'; $('shTitle').nextElementSibling.textContent = 'Продолжить его или начать новый? Этот останется в черновиках.'; $('dCont').textContent = 'Продолжить заказ'; }
+      $('dTitle').textContent = cur.title; $('dSub').textContent = cur.sub; $('dSum').textContent = money(cur.sum);
+      show('sheet'); setTimeout(() => $('dCont').focus(), 50);
+    });
     $('dCont').addEventListener('click', () => { location.href = 'combo.html'; });
     $('dNew').addEventListener('click', () => { location.href = 'combo.html?new=1'; });
-    $('dCancel').addEventListener('click', close); $('veil').addEventListener('click', close);
+    // черновик: изменить / в amoCRM / удалить
+    $('draftsList').addEventListener('click', e => {
+      const b = e.target.closest('[data-d]'); if (!b) return;
+      sel = items.find(x => x.id === b.dataset.d); if (!sel) return;
+      $('dsTitle').textContent = sel.changed ? 'Корректировка заказа' : 'Черновик';
+      $('dsNote').textContent = sel.changed ? 'Изменения ещё не отправлены в amoCRM.' : (sel.active ? 'Этот заказ открыт сейчас.' : 'Сохранён ' + when(sel.when) + '.');
+      $('dsName').textContent = sel.title; $('dsSub').textContent = sel.sub; $('dsSum').textContent = money(sel.sum);
+      $('dsSend').lastChild.textContent = sel.changed ? 'Обновить в amoCRM' : 'Добавить в amoCRM';
+      $('dsSend').disabled = !sel.pcs && !sel.sum;
+      show('dsheet');
+    });
+    const go = send => { if (!sel) return; location.href = 'combo.html' + (sel.active ? (send ? '?send=1' : '') : '?draft=' + encodeURIComponent(sel.id) + (send ? '&send=1' : '')); };
+    $('dsEdit').addEventListener('click', () => go(false));
+    $('dsSend').addEventListener('click', () => go(true));
+    $('dsDel').addEventListener('click', async () => {
+      if (!sel) return;
+      if (!confirm(`Удалить черновик «${sel.title}»? Восстановить его будет нельзя.` + (sel.changed ? ' Сделка в amoCRM останется без изменений.' : ''))) return;
+      await D.remove(sel.id); close(); render(); toast('Черновик удалён');
+    });
+    $('dCancel').addEventListener('click', close); $('dsCancel').addEventListener('click', close); veil.addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-    window.addEventListener('pageshow', e => { if (e.persisted) close(); });
+    function toast(t) { const el = $('itoast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600); }
+    const fromCombo = () => { try { const t = sessionStorage.getItem('spToast'); if (t) { sessionStorage.removeItem('spToast'); toast(t); } } catch (e) {} };
+    window.addEventListener('pageshow', () => { close(); render(); fromCombo(); });
+    render();
   })();
 
   // amoCRM: адрес запоминается после первой сделки или вводится в настройках.

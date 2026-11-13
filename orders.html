@@ -179,6 +179,7 @@
   <div class="v-body" id="vBody"></div>
 </div>
 
+<script src="drafts.js"></script>
 <script>
   const CFG_KEY = 'spAmoConfig', CACHE_KEY = 'spOrdersCache', UI_KEY = 'spOrdersUi';
   const STAGES = ['Изготовление', 'Готов к установке', 'На установку'];
@@ -488,23 +489,14 @@
   async function editOrder(leadId, btn) {
     const cfg = ls.get(CFG_KEY, {});
     const cur = ls.get('spCombo2', null);
-    if (cur && cur.id) {
-      const sent = !!localStorage.getItem('spComboLead2:' + cur.id);
-      const unsent = sent ? !!(cur.sentSig && cur.sig && cur.sig !== cur.sentSig) : !!((cur.parts || []).length || (cur.services || []).length || (cur.client || {}).clientName);
-      if (unsent && Number(localStorage.getItem('spComboLead2:' + cur.id)) !== leadId &&
-        !confirm('Есть незаконченный заказ, не отправленный в amoCRM. Открыть корректировку вместо него? Незаконченный заказ удалится.')) return;
-    }
     const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'Загружаю…';
     try {
       const r = await fetch(String(cfg.url).trim().replace(/^(https?:\/\/[^\/?#\s]+).*$/i, '$1').replace(/\/+$/, '') + '/state-get', { method: 'POST', headers: { 'X-App-Key': cfg.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ lead_id: leadId }), cache: 'no-store' });
       let j = null; try { j = await r.json(); } catch (e) {}
       if (!r.ok || !j || !j.state) throw new Error(j && j.error ? j.error : `посредник ответил ${r.status}`);
       const S = j.state, combo = S.combo || {};
-      // убрать текущий заказ (его разделы и фото)
-      if (cur && cur.id) {
-        Object.keys(localStorage).filter(k => k.endsWith('@combo:' + cur.id)).forEach(k => localStorage.removeItem(k));
-        await Promise.all(CALC_IDS.map(n => idbDel(n + 'CalcPhotos', 'photos@combo:' + cur.id)));
-      }
+      // открытый заказ: незаконченный — в черновики, пустой или отправленный — убрать (его разделы и фото)
+      if (cur && cur.id && !SPDrafts.stash(cur)) await SPDrafts.dropData(cur.id, true);
       // заказ из amoCRM: свой номер раздела, чтобы не смешаться с другими
       const id = 'e' + leadId + '-' + Date.now().toString(36);
       Object.entries(S.ls || {}).forEach(([k, v]) => localStorage.setItem(k.replace(/@combo:.*$/, '@combo:' + id), v));

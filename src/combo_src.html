@@ -270,6 +270,10 @@
     </div>
     <div class="sec-f">Уходит одной сделкой на всю сумму: все изделия, КП, заказ-наряд с раскроем и наклейки.</div>
     <input type="hidden" id="pipeline">
+    <div class="group" style="margin-top:18px;">
+      <div class="row tap" id="draftRow" role="button" tabindex="0"><span style="color:var(--accent); display:flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg></span><span class="lbl" style="flex:1; width:auto; font-weight:700;">Сохранить в черновики</span></div>
+    </div>
+    <div class="sec-f">Заказ останется на главном экране в «Черновиках» — доделать, отправить в amoCRM или удалить можно позже.</div>
   </div>
 </div>
 
@@ -287,6 +291,7 @@
   <div class="sh-body" id="shBody"></div>
 </div>
 <div id="printArea"></div>
+<script src="drafts.js"></script>
 <script>
 /*PDFLIB*/
 
@@ -469,6 +474,7 @@
     labels: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>'
   };
   const IC = {
+    save: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>',
     check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
     alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
     x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -661,16 +667,43 @@
         r.onsuccess = () => { try { r.result.transaction('kv', 'readwrite').objectStore('kv').delete('photos@combo:' + cid); } catch (e) {} r.result.close(); }; } catch (e) {}
     });
   }
+  // новый заказ: незаконченный уходит в черновики (ничего не теряется), пустой или отправленный — убирается
+  function dropCurrent() {
+    const kept = SPDrafts.stash(st);
+    if (!kept) {
+      try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+      dropPhotos(st.id);
+    }
+    return kept;
+  }
   function newOrder(force) {
-    if (force !== true && !confirm('Начать новый заказ? Текущий очистится (отправленная в amoCRM сделка останется).')) return;
-    try { Object.keys(localStorage).filter(k => k.endsWith('@combo:' + st.id)).forEach(k => localStorage.removeItem(k)); } catch (e) {}
-    dropPhotos(st.id);
+    const kept = dropCurrent();
     Object.values(frames).forEach(r => r.f.remove()); Object.keys(frames).forEach(k => delete frames[k]);
     st = { id: Date.now().toString(36), client: {}, parts: [], sum: {}, priceSel: 'base', pipeline: '', services: [], ownMake: true, ownInstall: true }; addrInit(st.client); save();
-    ui.client = null; ui.parts = {}; setStatus(''); render(); window.scrollTo(0, 0);
+    ui.client = null; ui.parts = {}; setStatus(kept && force !== true ? '✓ Прошлый заказ — в черновиках на главном экране' : ''); render(); window.scrollTo(0, 0);
   }
+  // открыть сохранённый черновик (открытый сейчас заказ, если не пустой, тоже уходит в черновики)
+  function openDraft(id) {
+    if (st.id === id || !SPDrafts.list()[id]) return;
+    dropCurrent();
+    st = SPDrafts.take(id); delete st.savedAt;
+    if (!Array.isArray(st.services)) st.services = [];
+    st.client = st.client || {}; addrInit(st.client);
+    save();
+  }
+  // «Сохранить в черновики»: заказ уходит в список на главном, а здесь — чистый лист
+  function saveDraft() {
+    if (!SPDrafts.state(st)) { setStatus('⚠ Заказ пустой — сохранять нечего'); return; }
+    newOrder(true);
+    try { sessionStorage.setItem('spToast', 'Заказ сохранён в черновики'); } catch (e) {}
+    const back = document.querySelector('a[data-back]');
+    if (back) back.click(); else location.href = 'index.html';
+  }
+  $('draftRow').onclick = saveDraft;
+  $('draftRow').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); saveDraft(); } };
   $('moreBtn').onclick = () => menu($('moreBtn'), [
-    { label: 'Начать новый заказ', icon: IC.plus, act: newOrder },
+    { label: 'Сохранить в черновики', sub: 'Доделать или отправить позже', icon: IC.save, act: saveDraft },
+    { label: 'Начать новый заказ', sub: 'Этот останется в черновиках', icon: IC.plus, act: newOrder },
     { label: 'Текущие заказы', icon: IC.list, bg: 'var(--slate-soft)', fg: 'var(--slate)', act: () => { location.href = 'orders.html'; } }
   ], { alignRight: true, width: 280 });
   window.addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 44), { passive: true });
@@ -897,9 +930,20 @@
   }
 
   // старт: ?new=1 — с главного «Начать новый»; иначе подгрузить разделы, чтобы сводка была свежей
-  if (new URLSearchParams(location.search).get('new') === '1') { newOrder(true); history.replaceState(null, '', location.pathname); }
+  const P = new URLSearchParams(location.search);
+  if (P.get('new') === '1') newOrder(true);
+  else if (P.get('draft')) openDraft(P.get('draft'));
+  if (location.search) history.replaceState(null, '', location.pathname);
   render();
   ordered().forEach(id => frameFor(id));
+  // «Добавить в amoCRM» из черновиков на главном: досчитать разделы и отправить
+  if (P.get('send') === '1' && ordered().length) {
+    setStatus('⏳ Готовлю заказ к отправке…');
+    Promise.all(ordered().map(id => frameFor(id).ready)).then(() => setTimeout(() => {
+      if (!$('amoBtn').disabled) $('amoBtn').click();
+      else setStatus('⚠ Заказ не готов к отправке — проверьте разделы');
+    }, 400));
+  }
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 <script>
